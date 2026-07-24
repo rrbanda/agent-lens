@@ -51,8 +51,8 @@ Show me the last 20 traces for <experiment-name>
 Evaluate the outreach agent using the tool-calling profile
 ```
 
-**Expected:** `mcp_mlflow_list_scorers` (optional) + `mcp_mlflow_evaluate_traces` →
-Quality Certification Report with PASS/FAIL dimensions.
+**Expected:** dry-run then full `mcp_mlflow_evaluate_traces` → Quality Certification
+Report with **pass rates** (yes/no scorers, ≥80% threshold) — not `/5` scores.
 
 **Prompt:**
 ```

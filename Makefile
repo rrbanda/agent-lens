@@ -1,7 +1,8 @@
-.PHONY: help deploy-agent deploy-all undeploy secret eval logs-agent status check-mcp
+.PHONY: help deploy-agent deploy-all undeploy secret eval logs-agent status check-mcp build-agent
 
 NAMESPACE ?= agent-lens
 MCP_URL ?= http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp
+AGENT_IMAGE ?= quay.io/rrbanda/agent-lens:v3
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -21,12 +22,20 @@ secret: ## Create LLM + dashboard/API secrets (interactive)
 	@echo "✓ Secrets agent-lens-llm-key and agent-lens-auth upserted in $(NAMESPACE)"
 	@echo "  Reminder: official MLflow MCP (mlflow-mcp) must already be installed."
 
+build-agent: ## Build immutable Hermes image (podman/docker)
+	podman build -t $(AGENT_IMAGE) -f agent-lens/Containerfile agent-lens/ \
+		|| docker build -t $(AGENT_IMAGE) -f agent-lens/Containerfile agent-lens/
+	@echo "✓ Built $(AGENT_IMAGE)"
+	@echo "  Push to your registry, then: oc set image deploy/agent-lens hermes=$(AGENT_IMAGE) -n $(NAMESPACE)"
+	@echo "  And: oc set env deploy/agent-lens BOOTSTRAP_DEPS=0 -n $(NAMESPACE)"
+
 deploy-agent: ## Deploy the Agent Lens observability agent
 	@echo "Deploying Agent Lens to $(NAMESPACE)..."
-	oc apply -k agent-lens/deploy/
+	oc apply -k agent-lens/deploy/ --server-side --force-conflicts 2>/dev/null \
+		|| oc apply -k agent-lens/deploy/
 	@echo "✓ Agent Lens deployed"
 	@echo "  MCP prerequisite: $(MCP_URL)"
-	@echo "  See docs/operator-mcp.md"
+	@echo "  See docs/operator-mcp.md and docs/enterprise-readiness.md"
 
 deploy-all: secret deploy-agent ## Secrets + Agent Lens (MCP is a prerequisite)
 	@echo ""

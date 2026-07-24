@@ -5,6 +5,7 @@
     <br />
     <a href="docs/architecture.md"><strong>Architecture</strong></a> ·
     <a href="docs/limitations.md"><strong>Limitations</strong></a> ·
+    <a href="docs/enterprise-readiness.md"><strong>Enterprise</strong></a> ·
     <a href="docs/demo-script.md"><strong>Demo</strong></a> ·
     <a href="docs/operator-mcp.md"><strong>MCP ops</strong></a> ·
     <a href="#contributing"><strong>Contributing</strong></a>
@@ -60,11 +61,12 @@ What you can do in chat today (each maps to a Hermes skill):
 | Feature | Example ask | What you get |
 |---------|-------------|--------------|
 | **Trace explorer** | “Show me the last 20 traces for outreach-agent” | Latency, errors, token patterns from production traces |
-| **Quality evaluation** | “Evaluate outreach-agent with the tool-calling profile” | GenAI scorers via official MCP + Quality Certification Report |
-| **Certification verdict** | “Can this agent be deployed?” | PASS/FAIL vs thresholds in chat ([not a CI block yet](docs/limitations.md)) |
+| **Quality evaluation** | “Evaluate outreach-agent with the tool-calling profile” | GenAI scorers via official MCP; **pass rates** (yes/no), not fake /5 scores |
+| **Certification verdict** | “Can this agent be deployed?” | ≥80% pass rate + low error rate in chat ([not a CI block yet](docs/limitations.md)) |
 | **Human review & annotation** | “Annotate that trace as incorrect tool selection” | Feedback / expectations logged on the trace in MLflow |
+| **Session analysis** | “Where did this chat session go wrong?” | Multi-turn timeline via `mlflow.trace.session` |
 | **Regression follow-up** | “Log a regression follow-up for this failure” | Expectation + tags (`regression=true`) for tracking |
-| **Fleet Observatory** | “Give me a quality dashboard across all agents” | HEALTHY / WARNING / CRITICAL / INACTIVE summary (capped scan) |
+| **Fleet Observatory** | “Give me a quality dashboard across all agents” | HEALTHY / WARNING / CRITICAL / INACTIVE (capped scan) |
 | **Scorer profiles** | “Use the RAG profile” | RAG, tool-calling, chat, or custom Guidelines (see below) |
 | **Zero-code instrumentation** | *(on the target agent)* | `usercustomize.py` autolog for OpenAI-compatible Python agents |
 

@@ -1,55 +1,58 @@
 # Agent Lens — Instrumentation
 
-Tools to add observability to **any** AI agent running on the platform.
+Tools to add observability to **target** AI agents (not Hermes). Hermes talks to
+MLflow only via **official MCP** — never run these patterns inside the Agent Lens sandbox.
 
 ## Components
 
-### 1. `usercustomize.py` — Zero-Code Auto-Instrumentation
+### 1. `usercustomize.py` — Zero-code auto-instrumentation
 
-Drop into a target agent's Python environment. Every OpenAI-compatible LLM call
-is automatically captured as an MLflow trace — no code changes required.
+Drop into a target agent's Python environment. Enables `mlflow.openai.autolog` when
+`MLFLOW_TRACKING_URI` and `MLFLOW_EXPERIMENT_NAME` are set.
 
 ```bash
-# Install into the agent's site-packages
-cp usercustomize.py $(python -m site --user-site)/usercustomize.py
-
-# Set required env vars on the agent
+cp usercustomize.py "$(python -m site --user-site)/usercustomize.py"
 export MLFLOW_TRACKING_URI="https://your-mlflow:8443"
 export MLFLOW_EXPERIMENT_NAME="my-agent"
 ```
 
-### 2. `eval_agent.py` — Evaluation Runner
+**Scope:** OpenAI-compatible Python clients. For LangChain / LangGraph / Anthropic /
+LiteLLM, use the matching `mlflow.*.autolog` (see [mlflow/skills instrumenting-with-mlflow-tracing](https://github.com/mlflow/skills/tree/main/instrumenting-with-mlflow-tracing)).
 
-Run systematic quality evaluations against any agent API and store results in MLflow.
+**RAG note:** `RetrievalGroundedness` needs retrieval/`RETRIEVER` spans. Plain OpenAI
+chat autolog may not create them.
+
+See also [docs/first-trace.md](../docs/first-trace.md).
+
+### 2. `eval_agent.py` — Offline CLI evaluation
+
+Runs **outside** Hermes with tracking credentials. Uses `mlflow.genai.evaluate` and
+built-in GenAI scorers (yes/no pass rates). Requires **MLflow 3.8+**.
 
 ```bash
 export MLFLOW_TRACKING_URI="https://your-mlflow:8443"
 export AGENT_API_URL="http://agent-service:8642"
 export AGENT_API_KEY="agent-api-key"
 
-python eval_agent.py --experiment-name "my-agent" --workspace "my-namespace"
+python eval_agent.py --experiment-name "my-agent" --profile chat
+# profiles: rag | tool-calling | chat
 ```
 
-Custom prompts:
+Custom prompts JSON:
 
-```bash
-python eval_agent.py --experiment-name "my-agent" --prompts-file prompts.json
-```
-
-Format for `prompts.json`:
 ```json
 [
-  {"prompt": "Your question", "context": "Expected grounding context"},
-  {"prompt": "Another question", "context": "More context"}
+  {"prompt": "Your question", "context": "Optional grounding context"}
 ]
 ```
 
-## Evaluation Metrics
+## Metrics (GenAI)
 
-| Metric | What It Measures |
-|--------|-----------------|
-| Relevance | Does the output address the user's request? |
-| Faithfulness | Is the output grounded in provided context? |
-| Correctness | Is the output factually accurate? |
-| Token Count | Efficiency of the response |
-| Latency | Response time |
+| Scorer | Measures |
+|--------|----------|
+| RelevanceToQuery | Output addresses the request |
+| RetrievalGroundedness | Grounded in retrieved context (needs retriever spans) |
+| ToolCallCorrectness / Efficiency | Tool use quality |
+| Guidelines | Custom policy bars |
+
+Report **pass rates**, not 1–5 Likert scores.

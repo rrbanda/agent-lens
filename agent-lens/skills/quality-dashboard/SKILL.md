@@ -7,13 +7,16 @@ description: "Generate a full observability summary across all tracked agents: t
 
 Fleet-wide observability summary across all tracked agents via **upstream official MLflow MCP**.
 
+Quality from GenAI scorers is a **pass rate** (yes/no), not a 1–5 Likert. Prefer error rate +
+latency for health when evaluation metrics are absent.
+
 ## Strategy (MCP-first — required)
 
 1. Call `mcp_mlflow_search_experiments` to list active experiments (agents).
 2. Cap the fleet scan at **20 experiments** (prefer recently updated). Say so in the report if truncated.
 3. For each selected experiment:
    - `mcp_mlflow_search_traces` with that experiment id (`max_results` 50)
-   - Optionally `mcp_mlflow_list_runs` for recent evaluation metrics
+   - Optionally `mcp_mlflow_list_runs` for recent evaluation metrics / pass rates
 4. Compute status with the criteria table (code execution may aggregate MCP JSON only).
 5. Format the Observatory output below.
 
@@ -30,16 +33,19 @@ Do **not** open code execution to call MLflow. Only use it on data already retur
 
 | Status | Conditions |
 |--------|-----------|
-| HEALTHY | Error rate < 5%, quality > 4.0, has traces |
-| WARNING | Error rate 5-15%, quality 3.0-4.0, active but no eval scores, or reduced quality |
-| CRITICAL | Error rate > 15%, quality < 3.0, or tool error fetching data |
+| HEALTHY | Has traces; error rate < 5%; if eval metrics exist, primary pass rate ≥ 80% |
+| WARNING | Error rate 5–15%; or active with traces but no eval scores; or pass rate 50–80% |
+| CRITICAL | Error rate > 15%; or pass rate < 50%; or MCP tool error fetching data |
 | INACTIVE | No traces recorded in the experiment |
+
+Do **not** use `/5` quality scores. If only categorical assessments exist, convert to pass rate.
 
 ## Output Format
 
 ```
 ## AI Agent Observatory
 Generated: [timestamp]
+Scan cap: N experiments (truncated: yes/no)
 
 ### Fleet Summary
 | Status | Count |
@@ -57,7 +63,7 @@ Generated: [timestamp]
 | Traces (sample) | N | up/down/stable |
 | Error Rate | X% | up/down/stable |
 | Avg Latency | Xms | up/down/stable |
-| Quality Score | X.X/5.0 | up/down/stable |
+| Eval pass rate | XX% or n/a | up/down/stable |
 
 ---
 

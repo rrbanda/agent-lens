@@ -1,0 +1,30 @@
+# Production image for Agent Lens (Hermes). Bake deps — no pip/Node download at pod start.
+# Build: make build-agent
+# Deploy: set image + BOOTSTRAP_DEPS=0 (entrypoint.sh still mounted from ConfigMap)
+FROM python:3.11-slim
+
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG NODE_VERSION=22.16.0
+RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+      -o /tmp/node.tar.xz \
+    && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
+    && rm /tmp/node.tar.xz \
+    && node -v && npm -v
+
+RUN pip install --no-cache-dir hermes-agent aiohttp mcp pyyaml \
+    && useradd -m -u 1001 -s /bin/bash hermes
+
+WORKDIR /home/hermes
+USER 1001
+ENV HOME=/tmp/work \
+    HERMES_HOME=/tmp/work/.hermes \
+    PATH="/usr/local/bin:/home/hermes/.local/bin:${PATH}" \
+    PYTHONUSERBASE=/home/hermes/.local \
+    BOOTSTRAP_DEPS=0
+
+EXPOSE 18789
+# Runtime command comes from Deployment (mounted entrypoint ConfigMap)

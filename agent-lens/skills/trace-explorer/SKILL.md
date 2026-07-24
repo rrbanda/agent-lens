@@ -5,36 +5,30 @@ description: "Search and summarize traces from any agent's MLflow experiment. Sh
 
 # Trace Explorer
 
-Investigate agent activity by querying trace data via **upstream official MLflow MCP**.
+Investigate agent activity via **upstream official MLflow MCP**.
+Adapted from [mlflow/skills retrieving-mlflow-traces](https://github.com/mlflow/skills/tree/main/retrieving-mlflow-traces).
 
 ## Strategy
 
-1. Identify the target experiment — call `mcp_mlflow_search_experiments` if unknown
-2. Search traces — call `mcp_mlflow_search_traces` with the experiment_id
-3. For detail on a single trace — call `mcp_mlflow_get_trace`
-4. Analyze for patterns:
-   - **Error rate**: count ERROR status vs total
-   - **Latency distribution**: identify p50, p95, outliers
-   - **Token usage**: spot excessive consumption
-   - **Time patterns**: correlate with deployments or traffic spikes
+1. Identify experiment — `mcp_mlflow_search_experiments` if unknown
+2. Search — `mcp_mlflow_search_traces` (follow tool schema for filters)
+3. Detail — `mcp_mlflow_get_trace` for a single ID
+4. Analyze: error rate, latency distribution, token usage, time patterns
 
-## Key Parameters
+## Filter cookbook (adapt to MCP schema)
 
-- Useful filters: `status = 'ERROR'`, `status = 'OK'` (follow tool schema)
-- Default max_results: 20-50 for overview, 100+ for statistical analysis
+Prefer schema-accurate filters such as:
 
-## When to Use Code Execution
+- Execution failures: `trace.status = 'ERROR'` (or tool-equivalent)
+- Session: metadata key `mlflow.trace.session` (dots — quoting rules vary)
+- Tags: `regression=true` for follow-up samples
+- Time / latency: use fields exposed by the MCP tool description
 
-Use code execution when you need to:
-- Compute aggregate statistics on MCP-returned JSON (mean latency, error %)
-- Process large payloads already fetched via MCP
-- Generate time-series breakdowns from local data
+Default `max_results`: 20–50 overview; 100+ for stats.
 
-Never `import mlflow` in the sandbox — use `mcp_mlflow_*` only.
+Never `import mlflow` in the sandbox.
 
 ## Output Format
-
-Present findings as:
 
 ```
 ## Trace Summary: [agent name] (Experiment [id])
@@ -51,7 +45,6 @@ Present findings as:
 |-----------|--------|----------|--------|
 | ... | OK/ERROR | Xms | N |
 
-### Concerns (if any)
-- [Issue identified with evidence]
-- [Recommended action]
+### Concerns
+- [Issue with evidence]
 ```

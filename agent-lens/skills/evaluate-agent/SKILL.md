@@ -1,12 +1,15 @@
 ---
 name: "evaluate-agent"
-description: "Run a systematic evaluation of any agent's quality using MLflow scorers. Use when asked to evaluate, score, certify, or assess an agent's performance. Produces a Quality Certification Report."
+description: "Run a systematic evaluation of any agent's quality using MLflow GenAI scorers. Use when asked to evaluate, score, certify, or assess an agent's performance. Produces a Quality Certification Report."
 ---
 
 # Evaluate Agent
 
 Systematic agent evaluation for platform teams via **upstream official MLflow MCP**.
 Adapted from [mlflow/skills agent-evaluation](https://github.com/mlflow/skills/tree/main/agent-evaluation).
+
+MLflow GenAI built-in scorers return **categorical yes/no** (or equivalent), not a 1–5 Likert.
+Report **pass rates** (share of traces scoring yes / positive). Never invent `/5` scores.
 
 ## When to Use
 
@@ -22,13 +25,21 @@ Adapted from [mlflow/skills agent-evaluation](https://github.com/mlflow/skills/t
 
 Call `mcp_mlflow_search_experiments` to find the target agent's experiment.
 
-### Step 2: Select Scorer Profile
+### Step 2: Agent interview (do not skip)
 
-Choose based on agent type. Confirm availability with `mcp_mlflow_list_scorers` if needed.
+Confirm agent type (RAG / tool-calling / chat) and what “good” means. Derive scorers from that —
+do not invent custom score names.
+
+### Step 3: Select Scorer Profile
+
+Confirm availability with `mcp_mlflow_list_scorers` if needed.
 
 **RAG Agent Profile**:
 - `RelevanceToQuery` — Does the output address the request?
 - `RetrievalGroundedness` — Is it grounded in retrieved context?
+  - **Prerequisite:** traces must include a `RETRIEVER` (or equivalent retrieval) span.
+  - OpenAI-only autolog (`usercustomize.py`) often **lacks** retriever spans — warn and skip
+    groundedness or mark NEEDS REVIEW rather than failing silently.
 
 **Tool-Calling Agent Profile**:
 - `ToolCallCorrectness` — Are tool calls and arguments correct?
@@ -39,17 +50,37 @@ Choose based on agent type. Confirm availability with `mcp_mlflow_list_scorers` 
 - `RelevanceToQuery` — Addresses the user's intent?
 - Guidelines: helpful, harmless, honest
 
-**Custom Profile** — Ask the user what dimensions matter most.
+**Custom Profile** — Ask the user what dimensions matter most (`Guidelines` / registered scorers).
 
-### Step 3: Run Evaluation
+### Step 4: Dry run (required before full cert)
 
-Call `mcp_mlflow_evaluate_traces` with the experiment / traces and chosen scorers
-(`max_traces`: 50 for quick check, 200 for certification — follow tool schema).
+Call `mcp_mlflow_evaluate_traces` with a **small** sample first (`max_traces`: 3–5).
+If scorers error, tools are broken, or all traces empty — stop and report; do not run 50–200.
 
-### Step 4: Generate Quality Certification Report
+### Step 5: Full evaluation
 
-Use MCP results (and optional code execution on returned JSON only) to fill the report.
-Never `import mlflow` in the sandbox.
+Call `mcp_mlflow_evaluate_traces` with chosen scorers:
+
+- Quick check: `max_traces` 50
+- Certification: `max_traces` 200 (follow tool schema)
+
+**Regression-focused cert:** If the user asks to include regression follow-ups, first
+`mcp_mlflow_search_traces` with tags/filter for `regression=true` (or dataset tag), evaluate
+those traces preferentially, and state the sample composition in the report.
+
+### Step 6: Generate Quality Certification Report
+
+Aggregate MCP JSON only (optional code execution on returned data). Never `import mlflow`.
+
+## Scoring rules
+
+| Signal | How to report | Default threshold |
+|--------|---------------|-------------------|
+| Built-in GenAI scorer | Pass rate = (# yes or positive) / (# scored) | **≥ 80%** PASS |
+| Trace status ERROR | Error rate on sample | **< 5%** for CERTIFIED |
+| Scorer `feedback.error` | Scorer failure — exclude from pass rate; call out separately | — |
+
+`state: OK` / `STATUS_CODE_OK` means the run completed — **not** that the answer is correct.
 
 ## Output Format
 
@@ -60,33 +91,39 @@ Never `import mlflow` in the sandbox.
 
 ### Profile: [RAG/Tool-Calling/Chat]
 
-### Scores
-| Dimension | Score | Rating | Threshold |
-|-----------|-------|--------|-----------|
-| Relevance | X.X/5 | PASS/FAIL | >= 3.5 |
-| Groundedness | X.X/5 | PASS/FAIL | >= 3.5 |
-| Tool Correctness | X.X/5 | PASS/FAIL | >= 3.5 |
+### Scores (pass rates — GenAI yes/no scorers)
+| Dimension | Pass rate | Rating | Threshold |
+|-----------|-----------|--------|-----------|
+| RelevanceToQuery | XX% | PASS/FAIL | >= 80% |
+| RetrievalGroundedness | XX% or N/A | PASS/FAIL/SKIPPED | >= 80% |
+| ToolCallCorrectness | XX% | PASS/FAIL | >= 80% |
 
 ### Certification verdict (chat — not a CI pipeline block)
 **[CERTIFIED / NOT CERTIFIED / NEEDS REVIEW]**
 
+Rules of thumb:
+- CERTIFIED: all required scorers PASS and error rate < 5%
+- NOT CERTIFIED: any required scorer FAIL or error rate >= 5%
+- NEEDS REVIEW: missing retriever spans, scorer errors, or insufficient sample
+
 ### Evidence
-- Traces evaluated: N
+- Traces evaluated: N (dry-run + full)
 - Error rate: X%
 - Avg latency: Xms
+- Regression-tagged traces included: Y/N
 
-### Findings (if NOT CERTIFIED)
+### Findings (if NOT CERTIFIED / NEEDS REVIEW)
 1. [Issue with evidence]
 2. [Recommended action]
 
 ### Next Steps
 - [ ] Address findings above
 - [ ] Re-run evaluation after fixes
-- [ ] Log expectations on failure traces for regression follow-up
+- [ ] Log expectations on failure traces (`create-regression` / review-trace)
 ```
 
 ## When to Use Code Execution
 
-- Aggregate stats on data already returned by MCP
+- Aggregate pass rates on data already returned by MCP
 - Format comparison tables (before/after)
 - Never call the MLflow tracking SDK from the sandbox
