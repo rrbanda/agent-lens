@@ -55,8 +55,8 @@ capabilities via the [Model Context Protocol](https://modelcontextprotocol.io/).
 %%{init: {'theme': 'neutral'}}%%
 graph LR
     subgraph MCP Server
-        H[/health]
-        M[/mcp]
+        H["GET /health"]
+        M["POST /mcp"]
         SDK[MLflow SDK<br/>singleton client]
     end
 
