@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
+# Runtime-only entrypoint. Dependencies MUST be baked into the image (Containerfile).
+# Never pip-install or download Node at pod start.
 set -euo pipefail
+
+if ! command -v hermes >/dev/null 2>&1; then
+  echo "ERROR: hermes not found in image PATH. Rebuild with agent-lens/Containerfile." >&2
+  exit 1
+fi
 
 SKILLS="evaluate-agent review-trace create-regression trace-explorer quality-dashboard analyze-session"
 
@@ -29,30 +36,6 @@ cp /mnt/skill-analyze-session/SKILL.md /tmp/work/.hermes/skills/analyze-session/
 
 cp /mnt/soul/SOUL.md /tmp/work/.hermes/SOUL.md
 cp /mnt/config/config.yaml /tmp/work/.hermes/config.yaml
-
-# Bootstrap only when not using the baked production image
-if [ "${BOOTSTRAP_DEPS:-1}" = "1" ] && ! command -v hermes >/dev/null 2>&1; then
-  echo "=== Bootstrapping hermes-agent (set BOOTSTRAP_DEPS=0 for baked image) ==="
-  pip install --user hermes-agent aiohttp mcp pyyaml 2>&1 | tail -8
-  if ! command -v node >/dev/null 2>&1; then
-    python3 -c "
-import urllib.request, tarfile, os, lzma
-url = 'https://nodejs.org/dist/v22.16.0/node-v22.16.0-linux-x64.tar.xz'
-path = '/tmp/node.tar.xz'
-urllib.request.urlretrieve(url, path)
-with lzma.open(path) as xz:
-    with tarfile.open(fileobj=xz) as tar:
-        tar.extractall('/tmp')
-os.makedirs('/tmp/work/.local/bin', exist_ok=True)
-for f in ['node', 'npm', 'npx']:
-    src = f'/tmp/node-v22.16.0-linux-x64/bin/{f}'
-    dst = f'/tmp/work/.local/bin/{f}'
-    if os.path.exists(src) and not os.path.exists(dst):
-        os.symlink(src, dst)
-print('Node.js 22 installed')
-"
-  fi
-fi
 
 HASH=$(python3 -c "
 import hashlib, secrets, base64, os

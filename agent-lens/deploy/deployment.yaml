@@ -8,6 +8,9 @@ metadata:
     app.kubernetes.io/part-of: agent-lens
 spec:
   replicas: 1
+  # RWO PVC cannot multi-attach
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: agent-lens
@@ -23,9 +26,9 @@ spec:
           type: RuntimeDefault
       containers:
         - name: hermes
-          # Prefer a baked image: `make build-agent` → quay.io/rrbanda/agent-lens:v3
-          # Fallback python:3.11-slim bootstraps deps once (slower; not enterprise-preferred).
-          image: python:3.11-slim
+          # Built from agent-lens/Containerfile (OpenShift ImageStream or make build-agent)
+          image: image-registry.openshift-image-registry.svc:5000/agent-lens/agent-lens:latest
+          imagePullPolicy: Always
           command: ["/bin/bash", "/mnt/entrypoint/entrypoint.sh"]
           securityContext:
             allowPrivilegeEscalation: false
@@ -43,9 +46,9 @@ spec:
                   name: agent-lens-llm-key
                   key: api-key
             - name: PATH
-              value: "/tmp/work/.local/bin:/usr/local/bin:/usr/bin:/bin"
+              value: "/usr/local/bin:/home/hermes/.local/bin:/tmp/work/.local/bin:/usr/bin:/bin"
             - name: PYTHONUSERBASE
-              value: "/tmp/work/.local"
+              value: /home/hermes/.local
             - name: API_SERVER_KEY
               valueFrom:
                 secretKeyRef:
@@ -58,9 +61,6 @@ spec:
                 secretKeyRef:
                   name: agent-lens-auth
                   key: dashboard-password
-            - name: BOOTSTRAP_DEPS
-              # Set to "0" when using the baked Containerfile image
-              value: "1"
           ports:
             - containerPort: 18789
               name: dashboard
@@ -68,12 +68,12 @@ spec:
           readinessProbe:
             tcpSocket:
               port: 18789
-            initialDelaySeconds: 30
+            initialDelaySeconds: 20
             periodSeconds: 10
           livenessProbe:
             tcpSocket:
               port: 18789
-            initialDelaySeconds: 90
+            initialDelaySeconds: 60
             periodSeconds: 30
             failureThreshold: 5
           resources:
@@ -83,7 +83,7 @@ spec:
             limits:
               memory: "2Gi"
               cpu: "1000m"
-              ephemeral-storage: "3Gi"
+              ephemeral-storage: "2Gi"
           volumeMounts:
             - name: entrypoint
               mountPath: /mnt/entrypoint

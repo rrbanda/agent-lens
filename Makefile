@@ -22,28 +22,33 @@ secret: ## Create LLM + dashboard/API secrets (interactive)
 	@echo "✓ Secrets agent-lens-llm-key and agent-lens-auth upserted in $(NAMESPACE)"
 	@echo "  Reminder: official MLflow MCP (mlflow-mcp) must already be installed."
 
-build-agent: ## Build immutable Hermes image (podman/docker)
-	podman build -t $(AGENT_IMAGE) -f agent-lens/Containerfile agent-lens/ \
-		|| docker build -t $(AGENT_IMAGE) -f agent-lens/Containerfile agent-lens/
-	@echo "✓ Built $(AGENT_IMAGE)"
-	@echo "  Push to your registry, then: oc set image deploy/agent-lens hermes=$(AGENT_IMAGE) -n $(NAMESPACE)"
-	@echo "  And: oc set env deploy/agent-lens BOOTSTRAP_DEPS=0 -n $(NAMESPACE)"
+build-agent: ## Build Hermes image in OpenShift (no pip at pod start)
+	@echo "Ensuring ImageStream + BuildConfig..."
+	oc apply -f agent-lens/deploy/namespace.yaml
+	oc apply -f agent-lens/deploy/imagestream.yaml -n $(NAMESPACE)
+	oc apply -f agent-lens/deploy/buildconfig.yaml -n $(NAMESPACE)
+	@echo "Starting binary build from agent-lens/Containerfile..."
+	oc start-build agent-lens -n $(NAMESPACE) --from-dir=agent-lens --follow --wait
+	@echo "✓ ImageStreamTag agent-lens:latest updated"
+	@echo "  Deploy uses: image-registry.../agent-lens/agent-lens:latest"
 
-deploy-agent: ## Deploy the Agent Lens observability agent
+deploy-agent: ## Deploy Agent Lens (expects baked image — run make build-agent first)
 	@echo "Deploying Agent Lens to $(NAMESPACE)..."
-	oc apply -k agent-lens/deploy/ --server-side --force-conflicts 2>/dev/null \
-		|| oc apply -k agent-lens/deploy/
-	@echo "✓ Agent Lens deployed"
+	@if command -v kustomize >/dev/null; then \
+		kustomize build --load-restrictor LoadRestrictionsNone agent-lens/deploy | oc apply -f - ; \
+	else \
+		oc apply -k agent-lens/deploy/ ; \
+	fi
+	@echo "✓ Agent Lens deployed (image must already contain hermes)"
 	@echo "  MCP prerequisite: $(MCP_URL)"
 	@echo "  See docs/operator-mcp.md and docs/enterprise-readiness.md"
 
-deploy-all: secret deploy-agent ## Secrets + Agent Lens (MCP is a prerequisite)
+deploy-all: build-agent deploy-agent ## Build baked image + deploy (run make secret first)
 	@echo ""
 	@echo "═══════════════════════════════════════════════"
-	@echo "  Agent Lens deployed successfully!"
+	@echo "  Agent Lens deployed (baked image — no startup pip/Node)"
 	@echo "  Dashboard: $$(oc get route agent-lens -n $(NAMESPACE) -o jsonpath='{.spec.host}')"
-	@echo "  MCP: upstream mlflow-mcp (not installed by this Makefile)"
-	@echo "  Next: docs/first-trace.md then docs/demo-script.md"
+	@echo "  MCP: upstream mlflow-mcp (prerequisite)"
 	@echo "═══════════════════════════════════════════════"
 
 undeploy: ## Remove Agent Lens resources

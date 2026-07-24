@@ -8,6 +8,8 @@ resources:
   - pvc.yaml
   - rbac.yaml
   # secret-auth.yaml is a template only — create via `make secret`
+  - imagestream.yaml
+  - buildconfig.yaml
   - networkpolicy.yaml
   - deployment.yaml
   - service.yaml

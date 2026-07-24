@@ -12,7 +12,7 @@ Honest status of Agent Lens for production / enterprise pilots on OpenShift AI (
 | Auth secrets bootstrap | **Done** | `make secret` → LLM + dashboard/API |
 | NetworkPolicy + non-root + drop caps | **Done** | Deploy manifests |
 | Skill alignment CI | **Done** | `.github/workflows/ci.yml` |
-| Immutable Hermes image | **Ready** | `agent-lens/Containerfile`; set image + `BOOTSTRAP_DEPS=0` |
+| Immutable Hermes image | **Done** | `make build-agent` → ImageStream; pod never pip-installs |
 | Demo / first-trace runbooks | **Done** | `docs/demo-script.md`, `first-trace.md`, `operator-mcp.md` |
 | Session analysis skill | **Done** | `analyze-session` |
 | CI/CD quality gate webhook | **Roadmap** | [#18](https://github.com/rrbanda/agent-lens/issues/18) |
@@ -25,10 +25,10 @@ Honest status of Agent Lens for production / enterprise pilots on OpenShift AI (
 
 1. Official `mlflow-mcp` healthy — [operator-mcp.md](operator-mcp.md)
 2. `make secret` (never commit real keys)
-3. Prefer baked image:
+3. Build + deploy baked image (required — no startup installs):
    ```bash
-   make build-agent
-   # push to your registry; set deployment image; BOOTSTRAP_DEPS=0
+   make secret          # once
+   make build-agent     # OpenShift BuildConfig from Containerfile
    make deploy-agent
    ```
 4. Seed traces — [first-trace.md](first-trace.md)
