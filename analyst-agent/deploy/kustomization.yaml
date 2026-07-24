@@ -12,18 +12,18 @@ resources:
   - route.yaml
 
 configMapGenerator:
+  - name: skill-evaluate-agent
+    files:
+      - SKILL.md=../skills/evaluate-agent/SKILL.md
+  - name: skill-review-trace
+    files:
+      - SKILL.md=../skills/review-trace/SKILL.md
+  - name: skill-create-regression
+    files:
+      - SKILL.md=../skills/create-regression/SKILL.md
   - name: skill-trace-explorer
     files:
       - SKILL.md=../skills/trace-explorer/SKILL.md
-  - name: skill-eval-report
-    files:
-      - SKILL.md=../skills/eval-report/SKILL.md
-  - name: skill-compare-agents
-    files:
-      - SKILL.md=../skills/compare-agents/SKILL.md
-  - name: skill-diagnose-failure
-    files:
-      - SKILL.md=../skills/diagnose-failure/SKILL.md
   - name: skill-quality-dashboard
     files:
       - SKILL.md=../skills/quality-dashboard/SKILL.md

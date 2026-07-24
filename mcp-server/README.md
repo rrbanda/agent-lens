@@ -1,57 +1,82 @@
-# MLflow MCP Server
+# Agent Lens — MLflow Evaluation MCP Server (v2)
 
-A lightweight [Model Context Protocol](https://modelcontextprotocol.io/) server that
-exposes MLflow experiment tracking data as callable tools for AI agents.
+A [Model Context Protocol](https://modelcontextprotocol.io/) server that provides AI agents
+with **evaluation, annotation, and governance** capabilities over MLflow data.
 
-## Tools Exposed
+Built on the MLflow Python SDK (not raw REST), enabling `mlflow.genai.evaluate()`,
+`mlflow.log_feedback()`, and dataset management directly as MCP tools.
 
+## Tool Categories
+
+### Observability (read)
 | Tool | Description |
 |------|-------------|
 | `list_experiments` | List all MLflow experiments |
-| `get_experiment` | Get experiment details by ID |
-| `search_runs` | Search runs with filters |
-| `get_run` | Get full run details |
-| `get_metric_history` | Metric values over time |
-| `compare_runs` | Side-by-side run comparison |
-| `search_traces` | Search agent traces |
-| `set_trace_tag` | Tag traces for tracking |
-| `log_feedback` | Log evaluation scores on traces |
-| `health_check` | Server connectivity check |
+| `search_traces` | Search traces with filters |
+| `get_trace` | Full trace details with spans and assessments |
+| `search_runs` | Search evaluation/training runs |
 
-## Quick Start (Local)
+### Evaluation (the core)
+| Tool | Description |
+|------|-------------|
+| `run_evaluation` | Run `mlflow.genai.evaluate()` with selected scorers on traces or datasets |
+| `list_scorers` | Show available built-in and registered scorers |
+
+### Annotation (human feedback loop)
+| Tool | Description |
+|------|-------------|
+| `annotate_trace` | Log human feedback via `mlflow.log_feedback()` |
+| `set_expectation` | Set ground truth via `mlflow.log_expectation()` |
+
+### Datasets (regression tests)
+| Tool | Description |
+|------|-------------|
+| `list_datasets` | Show available evaluation datasets |
+| `create_test_case` | Convert a production trace into a regression test case |
+
+### Governance (deployment gates)
+| Tool | Description |
+|------|-------------|
+| `check_quality_gate` | Compare against thresholds/baseline, return PASS/FAIL for CI/CD |
+| `get_review_queue` | Smart sampling of traces needing human review |
+
+### System
+| Tool | Description |
+|------|-------------|
+| `health_check` | Connectivity and configuration check |
+
+## Architecture
+
+```
+Platform Team --chat--> Agent Lens --MCP--> This Server --SDK--> MLflow
+                                                          |
+                                                          +--> mlflow.genai.evaluate()
+                                                          +--> mlflow.log_feedback()
+                                                          +--> mlflow.genai.datasets
+```
+
+## Quick Start
 
 ```bash
-export MLFLOW_TRACKING_URI="https://your-mlflow-server:8443"
-export MLFLOW_WORKSPACE="default"
+export MLFLOW_TRACKING_URI="https://your-mlflow:8443"
+export JUDGE_MODEL="gemini:/gemini-2.5-flash"
 
 pip install -r requirements.txt
 python entrypoint.py
-```
-
-Server starts on `http://0.0.0.0:8080/mcp` (streamable-http transport).
-
-## Container Build
-
-```bash
-podman build -t mlflow-mcp-server:latest -f Containerfile .
-```
-
-## Kubernetes Deployment
-
-```bash
-# Customize the ConfigMap values for your cluster
-cd deploy/
-# Edit kustomization.yaml to set tracking-uri and default-workspace
-oc apply -k .
 ```
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MLFLOW_TRACKING_URI` | `https://mlflow-server:8443` | MLflow server URL |
-| `MLFLOW_WORKSPACE` | `default` | Default workspace (k8s namespace) |
-| `MLFLOW_TRACKING_TOKEN_FILE` | SA token path | Bearer token for auth |
-| `MLFLOW_TRACKING_INSECURE_TLS` | `true` | Skip TLS verification |
-| `MCP_HOST` | `0.0.0.0` | Server bind address |
-| `MCP_PORT` | `8080` | Server bind port |
+| `MLFLOW_TRACKING_URI` | (required) | MLflow server URL |
+| `MLFLOW_EXPERIMENT_ID` | (optional) | Default experiment |
+| `JUDGE_MODEL` | `gemini:/gemini-2.5-flash` | LLM for scorers |
+| `MCP_HOST` | `0.0.0.0` | Bind address |
+| `MCP_PORT` | `8080` | Bind port |
+
+## Based On
+
+- [MLflow GenAI Evaluation](https://mlflow.org/docs/latest/genai/eval-monitor/)
+- [mlflow/skills](https://github.com/mlflow/skills) — agent-evaluation patterns
+- [MLflow Human Feedback](https://mlflow.org/docs/latest/genai/assessments/feedback.md)

@@ -1,38 +1,56 @@
-# 🔍 Agent Lens
+# Agent Lens
 
-**AI-native observability for agentic systems.** Ask questions about your agents in natural language — get answers backed by MLflow traces, metrics, and evaluation data.
+**AI agent evaluation platform for platform teams.** Evaluate, annotate, and gate agents you didn't build — powered by MLflow and the Model Context Protocol.
 
 <p align="center">
-  <img src="docs/images/architecture-overview.png" alt="Agent Lens Architecture" width="800"/>
+  <img src="docs/images/agentops-loop.png" alt="The AgentOps Evaluation Loop" width="800"/>
 </p>
 
 ---
 
-## What Is Agent Lens?
+## The Problem
 
-Agent Lens is an **observability agent** — an AI that watches other AIs. It connects to MLflow via the Model Context Protocol (MCP) and provides a conversational interface for platform teams to understand how their AI agents are performing.
+Platform teams manage fleets of AI agents they did not build. They need to:
+
+1. **Score** whether agents perform well (not just see what they did)
+2. **Annotate** production traces when quality drops
+3. **Gate** deployments — agents should not ship if they regress
+4. **Close the loop** — today's failure becomes tomorrow's test case
+
+Agent Lens orchestrates this entire cycle through a conversational interface backed by MLflow's evaluation APIs.
+
+## How It Works
 
 ```
-You:     "How is the outreach agent doing today?"
-Agent:   "3 errors in the last hour (12% error rate, up from 2%).
-          Root cause: RAG retrieval timeouts after the 2pm deployment.
-          Recommendation: Check vector DB connection pool limits."
+Platform Team: "Evaluate the outreach agent"
+
+Agent Lens:   Runs mlflow.genai.evaluate() with ToolCallCorrectness + RelevanceToQuery
+              on 50 production traces...
+
+              Quality Certification Report:
+              | Dimension      | Score | Rating |
+              |----------------|-------|--------|
+              | Relevance      | 4.2/5 | PASS   |
+              | Tool Correct.  | 3.1/5 | FAIL   |
+
+              CERTIFICATION: NOT CERTIFIED
+              Finding: Tool calls failing on date parsing (8/50 traces)
+              Recommendation: Add to regression dataset and block deploy
 ```
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Trace Explorer** | Search and summarize agent traces — latency, tokens, errors |
-| **Eval Reports** | Pull quality scores (relevance, faithfulness, correctness) |
-| **Run Comparison** | Before/after analysis across agent versions |
-| **Failure Diagnosis** | Root-cause analysis using trace timelines |
-| **Fleet Dashboard** | Health overview across all tracked agents |
-| **Zero-Code Instrumentation** | Drop-in autologging for any OpenAI-compatible agent |
+| Feature | What It Does | MLflow API Used |
+|---------|-------------|-----------------|
+| **Evaluate** | Run scorers on agent traces | `mlflow.genai.evaluate()` |
+| **Annotate** | Log human feedback on traces | `mlflow.log_feedback()` |
+| **Set Expectations** | Define ground truth | `mlflow.log_expectation()` |
+| **Create Test Cases** | Failure → regression dataset | `dataset.merge_records()` |
+| **Quality Gate** | PASS/FAIL for CI/CD | Compare runs + thresholds |
+| **Review Queue** | Surface traces needing attention | Smart trace sampling |
+| **Scorer Profiles** | Pre-configured per agent type | Built-in + `make_judge()` |
 
 ## Architecture
-
-### Data Flow
 
 <p align="center">
   <img src="docs/images/data-flow.png" alt="Agent Lens Data Flow" width="800"/>
@@ -40,52 +58,36 @@ Agent:   "3 errors in the last hour (12% error rate, up from 2%).
 
 ### Components
 
-| Component | Purpose | Location |
-|-----------|---------|----------|
-| **MLflow MCP Server** | Exposes MLflow data as MCP tools | `mcp-server/` |
-| **Agent Lens** (Hermes) | Conversational observability agent | `analyst-agent/` |
-| **Instrumentation** | Auto-logging + evaluation scripts | `instrumentation/` |
+| Component | Purpose |
+|-----------|---------|
+| **MCP Server** | MLflow SDK-based tools (evaluate, annotate, gate) |
+| **Agent Lens** | Conversational evaluation agent (Hermes-based) |
+| **Instrumentation** | Zero-code tracing for target agents |
+| **mlflow/skills** | Vendored evaluation patterns and methodology |
 
 ### Hybrid MCP Pattern
-
-Agent Lens uses a **production-grade hybrid pattern** — native MCP tool calls for simple queries, code execution with the `mcp` SDK for complex multi-step analysis:
 
 <p align="center">
   <img src="docs/images/hybrid-pattern.png" alt="Hybrid MCP Pattern" width="700"/>
 </p>
 
-| Pattern | When | Example |
-|---------|------|---------|
-| **Native MCP** | Single tool call | "List experiments" → `mcp_mlflow_list_experiments` |
-| **Code Execution** | Aggregation, loops, stats | "Error rate this week" → fetch 200 traces, compute % |
-
 ## Quick Start
 
 ### Prerequisites
 
-- OpenShift cluster with [RHOAI](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-ai) and MLflow operator
-- `oc` CLI logged into the cluster
-- Gemini API key (or other supported LLM provider)
+- OpenShift cluster with RHOAI and MLflow operator
+- `oc` CLI logged in
+- Gemini API key (or other LLM provider)
 
-### Deploy in 3 Steps
+### Deploy
 
 ```bash
-# 1. Clone
 git clone https://github.com/rrbanda/agent-lens.git && cd agent-lens
-
-# 2. Configure
-cp .env.example .env
-# Edit .env with your values
-
-# 3. Deploy
+cp .env.example .env  # Edit with your values
 make deploy-all
 ```
 
-The dashboard URL is printed at the end. Login with `admin` / `openshift` (default).
-
-### Instrument Your Agent
-
-Add zero-code tracing to any Python agent:
+### Instrument an Agent
 
 ```bash
 cp instrumentation/usercustomize.py $(python -m site --user-site)/
@@ -93,92 +95,81 @@ export MLFLOW_TRACKING_URI="https://your-mlflow:8443"
 export MLFLOW_EXPERIMENT_NAME="my-agent"
 ```
 
-Every LLM call is now captured as an MLflow trace — visible through Agent Lens.
+### Run Your First Evaluation
+
+In the Agent Lens dashboard:
+```
+You:    "Evaluate the outreach agent using the tool-calling profile"
+Agent:  [Runs evaluation, returns Quality Certification Report]
+```
+
+## Scorer Profiles
+
+Pre-configured evaluation dimensions per agent type:
+
+| Profile | Scorers | Best For |
+|---------|---------|----------|
+| **RAG Agent** | RelevanceToQuery + RetrievalGroundedness | Agents that retrieve documents |
+| **Tool-Calling** | ToolCallCorrectness + ToolCallEfficiency + Relevance | Agents that call APIs/tools |
+| **Chat Agent** | RelevanceToQuery + Guidelines (helpful, harmless) | Conversational assistants |
+
+## The Feedback Loop
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#4A90D9', 'primaryTextColor': '#fff'}}}%%
+flowchart LR
+    P[Production Trace] --> S[Smart Sampling]
+    S --> R[Human Review]
+    R --> A[Annotate Feedback]
+    A --> D[Add to Dataset]
+    D --> E[Next Eval Catches It]
+    E --> G[Quality Gate Blocks Deploy]
+    G -->|"Fixed"| P
+```
 
 ## Project Structure
 
 ```
 agent-lens/
-├── mcp-server/              # MLflow MCP Server
-│   ├── entrypoint.py        # Server implementation (FastMCP + httpx)
-│   ├── Containerfile        # Container build
-│   ├── requirements.txt
+├── mcp-server/              # MLflow SDK-based evaluation tools
+│   └── entrypoint.py        # evaluate, annotate, gate, datasets
+├── analyst-agent/           # Agent Lens (Hermes + skills)
+│   ├── soul.md              # v2: evaluation platform identity
+│   ├── skills/
+│   │   ├── evaluate-agent/  # Quality Certification Reports
+│   │   ├── review-trace/    # Human annotation workflow
+│   │   ├── create-regression/ # Failure-to-dataset pipeline
+│   │   ├── trace-explorer/  # Trace search and analysis
+│   │   └── quality-dashboard/ # Fleet health overview
 │   └── deploy/              # Kubernetes manifests
-├── analyst-agent/           # Agent Lens (Hermes-based)
-│   ├── config.yaml          # Hermes configuration
-│   ├── soul.md              # Agent personality & instructions
-│   ├── skills/              # Analytical skills (5 built-in)
-│   └── deploy/              # Kubernetes manifests
-├── instrumentation/         # Target agent instrumentation
-│   ├── usercustomize.py     # Zero-code MLflow autologging
-│   └── eval_agent.py        # Evaluation runner
-├── docs/                    # Architecture & demo documentation
-├── Makefile                 # Deployment automation
+├── instrumentation/         # Target agent auto-tracing
+├── vendor/mlflow-skills/    # Upstream patterns (submodule)
+├── docs/                    # Architecture + demo script
+├── Makefile                 # make deploy-all, make eval
 └── .env.example             # Configuration template
 ```
 
-## MCP Tools Available
+## Built On
 
-| Tool | Description |
-|------|-------------|
-| `list_experiments` | List all MLflow experiments |
-| `get_experiment` | Get experiment details |
-| `search_runs` | Search runs with filters |
-| `get_run` | Full run details (metrics, params, tags) |
-| `get_metric_history` | Metric values over time |
-| `compare_runs` | Side-by-side run comparison |
-| `search_traces` | Search agent traces |
-| `set_trace_tag` | Tag traces for tracking |
-| `log_feedback` | Log evaluation scores |
-| `health_check` | Server connectivity check |
+- [MLflow GenAI Evaluation](https://mlflow.org/docs/latest/genai/eval-monitor/) — `evaluate()`, `log_feedback()`, datasets, scorers
+- [mlflow/skills](https://github.com/mlflow/skills) — Agent evaluation patterns and methodology
+- [Model Context Protocol](https://modelcontextprotocol.io/) — Tool integration standard
+- [Hermes Agent](https://github.com/hermes-ai/hermes-agent) — Multi-skill agent framework
 
-## Example Queries
+## Inspiration
 
-| Question | Skill Used | Output |
-|----------|-----------|--------|
-| "Show me the last 10 traces" | trace-explorer | Table with status, latency, tokens |
-| "What's the agent's quality score?" | eval-report | Relevance/faithfulness/correctness |
-| "Compare before and after the prompt change" | compare-agents | Delta table with winner |
-| "Why did trace X fail?" | diagnose-failure | Root cause + remediation |
-| "How are all our agents doing?" | quality-dashboard | Fleet health overview |
-
-## Configuration
-
-### LLM Providers
-
-Agent Lens defaults to Gemini but supports any LLM provider compatible with Hermes:
-
-```yaml
-# config.yaml
-model:
-  default: "gemini-2.5-flash"
-  provider: gemini       # or: openai, anthropic, custom
-```
-
-### MCP Server Connection
-
-```yaml
-mcp_servers:
-  mlflow:
-    url: "http://mlflow-mcp-server:8080/mcp"
-    timeout: 180
-```
+- [Harness AgentTrace](https://www.harness.io/blog/introducing-agent-trace) — "Observe, evaluate, govern" framework
+- [Databricks AgentOps](https://community.databricks.com/t5/technical-blog/agentops-on-databricks-operating-production-ai-agents/ba-p/163602) — Closed feedback loop
+- [Braintrust](https://www.braintrust.dev/articles/best-ai-agent-observability-tools-2026) — Evaluation integrated into observability
+- [MLflow 2026 Evaluation Guide](https://mlflow.org/articles/integrating-evaluation-into-ai-workflows-2026-guide/)
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Commit your changes
+4. Open a Pull Request
 
 ## License
 
-This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
-
-## Related Projects
-
-- [MLflow](https://mlflow.org/) — ML experiment tracking and model registry
-- [Model Context Protocol](https://modelcontextprotocol.io/) — Open standard for AI tool integration
-- [Hermes Agent](https://github.com/hermes-ai/hermes-agent) — Multi-skill AI agent framework
-- [RHOAI](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-ai) — Red Hat OpenShift AI platform
+Apache License 2.0 — see [LICENSE](LICENSE).
