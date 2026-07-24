@@ -663,6 +663,198 @@ def check_quality_gate(
 
 
 # =============================================================================
+# FLEET HEALTH SUMMARY (quality dashboard)
+# =============================================================================
+
+SUMMARY_TIMEOUT = 60
+MAX_SUMMARY_EXPERIMENTS = 20
+
+
+def _extract_quality_score(metrics: dict) -> float | None:
+    """Pick a representative quality score from run metrics (1-5 scale preferred)."""
+    for key in (
+        "RelevanceToQuery/mean",
+        "relevance_mean",
+        "ToolCallCorrectness/mean",
+        "correctness_mean",
+        "Guidelines/mean",
+    ):
+        val = metrics.get(key)
+        if val is not None and val == val:  # not NaN
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                continue
+    for key, val in metrics.items():
+        if key.endswith("/mean") or key.endswith("_mean"):
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
+def _classify_health(
+    trace_count: int,
+    error_rate: float | None,
+    quality_score: float | None,
+) -> str:
+    """Classify experiment health using quality-dashboard skill thresholds."""
+    if trace_count == 0:
+        return "INACTIVE"
+    er = error_rate if error_rate is not None else 0.0
+    qs = quality_score
+    if er > 15 or (qs is not None and qs < 3.0):
+        return "CRITICAL"
+    if er >= 5 or (qs is not None and qs < 4.0):
+        return "WARNING"
+    if qs is None and er < 5:
+        # Active with low errors but no eval yet — treat as WARNING so ops notice
+        return "WARNING"
+    return "HEALTHY"
+
+
+def _summarize_one_experiment(experiment_id: str, name: str, max_traces: int) -> dict:
+    """Aggregate traces + latest run metrics for a single experiment."""
+    traces_df = mlflow.search_traces(
+        experiment_ids=[experiment_id],
+        max_results=max_traces,
+    )
+    trace_count = 0 if traces_df is None or traces_df.empty else len(traces_df)
+    error_rate = None
+    avg_latency_ms = None
+
+    if trace_count > 0:
+        statuses = traces_df["status"].astype(str).str.upper()
+        error_count = int(statuses.str.contains("ERROR|FAIL", regex=True).sum())
+        error_rate = round(100.0 * error_count / trace_count, 2)
+        if "execution_time_ms" in traces_df.columns:
+            lat = traces_df["execution_time_ms"].dropna()
+            if len(lat) > 0:
+                avg_latency_ms = round(float(lat.mean()), 1)
+
+    runs_df = mlflow.search_runs(
+        experiment_ids=[experiment_id],
+        max_results=1,
+        order_by=["start_time DESC"],
+    )
+    quality_score = None
+    latest_run_id = None
+    latest_metrics = {}
+    if runs_df is not None and not runs_df.empty:
+        latest = runs_df.iloc[0]
+        latest_run_id = latest.get("run_id")
+        latest_metrics = {
+            k.replace("metrics.", ""): v
+            for k, v in latest.items()
+            if str(k).startswith("metrics.") and v == v
+        }
+        quality_score = _extract_quality_score(latest_metrics)
+
+    status = _classify_health(trace_count, error_rate, quality_score)
+    return {
+        "experiment_id": experiment_id,
+        "name": name,
+        "status": status,
+        "trace_count": trace_count,
+        "error_rate_pct": error_rate,
+        "avg_latency_ms": avg_latency_ms,
+        "quality_score": round(quality_score, 3) if quality_score is not None else None,
+        "latest_run_id": latest_run_id,
+        "latest_metrics": latest_metrics,
+    }
+
+
+@mcp.tool()
+@with_timeout(SUMMARY_TIMEOUT)
+@with_retry()
+def summarize_experiment_health(
+    experiment_ids: str = "",
+    max_traces: int = 100,
+) -> str:
+    """Summarize fleet health for quality dashboards (error rate, latency, quality).
+
+    Aggregates traces and latest evaluation runs server-side so clients do not need
+    direct MLflow SDK access. Use this for Observatory / quality-dashboard views.
+
+    Args:
+        experiment_ids: Comma-separated experiment IDs. Empty = all experiments (capped).
+        max_traces: Max traces to sample per experiment for error/latency stats.
+    """
+    try:
+        client = _get_client()
+        experiments = []
+
+        if experiment_ids.strip():
+            for eid in [x.strip() for x in experiment_ids.split(",") if x.strip()]:
+                try:
+                    exp = client.get_experiment(eid)
+                    experiments.append((exp.experiment_id, exp.name))
+                except Exception:
+                    experiments.append((eid, eid))
+        else:
+            found = client.search_experiments(max_results=MAX_SUMMARY_EXPERIMENTS)
+            experiments = [(e.experiment_id, e.name) for e in found]
+
+        agents = []
+        for eid, name in experiments:
+            try:
+                agents.append(_summarize_one_experiment(eid, name, max_traces))
+            except Exception as e:
+                agents.append({
+                    "experiment_id": eid,
+                    "name": name,
+                    "status": "CRITICAL",
+                    "trace_count": 0,
+                    "error_rate_pct": None,
+                    "avg_latency_ms": None,
+                    "quality_score": None,
+                    "latest_run_id": None,
+                    "latest_metrics": {},
+                    "error": str(e),
+                })
+
+        fleet = {"HEALTHY": 0, "WARNING": 0, "CRITICAL": 0, "INACTIVE": 0}
+        for a in agents:
+            fleet[a["status"]] = fleet.get(a["status"], 0) + 1
+
+        alerts = []
+        for a in agents:
+            if a["status"] in ("CRITICAL", "WARNING", "INACTIVE"):
+                if a["status"] == "INACTIVE":
+                    issue = "No traces recorded"
+                elif a.get("error"):
+                    issue = a["error"]
+                elif a["status"] == "CRITICAL":
+                    issue = (
+                        f"Error rate {a['error_rate_pct']}% or quality "
+                        f"{a['quality_score']} below critical thresholds"
+                    )
+                else:
+                    issue = (
+                        f"Error rate {a['error_rate_pct']}% or quality "
+                        f"{a['quality_score']} needs attention"
+                    )
+                alerts.append({
+                    "severity": a["status"],
+                    "agent": a["name"],
+                    "experiment_id": a["experiment_id"],
+                    "issue": issue,
+                })
+
+        return json.dumps({
+            "generated_at": datetime.utcnow().isoformat(),
+            "fleet_summary": fleet,
+            "agents": agents,
+            "alerts": alerts,
+            "experiments_scanned": len(agents),
+        }, indent=2, default=str)
+
+    except Exception as e:
+        return json.dumps({"error": str(e), "fleet_summary": {}, "agents": [], "alerts": []})
+
+
+# =============================================================================
 # SMART SAMPLING (review queue)
 # =============================================================================
 

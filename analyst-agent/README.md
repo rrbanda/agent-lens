@@ -16,8 +16,8 @@ Ask natural-language questions like:
 - "Give me a quality dashboard across all agents"
 
 Agent Lens uses a **hybrid architecture**:
-- **Native MCP tools** for evaluation actions (run scorers, annotate, gate)
-- **Code execution** for complex multi-step analysis (error rate computation, trend analysis)
+- **Native MCP tools** for evaluation actions (run scorers, annotate, gate, fleet health)
+- **Code execution** only on data already returned via MCP — never `import mlflow` in the sandbox
 
 ## Skills
 
@@ -27,7 +27,7 @@ Agent Lens uses a **hybrid architecture**:
 | `review-trace` | "Review", "Annotate", "Feedback" | `get_review_queue`, `annotate_trace`, `set_expectation` |
 | `create-regression` | "Add to dataset", "Regression test" | `create_test_case`, `list_datasets` |
 | `trace-explorer` | "Show traces", "Recent activity", "Errors" | `search_traces`, `get_trace` |
-| `quality-dashboard` | "Overview", "Fleet health", "Dashboard" | `list_experiments`, `search_traces`, `search_runs` |
+| `quality-dashboard` | "Overview", "Fleet health", "Dashboard" | `summarize_experiment_health` |
 
 ## Prerequisites
 

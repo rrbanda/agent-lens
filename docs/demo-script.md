@@ -96,9 +96,15 @@ automatically catch this case.
 Give me a quality dashboard across all agents
 ```
 
-**Expected**: Agent uses quality-dashboard skill. Aggregates data across
-multiple experiments and returns a fleet-wide health summary with HEALTHY/WARNING/CRITICAL
-status indicators and alerts.
+**Expected**: Agent uses quality-dashboard skill and calls
+`mcp_agent-lens_summarize_experiment_health` (not code execution with `import mlflow`).
+Returns a fleet-wide health summary with HEALTHY/WARNING/CRITICAL/INACTIVE
+status indicators and alerts within a few seconds.
+
+**Verify (no cluster DB errors)**:
+1. Tool call is `summarize_experiment_health` (or list/search fallback) — **not** Execute Code + `import mlflow`
+2. With zero traces: INACTIVE row, no "MLflow database" / config error
+3. With seeded OK traces + eval metrics: HEALTHY or WARNING as appropriate
 
 ## Key Points to Highlight
 

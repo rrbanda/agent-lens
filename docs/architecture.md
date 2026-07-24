@@ -70,7 +70,7 @@ graph LR
 
 | Category | Tools |
 |----------|-------|
-| Observe | `list_experiments`, `search_traces`, `get_trace`, `search_runs` |
+| Observe | `list_experiments`, `search_traces`, `get_trace`, `search_runs`, `summarize_experiment_health` |
 | Evaluate | `run_evaluation`, `list_scorers` |
 | Annotate | `annotate_trace`, `set_expectation` |
 | Datasets | `list_datasets`, `create_test_case` |
@@ -99,7 +99,7 @@ an evaluation and governance specialist.
 | `review-trace` | "Review", "Annotate" | `get_review_queue`, `annotate_trace` |
 | `create-regression` | "Add to dataset" | `create_test_case` |
 | `trace-explorer` | "Show traces", "Errors" | `search_traces`, `get_trace` |
-| `quality-dashboard` | "Overview", "Health" | `list_experiments`, `search_traces`, `search_runs` |
+| `quality-dashboard` | "Overview", "Health" | `summarize_experiment_health` (fallback: list/search traces/runs) |
 
 ## Data Flow
 
@@ -143,9 +143,9 @@ flowchart TD
 |----------|------|--------|
 | "List experiments" | Native MCP | Single tool call, small response |
 | "Evaluate the agent" | Native MCP | Single tool call (long-running internally) |
-| "Error rate this week" | Code Execution | 200+ traces, aggregation logic |
-| "Compare 5 runs" | Code Execution | Loop, delta computation |
-| "Quality trend over time" | Code Execution | Time bucketing, metric merging |
+| "Error rate this week" | Native MCP (`summarize_experiment_health` or search + format) | Aggregation belongs on MCP server |
+| "Compare 5 runs" | Code Execution **on MCP results only** | Loop/delta after fetching via MCP — never `import mlflow` in sandbox |
+| "Quality trend over time" | Native MCP first; code exec only on returned JSON | Do not open a tracking URI from Hermes |
 
 ## Deployment Topology
 
