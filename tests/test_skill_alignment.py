@@ -112,6 +112,7 @@ class TestSkillToolAlignment:
             "check_quality_gate",
             "create_test_case",
             "get_review_queue",
+            "summarize_experiment_health",
             "health_check",
         ]
         missing = [t for t in required_tools if t not in registered_tools]

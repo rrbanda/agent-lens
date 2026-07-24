@@ -171,3 +171,78 @@ class TestListScorers:
         assert "Guidelines" in scorer_names
         assert "ToolCallCorrectness" in scorer_names
         assert "ToolCallEfficiency" in scorer_names
+
+
+class TestSummarizeExperimentHealth:
+    @patch("entrypoint.mlflow")
+    def test_inactive_when_no_traces(self, mock_mlflow_mod, mock_mlflow_client):
+        import pandas as pd
+        from entrypoint import summarize_experiment_health
+
+        mock_exp = MagicMock()
+        mock_exp.experiment_id = "28"
+        mock_exp.name = "agent-lens-test"
+        mock_mlflow_client.get_experiment.return_value = mock_exp
+        mock_mlflow_mod.search_traces.return_value = pd.DataFrame()
+        mock_mlflow_mod.search_runs.return_value = pd.DataFrame()
+
+        result = json.loads(summarize_experiment_health(experiment_ids="28"))
+        assert result["fleet_summary"]["INACTIVE"] == 1
+        assert result["agents"][0]["status"] == "INACTIVE"
+        assert result["agents"][0]["trace_count"] == 0
+
+    @patch("entrypoint.mlflow")
+    def test_critical_on_high_error_rate(self, mock_mlflow_mod, mock_mlflow_client):
+        import pandas as pd
+        from entrypoint import summarize_experiment_health
+
+        mock_exp = MagicMock()
+        mock_exp.experiment_id = "1"
+        mock_exp.name = "noisy-agent"
+        mock_mlflow_client.get_experiment.return_value = mock_exp
+        mock_mlflow_mod.search_traces.return_value = pd.DataFrame([
+            {"trace_id": "t1", "status": "ERROR", "execution_time_ms": 100},
+            {"trace_id": "t2", "status": "ERROR", "execution_time_ms": 120},
+            {"trace_id": "t3", "status": "OK", "execution_time_ms": 90},
+            {"trace_id": "t4", "status": "ERROR", "execution_time_ms": 110},
+            {"trace_id": "t5", "status": "ERROR", "execution_time_ms": 130},
+        ])
+        mock_mlflow_mod.search_runs.return_value = pd.DataFrame()
+
+        result = json.loads(summarize_experiment_health(experiment_ids="1"))
+        assert result["agents"][0]["status"] == "CRITICAL"
+        assert result["agents"][0]["error_rate_pct"] == 80.0
+
+    @patch("entrypoint.mlflow")
+    def test_healthy_with_quality_metrics(self, mock_mlflow_mod, mock_mlflow_client):
+        import pandas as pd
+        from entrypoint import summarize_experiment_health
+
+        mock_exp = MagicMock()
+        mock_exp.experiment_id = "1"
+        mock_exp.name = "good-agent"
+        mock_mlflow_client.get_experiment.return_value = mock_exp
+        mock_mlflow_mod.search_traces.return_value = pd.DataFrame([
+            {"trace_id": "t1", "status": "OK", "execution_time_ms": 200},
+            {"trace_id": "t2", "status": "OK", "execution_time_ms": 220},
+        ])
+        mock_mlflow_mod.search_runs.return_value = pd.DataFrame([{
+            "run_id": "run-1",
+            "metrics.RelevanceToQuery/mean": 4.5,
+            "start_time": "2026-01-01",
+            "status": "FINISHED",
+        }])
+
+        result = json.loads(summarize_experiment_health(experiment_ids="1"))
+        assert result["agents"][0]["status"] == "HEALTHY"
+        assert result["agents"][0]["quality_score"] == 4.5
+        assert result["fleet_summary"]["HEALTHY"] == 1
+
+    def test_classify_helpers(self):
+        from entrypoint import _classify_health, _extract_quality_score
+
+        assert _classify_health(0, None, None) == "INACTIVE"
+        assert _classify_health(10, 20.0, 4.5) == "CRITICAL"
+        assert _classify_health(10, 8.0, 4.5) == "WARNING"
+        assert _classify_health(10, 1.0, 4.5) == "HEALTHY"
+        assert _extract_quality_score({"RelevanceToQuery/mean": 4.2}) == 4.2

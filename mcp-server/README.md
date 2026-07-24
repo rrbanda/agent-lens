@@ -15,6 +15,7 @@ Built on the MLflow Python SDK (not raw REST), enabling `mlflow.genai.evaluate()
 | `search_traces` | Search traces with filters |
 | `get_trace` | Full trace details with spans and assessments |
 | `search_runs` | Search evaluation/training runs |
+| `summarize_experiment_health` | Fleet health summary (error rate, latency, quality status) for dashboards |
 
 ### Evaluation (the core)
 | Tool | Description |

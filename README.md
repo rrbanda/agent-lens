@@ -122,7 +122,7 @@ graph TB
             Agent[Agent Lens<br/>Hermes + 5 Skills]
         end
         subgraph ns2[redhat-ods-applications]
-            MCP[MCP Server<br/>13 tools]
+            MCP[MCP Server<br/>14 tools]
             MLflow[MLflow Tracking<br/>RHOAI Operator]
         end
         subgraph ns3[your namespaces]
@@ -143,7 +143,7 @@ See [docs/architecture.md](docs/architecture.md) for the full design, security m
 ```
 agent-lens/
 ├── mcp-server/           # MLflow evaluation tools exposed via MCP
-│   ├── entrypoint.py     # 13 tools: evaluate, annotate, gate, datasets
+│   ├── entrypoint.py     # 14 tools: evaluate, annotate, gate, datasets, health summary
 │   ├── Containerfile     # Production image build
 │   └── deploy/           # K8s manifests, NetworkPolicy, RBAC
 ├── analyst-agent/        # Conversational evaluation agent
