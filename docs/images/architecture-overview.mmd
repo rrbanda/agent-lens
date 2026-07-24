@@ -1,0 +1,35 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#4A90D9', 'primaryTextColor': '#fff', 'primaryBorderColor': '#2E6DAC', 'secondaryColor': '#F5A623', 'tertiaryColor': '#7ED321', 'lineColor': '#5C6BC0', 'fontSize': '14px'}}}%%
+graph TB
+    subgraph Platform["☁️ OpenShift / RHOAI Platform"]
+        direction TB
+
+        subgraph Agents["🤖 AI Agents (Instrumented)"]
+            A1[Outreach Agent]
+            A2[Support Agent]
+            A3[Code Agent]
+        end
+
+        subgraph Observability["🔍 Agent Lens Stack"]
+            direction LR
+            MLF[(🗄️ MLflow<br/>Tracking Server)]
+            MCP[⚡ MCP Server<br/>FastMCP + httpx]
+            LENS[🔍 Agent Lens<br/>Hermes + Skills]
+        end
+    end
+
+    A1 -->|"traces & metrics"| MLF
+    A2 -->|"traces & metrics"| MLF
+    A3 -->|"traces & metrics"| MLF
+    MLF -->|"REST API"| MCP
+    MCP -->|"MCP tools"| LENS
+
+    U[👩‍💻 Platform Engineer] -->|"natural language"| LENS
+    LENS -->|"insights & reports"| U
+
+    style A1 fill:#7ED321,stroke:#4A8C1C,color:#fff
+    style A2 fill:#7ED321,stroke:#4A8C1C,color:#fff
+    style A3 fill:#7ED321,stroke:#4A8C1C,color:#fff
+    style MLF fill:#F5A623,stroke:#C17D0E,color:#fff
+    style MCP fill:#4A90D9,stroke:#2E6DAC,color:#fff
+    style LENS fill:#9013FE,stroke:#6B0FBB,color:#fff
+    style U fill:#50E3C2,stroke:#2BA88E,color:#333

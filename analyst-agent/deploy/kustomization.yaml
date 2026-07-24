@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: agent-lens
+
+resources:
+  - namespace.yaml
+  - pvc.yaml
+  - rbac.yaml
+  - deployment.yaml
+  - service.yaml
+  - route.yaml
+
+configMapGenerator:
+  - name: skill-trace-explorer
+    files:
+      - SKILL.md=../skills/trace-explorer/SKILL.md
+  - name: skill-eval-report
+    files:
+      - SKILL.md=../skills/eval-report/SKILL.md
+  - name: skill-compare-agents
+    files:
+      - SKILL.md=../skills/compare-agents/SKILL.md
+  - name: skill-diagnose-failure
+    files:
+      - SKILL.md=../skills/diagnose-failure/SKILL.md
+  - name: skill-quality-dashboard
+    files:
+      - SKILL.md=../skills/quality-dashboard/SKILL.md
+  - name: agent-lens-soul
+    files:
+      - SOUL.md=../soul.md
+  - name: agent-lens-config
+    files:
+      - config.yaml=../config.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true

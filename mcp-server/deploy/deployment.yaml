@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-mcp-server
+  labels:
+    app: mlflow-mcp-server
+    app.kubernetes.io/name: mlflow-mcp-server
+    app.kubernetes.io/part-of: agent-lens
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow-mcp-server
+  template:
+    metadata:
+      labels:
+        app: mlflow-mcp-server
+        app.kubernetes.io/name: mlflow-mcp-server
+    spec:
+      serviceAccountName: mlflow-mcp-sa
+      initContainers:
+        - name: install-deps
+          image: python:3.11-slim
+          command: ["sh", "-c", "pip install --no-cache-dir --target=/deps fastmcp>=2.3.0 httpx"]
+          volumeMounts:
+            - name: deps
+              mountPath: /deps
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+      containers:
+        - name: mlflow-mcp
+          image: python:3.11-slim
+          command: ["python", "/app/entrypoint.py"]
+          env:
+            - name: PYTHONPATH
+              value: "/deps"
+            - name: MLFLOW_TRACKING_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: mlflow-mcp-config
+                  key: tracking-uri
+            - name: MCP_HOST
+              value: "0.0.0.0"
+            - name: MCP_PORT
+              value: "8080"
+            - name: MLFLOW_TRACKING_INSECURE_TLS
+              value: "true"
+            - name: MLFLOW_TRACKING_TOKEN_FILE
+              value: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+            - name: MLFLOW_WORKSPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: mlflow-mcp-config
+                  key: default-workspace
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: deps
+              mountPath: /deps
+            - name: app-code
+              mountPath: /app
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+      volumes:
+        - name: deps
+          emptyDir:
+            sizeLimit: 200Mi
+        - name: app-code
+          configMap:
+            name: mlflow-mcp-server-code

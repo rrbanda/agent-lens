@@ -1,0 +1,16 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: agent-lens
+  labels:
+    app: agent-lens
+    app.kubernetes.io/part-of: agent-lens
+spec:
+  to:
+    kind: Service
+    name: agent-lens
+  port:
+    targetPort: dashboard
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

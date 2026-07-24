@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - rbac.yaml
+  - deployment.yaml
+  - service.yaml
+
+configMapGenerator:
+  - name: mlflow-mcp-server-code
+    files:
+      - entrypoint.py=../entrypoint.py
+  - name: mlflow-mcp-config
+    literals:
+      - tracking-uri=https://mlflow-server:8443
+      - default-workspace=default
+
+generatorOptions:
+  disableNameSuffixHash: true

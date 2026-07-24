@@ -1,0 +1,175 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-lens
+  labels:
+    app: agent-lens
+    app.kubernetes.io/name: agent-lens
+    app.kubernetes.io/part-of: agent-lens
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-lens
+  template:
+    metadata:
+      labels:
+        app: agent-lens
+    spec:
+      serviceAccountName: agent-lens
+      containers:
+        - name: hermes
+          image: python:3.11-slim
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              SKILLS="trace-explorer eval-report compare-agents diagnose-failure quality-dashboard"
+
+              mkdir -p /persistent/memory /persistent/sessions /persistent/profiles /persistent/auto-skills /persistent/db
+              mkdir -p /tmp/work/.local /tmp/work/data /tmp/work/output /tmp/work/.hermes
+
+              ln -sf /persistent/memory /tmp/work/.hermes/memory
+              ln -sf /persistent/sessions /tmp/work/.hermes/sessions
+              ln -sf /persistent/profiles /tmp/work/.hermes/profiles
+              ln -sf /persistent/auto-skills /tmp/work/.hermes/auto-skills
+              ln -sf /persistent/db /tmp/work/.hermes/db
+
+              for f in USER.md MEMORY.md; do
+                [ -f /persistent/$f ] && cp /persistent/$f /tmp/work/.hermes/$f
+              done
+
+              for s in $SKILLS; do
+                mkdir -p /tmp/work/.hermes/skills/$s
+              done
+
+              cp /mnt/skills-te/SKILL.md /tmp/work/.hermes/skills/trace-explorer/SKILL.md
+              cp /mnt/skills-er/SKILL.md /tmp/work/.hermes/skills/eval-report/SKILL.md
+              cp /mnt/skills-ca/SKILL.md /tmp/work/.hermes/skills/compare-agents/SKILL.md
+              cp /mnt/skills-df/SKILL.md /tmp/work/.hermes/skills/diagnose-failure/SKILL.md
+              cp /mnt/skills-qd/SKILL.md /tmp/work/.hermes/skills/quality-dashboard/SKILL.md
+
+              cp /mnt/soul/SOUL.md /tmp/work/.hermes/SOUL.md
+              cp /mnt/config/config.yaml /tmp/work/.hermes/config.yaml
+
+              echo "=== Installing Python dependencies ==="
+              pip install --user hermes-agent aiohttp mcp 2>&1 | tail -5
+
+              echo "=== Installing Node.js 22 (for MCP stdio transport support) ==="
+              python3 -c "
+              import urllib.request, tarfile, os, lzma
+              url = 'https://nodejs.org/dist/v22.16.0/node-v22.16.0-linux-x64.tar.xz'
+              path = '/tmp/node.tar.xz'
+              urllib.request.urlretrieve(url, path)
+              with lzma.open(path) as xz:
+                  with tarfile.open(fileobj=xz) as tar:
+                      tar.extractall('/tmp')
+              os.makedirs('/tmp/work/.local/bin', exist_ok=True)
+              for f in ['node', 'npm', 'npx']:
+                  src = f'/tmp/node-v22.16.0-linux-x64/bin/{f}'
+                  dst = f'/tmp/work/.local/bin/{f}'
+                  if os.path.exists(src) and not os.path.exists(dst):
+                      os.symlink(src, dst)
+              print('Node.js 22 installed')
+              "
+
+              HASH=$(python3 -c "
+              import hashlib, secrets, base64
+              salt = secrets.token_bytes(16)
+              key = hashlib.scrypt(b'${DASHBOARD_PASSWORD:-openshift}', salt=salt, n=16384, r=8, p=1, dklen=32)
+              s = base64.b64encode(salt).decode()
+              k = base64.b64encode(key).decode()
+              print(f'scrypt\$16384\$8\$1\${s}\${k}')
+              ")
+
+              python3 -c "
+              import yaml
+              with open('/tmp/work/.hermes/config.yaml') as f:
+                  cfg = yaml.safe_load(f)
+              cfg['dashboard']['basic_auth']['password_hash'] = '${HASH}'
+              with open('/tmp/work/.hermes/config.yaml', 'w') as f:
+                  yaml.dump(cfg, f, default_flow_style=False)
+              print('Config updated with password hash')
+              "
+
+              trap 'cp /tmp/work/.hermes/USER.md /tmp/work/.hermes/MEMORY.md /persistent/ 2>/dev/null; echo "State saved"' SIGTERM SIGINT
+
+              echo "=== Starting Hermes gateway (background) ==="
+              GATEWAY_ALLOW_ALL_USERS=true hermes gateway run > /tmp/hermes-gateway.log 2>&1 &
+              GATEWAY_PID=$!
+              sleep 5
+
+              echo "=== Starting Hermes dashboard ==="
+              hermes dashboard --host 0.0.0.0 --port 18789 --no-open --skip-build
+          env:
+            - name: HOME
+              value: /tmp/work
+            - name: HERMES_HOME
+              value: /tmp/work/.hermes
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-lens-llm-key
+                  key: api-key
+            - name: PATH
+              value: "/tmp/work/.local/bin:/usr/local/bin:/usr/bin:/bin"
+            - name: PYTHONUSERBASE
+              value: "/tmp/work/.local"
+            - name: API_SERVER_KEY
+              value: "change-me-in-production"
+            - name: MLFLOW_MCP_URL
+              value: "http://mlflow-mcp-server.${MCP_NAMESPACE:-agent-lens}.svc.cluster.local:8080/mcp"
+          ports:
+            - containerPort: 18789
+              name: dashboard
+              protocol: TCP
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+              ephemeral-storage: "3Gi"
+          volumeMounts:
+            - name: skills-te
+              mountPath: /mnt/skills-te
+            - name: skills-er
+              mountPath: /mnt/skills-er
+            - name: skills-ca
+              mountPath: /mnt/skills-ca
+            - name: skills-df
+              mountPath: /mnt/skills-df
+            - name: skills-qd
+              mountPath: /mnt/skills-qd
+            - name: soul
+              mountPath: /mnt/soul
+            - name: config
+              mountPath: /mnt/config
+            - name: hermes-data
+              mountPath: /persistent
+      volumes:
+        - name: skills-te
+          configMap:
+            name: skill-trace-explorer
+        - name: skills-er
+          configMap:
+            name: skill-eval-report
+        - name: skills-ca
+          configMap:
+            name: skill-compare-agents
+        - name: skills-df
+          configMap:
+            name: skill-diagnose-failure
+        - name: skills-qd
+          configMap:
+            name: skill-quality-dashboard
+        - name: soul
+          configMap:
+            name: agent-lens-soul
+        - name: config
+          configMap:
+            name: agent-lens-config
+        - name: hermes-data
+          persistentVolumeClaim:
+            claimName: agent-lens-data

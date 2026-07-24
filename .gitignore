@@ -1,0 +1,31 @@
+# Environment
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Real secrets (never commit)
+# Note: deploy/secret.yaml contains PLACEHOLDER values only — safe to commit
+.env.secrets
+
+# Build artifacts
+*.tar
+*.tar.gz
