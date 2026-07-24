@@ -6,8 +6,7 @@
 
 ## Test plan
 - [ ] `pytest` passes (including `tests/test_skill_alignment.py`)
-- [ ] New/changed MCP tools have unit coverage in `tests/test_mcp_tools.py`
-- [ ] Skills only reference `mcp_agent-lens_*` tools that exist in `entrypoint.py`
+- [ ] Skills only reference official `mcp_mlflow_*` tools allowlisted in `agent-lens/config.yaml`
 - [ ] Docs updated if user-facing behavior changed
 
 ## Checklist

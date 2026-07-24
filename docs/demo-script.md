@@ -1,133 +1,127 @@
 # Demo Script
 
-A step-by-step demonstration of Agent Lens v2 capabilities.
+Step-by-step demonstration of Agent Lens with **upstream official MLflow MCP**.
 
-## Prerequisites
+## Preflight (do not skip)
 
-- Agent Lens deployed and accessible via Route
-- At least one agent instrumented with MLflow autologging and generating traces
-- Dashboard password set via `agent-lens-auth` secret
+Complete **before** opening the dashboard:
 
-## Demo Flow
+- [ ] `make status` shows official MCP pod(s) and Agent Lens Ready
+- [ ] Secrets exist: `agent-lens-llm-key` and `agent-lens-auth` (see `make secret`)
+- [ ] Target agent has traces — [first-trace.md](first-trace.md) (≥5 recommended)
+- [ ] You understand [limitations.md](limitations.md) (certify ≠ CI gate; tags ≠ dataset API)
+
+```bash
+make status
+MCP_URL=http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp \
+  ./scripts/check_mcp_contract.sh || true
+```
+
+## Demo flow
 
 ### Act 1: Orientation (2 min)
 
-**Goal**: Show what Agent Lens is and how it connects to the ecosystem.
+1. Open the Agent Lens dashboard Route
+2. Login with credentials from `agent-lens-auth` (`dashboard-password`)
+3. Start a new chat
 
-1. Open the Agent Lens dashboard in a browser
-2. Login with the credentials from the `agent-lens-auth` secret
-3. Start a new chat session
-
-**Say**: "Agent Lens is a conversational evaluation platform. Instead of clicking
-through dashboards, you ask questions in plain English — and it runs MLflow's
-evaluation APIs behind the scenes."
+**Say:** "Agent Lens is a conversational certification layer on official MLflow MCP —
+not a custom scoring sidecar."
 
 ### Act 2: Discovery (3 min)
 
-**Prompt**:
+**Prompt:**
 ```
 What experiments are being tracked?
 ```
 
-**Expected**: Agent calls `mcp_agent-lens_list_experiments` and returns a formatted
-table of all experiments with IDs, names, and status.
+**Expected:** `mcp_mlflow_search_experiments` → formatted table.
 
-**Prompt**:
+**Prompt:**
 ```
 Show me the last 20 traces for <experiment-name>
 ```
 
-**Expected**: Agent uses the trace-explorer skill. Returns a table with timestamp,
-status, latency, and token usage for each trace.
+**Expected:** trace-explorer → `mcp_mlflow_search_traces` table (status, latency, tokens).
 
-### Act 3: Evaluation (4 min)
+### Act 3: Evaluation / certify (4 min)
 
-**Prompt**:
+**Prompt:**
 ```
 Evaluate the outreach agent using the tool-calling profile
 ```
 
-**Expected**: Agent uses the evaluate-agent skill. Calls `mcp_agent-lens_run_evaluation`
-with ToolCallCorrectness + ToolCallEfficiency + RelevanceToQuery scorers. Returns a
-Quality Certification Report with per-dimension scores and a PASS/FAIL verdict.
+**Expected:** `mcp_mlflow_list_scorers` (optional) + `mcp_mlflow_evaluate_traces` →
+Quality Certification Report with PASS/FAIL dimensions.
 
-**Prompt**:
+**Prompt:**
 ```
 Can this agent be deployed?
 ```
 
-**Expected**: Agent calls `mcp_agent-lens_check_quality_gate` with the experiment ID.
-Returns PASS/FAIL with specific metrics that drove the decision.
+**Expected:** Skill-side **certification verdict** from scores vs thresholds.
+Clarify for the audience: this does **not** block a pipeline yet
+([issue #18](https://github.com/rrbanda/agent-lens/issues/18)).
 
-### Act 4: Human Review (3 min)
+### Act 4: Human review (3 min)
 
-**Prompt**:
+**Prompt:**
 ```
 Show me traces that need review
 ```
 
-**Expected**: Agent calls `mcp_agent-lens_get_review_queue`. Returns traces ordered by
-priority — those without assessments or with low automated scores.
+**Expected:** `mcp_mlflow_search_traces` with error/recent heuristics — not a dedicated queue API.
 
-**Prompt**:
+**Prompt:**
 ```
-That first trace looks problematic — annotate it as "incorrect tool selection"
-with a score of 2
+That first trace looks problematic — annotate it as incorrect tool selection with a score of 2
 ```
 
-**Expected**: Agent calls `mcp_agent-lens_annotate_trace` to persist the feedback.
-Confirms the annotation was logged in MLflow.
+**Expected:** `mcp_mlflow_log_trace_feedback`.
 
-### Act 5: Closing the Loop (3 min)
+### Act 5: Regression follow-up (3 min)
 
-**Prompt**:
+**Prompt:**
 ```
-Add that failing trace to the regression dataset
+Log a regression follow-up for that failing trace
 ```
 
-**Expected**: Agent uses create-regression skill. Calls `mcp_agent-lens_create_test_case`
-to convert the trace into an evaluation dataset entry. Next evaluation run will
-automatically catch this case.
+**Expected:** `mcp_mlflow_log_trace_expectation` + `mcp_mlflow_set_trace_tag`
+(`regression=true`). Say aloud: this is **not** creating an MLflow Evaluation Dataset.
 
-### Act 6: Fleet Overview (2 min)
+### Act 6: Fleet overview (2 min)
 
-**Prompt**:
+**Prompt:**
 ```
 Give me a quality dashboard across all agents
 ```
 
-**Expected**: Agent uses quality-dashboard skill and calls
-`mcp_agent-lens_summarize_experiment_health` (not code execution with `import mlflow`).
-Returns a fleet-wide health summary with HEALTHY/WARNING/CRITICAL/INACTIVE
-status indicators and alerts within a few seconds.
+**Expected:** `search_experiments` + capped per-experiment `search_traces` / `list_runs`
+(**not** `import mlflow` in the sandbox). HEALTHY/WARNING/CRITICAL/INACTIVE summary.
 
-**Verify (no cluster DB errors)**:
-1. Tool call is `summarize_experiment_health` (or list/search fallback) — **not** Execute Code + `import mlflow`
-2. With zero traces: INACTIVE row, no "MLflow database" / config error
-3. With seeded OK traces + eval metrics: HEALTHY or WARNING as appropriate
+**Verify:**
+1. Tool calls are `mcp_mlflow_*` only
+2. Zero traces → INACTIVE, no DB connection errors
+3. With seeded traces → non-INACTIVE rows
 
-## Key Points to Highlight
+## Key points
 
-1. **Evaluation, not just observability** — Agent Lens scores agent quality, not just logs
-2. **AgentOps loop** — observe → evaluate → annotate → gate → improve, all conversational
-3. **MLflow-native** — uses `mlflow.genai.evaluate()` directly, not custom scoring
-4. **Skill-based** — each analytical pattern is a documented, extensible skill
-5. **Production-grade** — TLS, secrets, NetworkPolicies, security contexts, health probes
+1. Evaluation on production traces via official MCP
+2. Honest AgentOps: certify in chat today; CI gate on the roadmap
+3. Skills encode methodology; MCP owns MLflow access
+4. Empty fleet is an instrumentation problem, not an Agent Lens outage
 
-## Troubleshooting During Demo
+## Troubleshooting
 
-| Issue | Quick Fix |
+| Issue | Quick fix |
 |-------|-----------|
-| "No experiments found" | Check MLflow tracking URI in MCP server ConfigMap |
-| "Connection refused" | Verify MCP server pod is running: `oc get pods -l app=mlflow-mcp-server` |
-| Agent responds slowly | Gemini rate limits — wait 30s and retry |
-| "No traces found" | Ensure target agent has made LLM calls recently |
-| Dashboard won't load | Check route: `oc get route agent-lens` |
-| "Operation timed out" | MCP server has 30s default timeout; evaluations get 120s |
+| No experiments | [operator-mcp.md](operator-mcp.md) + MLflow workspace |
+| Connection refused | `oc get pods -l app=mlflow-mcp -n redhat-ods-applications` |
+| All INACTIVE | [first-trace.md](first-trace.md) |
+| Sandbox `import mlflow` | Sync soul/skills ConfigMaps from this repo |
+| Slow responses | Cap fleet scan; Gemini rate limits — retry |
 
-## Advanced Demo (Optional)
-
-### Run Evaluation from CLI
+## Optional API call
 
 ```bash
 curl -X POST "https://<agent-lens-route>/api/v1/chat" \
@@ -136,11 +130,4 @@ curl -X POST "https://<agent-lens-route>/api/v1/chat" \
   -d '{"message": "Evaluate experiment 1 with RAG profile"}'
 ```
 
-### Custom Scorer via Guidelines
-
-```
-You: "Evaluate the agent with custom guidelines: responses must never suggest
-     contacting a competitor, must always include a CTA, and should be under 200 words"
-```
-
-Agent Lens will use the `Guidelines` scorer with your custom rules.
+Use the API key from secret `agent-lens-auth` / `api-server-key`.

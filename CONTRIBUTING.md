@@ -12,7 +12,9 @@ This project follows the [Contributor Covenant Code of Conduct](https://www.cont
 
 - Python 3.11+
 - Access to an OpenShift cluster with RHOAI (for integration testing)
+- Upstream official MLflow MCP available in the cluster (`mlflow-mcp`) — see `docs/operator-mcp.md`
 - `oc` CLI (for deployment testing)
+- Read `docs/limitations.md` before proposing gate/dataset/queue features
 
 ### How we track work
 
@@ -48,9 +50,8 @@ cd agent-lens
 python -m venv .venv
 source .venv/bin/activate
 
-# Install dependencies
-pip install -r mcp-server/requirements.txt
-pip install pytest
+# Install test dependencies
+pip install pytest pyyaml
 
 # Run tests
 pytest
@@ -62,11 +63,8 @@ pytest
 # All tests
 pytest
 
-# Skill alignment only (fast, no dependencies)
+# Skill alignment only (official MCP allowlist)
 pytest tests/test_skill_alignment.py -v
-
-# MCP tool unit tests
-pytest tests/test_mcp_tools.py -v
 ```
 
 ## How to Contribute
@@ -109,33 +107,29 @@ Open a [GitHub Issue](https://github.com/rrbanda/agent-lens/issues/new) with:
 
 ## Contribution Areas
 
-### Adding a New Scorer
-
-1. Add the scorer import and instantiation to `mcp-server/entrypoint.py` in the `scorer_map`
-2. Update `list_scorers()` to document it
-3. Add a test case in `tests/test_mcp_tools.py`
-4. Update scorer profile documentation in the README
-
 ### Adding a New Skill
 
-1. Create `analyst-agent/skills/<skill-name>/SKILL.md`
-2. Reference only tools that exist in `entrypoint.py` (use `mcp_agent-lens_<tool>` format)
-3. Add the skill to `analyst-agent/deploy/kustomization.yaml` configMapGenerator
-4. Add the skill name to the `SKILLS` env var in `analyst-agent/deploy/deployment.yaml`
+1. Create `agent-lens/skills/<skill-name>/SKILL.md`
+2. Reference only official tools allowlisted in `agent-lens/config.yaml` as `mcp_mlflow_<tool>`
+3. Add the skill to `agent-lens/deploy/kustomization.yaml` configMapGenerator
+4. Add the skill name to the `SKILLS` list in `agent-lens/deploy/deployment.yaml`
 5. Run `pytest tests/test_skill_alignment.py` to verify
+6. Never include sandbox snippets that `import mlflow`
 
-### Adding a New MCP Tool
+### Extending MCP capabilities
 
-1. Add the function to `mcp-server/entrypoint.py` with `@mcp.tool()` decorator
-2. Include `@with_timeout()` and `@with_retry()` decorators
-3. Use `_get_client()` for the MLflow client (singleton)
-4. Add a test in `tests/test_mcp_tools.py`
-5. Document the tool in `mcp-server/README.md`
+Agent Lens does **not** ship a custom MCP server. New MLflow MCP tools belong
+[upstream in MLflow](https://mlflow.org/docs/latest/genai/mcp/). After an upstream
+tool ships:
+
+1. Add it to `agent-lens/config.yaml` `tools.include`
+2. Update skills / `soul.md` to call `mcp_mlflow_<tool>`
+3. Run skill alignment tests
 
 ### Adding a Deployment Target
 
-1. Create `mcp-server/deploy/overlays/<target>/kustomization.yaml`
-2. Override environment-specific values (tracking URI, image, resources)
+1. Create `agent-lens/deploy/overlays/<target>/kustomization.yaml`
+2. Override environment-specific values (MCP URL, image, resources)
 3. Document in the README under "Getting Started"
 
 ## Style Guide
@@ -144,7 +138,6 @@ Open a [GitHub Issue](https://github.com/rrbanda/agent-lens/issues/new) with:
 
 - Follow PEP 8
 - Use type hints for function parameters
-- Docstrings for all public functions (used as MCP tool descriptions)
 - No credentials or environment-specific values in code
 
 ### Kubernetes Manifests
@@ -164,12 +157,14 @@ Open a [GitHub Issue](https://github.com/rrbanda/agent-lens/issues/new) with:
 
 Key decisions are documented in `docs/architecture.md`. When proposing changes that affect architecture, please reference or update that document.
 
+**Product rule:** Hermes always uses upstream official MLflow MCP — do not reintroduce a custom FastMCP package as the default path.
+
 ## Release Process
 
 Releases follow semantic versioning:
 - **Patch** (0.1.x) — bug fixes, dependency updates
-- **Minor** (0.x.0) — new tools, skills, features
-- **Major** (x.0.0) — breaking changes to MCP tool interface
+- **Minor** (0.x.0) — new skills, features
+- **Major** (x.0.0) — breaking changes to skill / MCP allowlist contract
 
 ## Questions?
 

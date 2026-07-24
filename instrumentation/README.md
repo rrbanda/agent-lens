@@ -44,11 +44,6 @@ Format for `prompts.json`:
 ]
 ```
 
-### 3. Kubernetes Sidecar (Optional)
-
-For agents that don't use Python, inject a sidecar container that proxies LLM calls
-and logs traces. See `deploy/` for manifests.
-
 ## Evaluation Metrics
 
 | Metric | What It Measures |

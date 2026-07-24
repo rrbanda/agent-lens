@@ -5,7 +5,8 @@ description: "Run a systematic evaluation of any agent's quality using MLflow sc
 
 # Evaluate Agent
 
-Systematic agent evaluation for platform teams. Adapted from [mlflow/skills agent-evaluation](https://github.com/mlflow/skills/tree/main/agent-evaluation).
+Systematic agent evaluation for platform teams via **upstream official MLflow MCP**.
+Adapted from [mlflow/skills agent-evaluation](https://github.com/mlflow/skills/tree/main/agent-evaluation).
 
 ## When to Use
 
@@ -19,37 +20,36 @@ Systematic agent evaluation for platform teams. Adapted from [mlflow/skills agen
 
 ### Step 1: Identify the Agent
 
-Call `mcp_agent-lens_list_experiments` to find the target agent's experiment.
+Call `mcp_mlflow_search_experiments` to find the target agent's experiment.
 
 ### Step 2: Select Scorer Profile
 
-Choose based on agent type:
+Choose based on agent type. Confirm availability with `mcp_mlflow_list_scorers` if needed.
 
-**RAG Agent Profile** (retrieval-augmented generation):
+**RAG Agent Profile**:
 - `RelevanceToQuery` — Does the output address the request?
 - `RetrievalGroundedness` — Is it grounded in retrieved context?
-- Guidelines: "The response must cite sources from the retrieved documents"
 
-**Tool-Calling Agent Profile** (function calling, API agents):
+**Tool-Calling Agent Profile**:
 - `ToolCallCorrectness` — Are tool calls and arguments correct?
 - `ToolCallEfficiency` — No redundant or unnecessary calls?
 - `RelevanceToQuery` — Does the final answer address the user?
 
-**Chat Agent Profile** (conversational assistants):
+**Chat Agent Profile**:
 - `RelevanceToQuery` — Addresses the user's intent?
-- Guidelines: "Response is helpful, harmless, and honest"
-- Guidelines: "Response maintains conversation context"
+- Guidelines: helpful, harmless, honest
 
 **Custom Profile** — Ask the user what dimensions matter most.
 
 ### Step 3: Run Evaluation
 
-Call `mcp_agent-lens_run_evaluation` with:
-- `experiment_id`: from step 1
-- `scorer_names`: from step 2 profile
-- `max_traces`: 50 for quick check, 200 for certification
+Call `mcp_mlflow_evaluate_traces` with the experiment / traces and chosen scorers
+(`max_traces`: 50 for quick check, 200 for certification — follow tool schema).
 
 ### Step 4: Generate Quality Certification Report
+
+Use MCP results (and optional code execution on returned JSON only) to fill the report.
+Never `import mlflow` in the sandbox.
 
 ## Output Format
 
@@ -67,7 +67,7 @@ Call `mcp_agent-lens_run_evaluation` with:
 | Groundedness | X.X/5 | PASS/FAIL | >= 3.5 |
 | Tool Correctness | X.X/5 | PASS/FAIL | >= 3.5 |
 
-### Certification
+### Certification verdict (chat — not a CI pipeline block)
 **[CERTIFIED / NOT CERTIFIED / NEEDS REVIEW]**
 
 ### Evidence
@@ -82,12 +82,11 @@ Call `mcp_agent-lens_run_evaluation` with:
 ### Next Steps
 - [ ] Address findings above
 - [ ] Re-run evaluation after fixes
-- [ ] Add failure cases to regression dataset
+- [ ] Log expectations on failure traces for regression follow-up
 ```
 
 ## When to Use Code Execution
 
-- Computing aggregate stats across many traces
-- Generating time-series quality trends
-- Cross-referencing multiple evaluation runs
-- Producing comparison reports (before/after)
+- Aggregate stats on data already returned by MCP
+- Format comparison tables (before/after)
+- Never call the MLflow tracking SDK from the sandbox

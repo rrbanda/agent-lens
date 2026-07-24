@@ -2,8 +2,7 @@
 * @rrbanda
 
 # Core product surfaces
-/mcp-server/ @rrbanda
-/analyst-agent/ @rrbanda
+/agent-lens/ @rrbanda
 /instrumentation/ @rrbanda
 /tests/ @rrbanda
 

@@ -5,13 +5,14 @@ description: "Search and summarize traces from any agent's MLflow experiment. Sh
 
 # Trace Explorer
 
-Investigate agent activity by querying trace data from MLflow.
+Investigate agent activity by querying trace data via **upstream official MLflow MCP**.
 
 ## Strategy
 
-1. Identify the target experiment — call `mcp_agent-lens_list_experiments` if unknown
-2. Search traces — call `mcp_agent-lens_search_traces` with the experiment_id
-3. Analyze for patterns:
+1. Identify the target experiment — call `mcp_mlflow_search_experiments` if unknown
+2. Search traces — call `mcp_mlflow_search_traces` with the experiment_id
+3. For detail on a single trace — call `mcp_mlflow_get_trace`
+4. Analyze for patterns:
    - **Error rate**: count ERROR status vs total
    - **Latency distribution**: identify p50, p95, outliers
    - **Token usage**: spot excessive consumption
@@ -19,16 +20,17 @@ Investigate agent activity by querying trace data from MLflow.
 
 ## Key Parameters
 
-- Useful filters: `status = 'ERROR'`, `status = 'OK'`
+- Useful filters: `status = 'ERROR'`, `status = 'OK'` (follow tool schema)
 - Default max_results: 20-50 for overview, 100+ for statistical analysis
 
 ## When to Use Code Execution
 
 Use code execution when you need to:
-- Compute aggregate statistics (mean latency, error percentage)
-- Process more than 50 traces for trend analysis
-- Cross-reference traces with run metrics
-- Generate time-series breakdowns
+- Compute aggregate statistics on MCP-returned JSON (mean latency, error %)
+- Process large payloads already fetched via MCP
+- Generate time-series breakdowns from local data
+
+Never `import mlflow` in the sandbox — use `mcp_mlflow_*` only.
 
 ## Output Format
 

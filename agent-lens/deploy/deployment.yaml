@@ -94,13 +94,21 @@ spec:
               ")
 
               python3 -c "
-              import yaml
+              import os, yaml
               with open('/tmp/work/.hermes/config.yaml') as f:
                   cfg = yaml.safe_load(f)
               cfg['dashboard']['basic_auth']['password_hash'] = '${HASH}'
+              # Single source of truth: MLFLOW_MCP_URL env overrides ConfigMap URL
+              mcp_url = os.environ.get('MLFLOW_MCP_URL')
+              if mcp_url:
+                  cfg.setdefault('mcp_servers', {}).setdefault('mlflow', {})['url'] = mcp_url
+              api_key = os.environ.get('API_SERVER_KEY')
+              if api_key:
+                  cfg['api_server_key'] = api_key
+                  cfg.setdefault('platforms', {}).setdefault('api_server', {}).setdefault('extra', {})['key'] = api_key
               with open('/tmp/work/.hermes/config.yaml', 'w') as f:
                   yaml.dump(cfg, f, default_flow_style=False)
-              print('Config updated with password hash')
+              print('Config updated: password hash, MCP URL, API key')
               "
 
               trap 'cp /tmp/work/.hermes/USER.md /tmp/work/.hermes/MEMORY.md /persistent/ 2>/dev/null; echo "State saved"' SIGTERM SIGINT
@@ -132,7 +140,7 @@ spec:
                   name: agent-lens-auth
                   key: api-server-key
             - name: MLFLOW_MCP_URL
-              value: "http://mlflow-mcp-server.redhat-ods-applications.svc.cluster.local:8080/mcp"
+              value: "http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp"
             - name: DASHBOARD_PASSWORD
               valueFrom:
                 secretKeyRef:

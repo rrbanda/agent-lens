@@ -1,119 +1,141 @@
-"""Test that all skills reference valid MCP tool names.
+"""Test that analyst skills reference official upstream MLflow MCP tools only.
 
-Parses SKILL.md files and verifies that every referenced tool name
-(mcp_agent-lens_*) exists in the MCP server's entrypoint.py.
+Agent Lens uses upstream `mlflow mcp run` (service mlflow-mcp) exclusively.
+Skills must use mcp_mlflow_<tool> names that match the allowlist in
+agent-lens/config.yaml. There is no in-repo FastMCP server.
 """
 
 import os
 import re
 
 import pytest
+import yaml
 
 
 SKILLS_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "analyst-agent", "skills"
+    os.path.dirname(__file__), "..", "agent-lens", "skills"
 )
-ENTRYPOINT = os.path.join(
-    os.path.dirname(__file__), "..", "mcp-server", "entrypoint.py"
+CONFIG_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "agent-lens", "config.yaml"
+)
+SOUL_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "agent-lens", "soul.md"
 )
 
-MCP_TOOL_PATTERN = re.compile(r"mcp_agent-lens_(\w+)")
-FUNC_DEF_PATTERN = re.compile(r"^def (\w+)\(", re.MULTILINE)
+MCP_OFFICIAL_PATTERN = re.compile(r"mcp_mlflow_(\w+)")
+MCP_AGENT_LENS_PATTERN = re.compile(r"mcp_agent-lens_(\w+)")
+IMPORT_MLFLOW_PATTERN = re.compile(r"import\s+mlflow|mlflow\.set_tracking_uri")
 
 
-def _get_registered_tools():
-    """Extract all function names decorated with @mcp.tool() from entrypoint."""
-    with open(ENTRYPOINT) as f:
-        source = f.read()
-
-    tools = set()
-    lines = source.split("\n")
-    for i, line in enumerate(lines):
-        if "@mcp.tool()" in line:
-            for j in range(i + 1, min(i + 5, len(lines))):
-                match = FUNC_DEF_PATTERN.match(lines[j])
-                if match:
-                    tools.add(match.group(1))
-                    break
-    return tools
+def _official_tools_from_config():
+    with open(CONFIG_PATH) as f:
+        cfg = yaml.safe_load(f)
+    include = cfg["mcp_servers"]["mlflow"]["tools"]["include"]
+    return set(include)
 
 
 def _get_skill_files():
-    """Find all SKILL.md files in the skills directory."""
     skills = []
     if not os.path.isdir(SKILLS_DIR):
         return skills
-    for root, dirs, files in os.walk(SKILLS_DIR):
+    for root, _dirs, files in os.walk(SKILLS_DIR):
         for f in files:
             if f == "SKILL.md":
                 skills.append(os.path.join(root, f))
     return skills
 
 
-def _extract_tool_references(skill_path):
-    """Extract all mcp_agent-lens_* tool references from a skill file."""
-    with open(skill_path) as f:
+def _extract_official_refs(path):
+    with open(path) as f:
         content = f.read()
-    return set(MCP_TOOL_PATTERN.findall(content))
+    return set(MCP_OFFICIAL_PATTERN.findall(content)), content
 
 
 class TestSkillToolAlignment:
-    """Verify all skills reference existing MCP tools."""
+    """Verify skills/soul use official MLflow MCP tool names."""
 
     @pytest.fixture(scope="class")
-    def registered_tools(self):
-        return _get_registered_tools()
+    def official_tools(self):
+        return _official_tools_from_config()
 
     @pytest.fixture(scope="class")
     def skill_files(self):
         return _get_skill_files()
 
     def test_skills_exist(self, skill_files):
-        """At least one skill file should exist."""
         assert len(skill_files) > 0, "No SKILL.md files found"
 
-    def test_entrypoint_has_tools(self, registered_tools):
-        """Entrypoint should have registered tools."""
-        assert len(registered_tools) > 0, "No @mcp.tool() functions found"
+    def test_config_points_at_official_mcp(self):
+        with open(CONFIG_PATH) as f:
+            cfg = yaml.safe_load(f)
+        url = cfg["mcp_servers"]["mlflow"]["url"]
+        assert "mlflow-mcp." in url
+        assert "mlflow-mcp-server" not in url
 
-    def test_all_tool_references_are_valid(self, skill_files, registered_tools):
-        """Every mcp_agent-lens_* reference in skills must map to a real tool."""
+    def test_config_has_official_tool_allowlist(self, official_tools):
+        required = {
+            "search_experiments",
+            "search_traces",
+            "get_trace",
+            "evaluate_traces",
+            "list_scorers",
+            "log_trace_feedback",
+            "log_trace_expectation",
+        }
+        missing = required - official_tools
+        assert not missing, f"config.yaml missing official tools: {missing}"
+
+    def test_all_tool_references_are_official(self, skill_files, official_tools):
         errors = []
         for skill_path in skill_files:
             skill_name = os.path.basename(os.path.dirname(skill_path))
-            referenced_tools = _extract_tool_references(skill_path)
-            for tool in referenced_tools:
-                if tool not in registered_tools:
-                    errors.append(f"{skill_name}: references mcp_agent-lens_{tool} but no '{tool}' function exists")
-
+            refs, _ = _extract_official_refs(skill_path)
+            for tool in refs:
+                if tool not in official_tools:
+                    errors.append(
+                        f"{skill_name}: references mcp_mlflow_{tool} "
+                        f"but it is not in config.yaml tools.include"
+                    )
         assert not errors, "Skill/tool misalignment:\n" + "\n".join(errors)
 
-    def test_no_legacy_tool_references(self, skill_files):
-        """No skills should reference the old mcp_mlflow_* prefix."""
-        legacy_pattern = re.compile(r"mcp_mlflow_(\w+)")
+    def test_no_agent_lens_fastmcp_prefix(self, skill_files):
         errors = []
-        for skill_path in skill_files:
-            skill_name = os.path.basename(os.path.dirname(skill_path))
-            with open(skill_path) as f:
+        paths = list(skill_files) + [SOUL_PATH]
+        for path in paths:
+            label = os.path.basename(path) if path.endswith("soul.md") else (
+                os.path.basename(os.path.dirname(path))
+            )
+            with open(path) as f:
                 content = f.read()
-            legacy_refs = legacy_pattern.findall(content)
-            if legacy_refs:
-                errors.append(f"{skill_name}: still uses legacy mcp_mlflow_* references: {legacy_refs}")
+            bad = MCP_AGENT_LENS_PATTERN.findall(content)
+            if bad:
+                errors.append(f"{label}: uses mcp_agent-lens_* (FastMCP): {bad}")
+        assert not errors, "Must use official mcp_mlflow_* only:\n" + "\n".join(errors)
 
-        assert not errors, "Legacy tool references found:\n" + "\n".join(errors)
+    def test_no_sandbox_import_mlflow(self, skill_files):
+        errors = []
+        paths = list(skill_files) + [SOUL_PATH]
+        for path in paths:
+            label = os.path.basename(path) if path.endswith("soul.md") else (
+                os.path.basename(os.path.dirname(path))
+            )
+            with open(path) as f:
+                content = f.read()
+            # Allow mentioning the anti-pattern in prose; block executable snippets.
+            for i, line in enumerate(content.splitlines(), 1):
+                stripped = line.strip()
+                if stripped.startswith(">"):
+                    continue
+                if "Never" in stripped or "Do not" in stripped or "do not" in stripped:
+                    continue
+                if IMPORT_MLFLOW_PATTERN.search(stripped) and stripped.startswith(
+                    ("import ", "from ", "mlflow.")
+                ):
+                    errors.append(f"{label}:{i}: {stripped}")
+        assert not errors, "Sandbox must not teach import mlflow:\n" + "\n".join(errors)
 
-    def test_core_tools_registered(self, registered_tools):
-        """Critical tools for the AgentOps loop must exist."""
-        required_tools = [
-            "list_experiments",
-            "search_traces",
-            "run_evaluation",
-            "annotate_trace",
-            "check_quality_gate",
-            "create_test_case",
-            "get_review_queue",
-            "summarize_experiment_health",
-            "health_check",
-        ]
-        missing = [t for t in required_tools if t not in registered_tools]
-        assert not missing, f"Missing critical tools: {missing}"
+    def test_soul_references_official_prefix(self):
+        with open(SOUL_PATH) as f:
+            soul = f.read()
+        assert "mcp_mlflow_" in soul
+        assert "upstream official MLflow MCP" in soul
