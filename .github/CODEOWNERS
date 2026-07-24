@@ -2,7 +2,7 @@
 * @rrbanda
 
 # Core product surfaces
-/analyst-agent/ @rrbanda
+/agent-lens/ @rrbanda
 /instrumentation/ @rrbanda
 /tests/ @rrbanda
 

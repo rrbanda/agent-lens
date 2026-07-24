@@ -2,7 +2,7 @@
 
 Agent Lens uses upstream `mlflow mcp run` (service mlflow-mcp) exclusively.
 Skills must use mcp_mlflow_<tool> names that match the allowlist in
-analyst-agent/config.yaml. There is no in-repo FastMCP server.
+agent-lens/config.yaml. There is no in-repo FastMCP server.
 """
 
 import os
@@ -13,13 +13,13 @@ import yaml
 
 
 SKILLS_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "analyst-agent", "skills"
+    os.path.dirname(__file__), "..", "agent-lens", "skills"
 )
 CONFIG_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "analyst-agent", "config.yaml"
+    os.path.dirname(__file__), "..", "agent-lens", "config.yaml"
 )
 SOUL_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "analyst-agent", "soul.md"
+    os.path.dirname(__file__), "..", "agent-lens", "soul.md"
 )
 
 MCP_OFFICIAL_PATTERN = re.compile(r"mcp_mlflow_(\w+)")

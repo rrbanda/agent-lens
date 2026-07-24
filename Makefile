@@ -23,7 +23,7 @@ secret: ## Create LLM + dashboard/API secrets (interactive)
 
 deploy-agent: ## Deploy the Agent Lens observability agent
 	@echo "Deploying Agent Lens to $(NAMESPACE)..."
-	oc apply -k analyst-agent/deploy/
+	oc apply -k agent-lens/deploy/
 	@echo "✓ Agent Lens deployed"
 	@echo "  MCP prerequisite: $(MCP_URL)"
 	@echo "  See docs/operator-mcp.md"
@@ -38,7 +38,7 @@ deploy-all: secret deploy-agent ## Secrets + Agent Lens (MCP is a prerequisite)
 	@echo "═══════════════════════════════════════════════"
 
 undeploy: ## Remove Agent Lens resources
-	oc delete -k analyst-agent/deploy/ --ignore-not-found
+	oc delete -k agent-lens/deploy/ --ignore-not-found
 	oc delete namespace $(NAMESPACE) --ignore-not-found
 	@echo "✓ Agent Lens removed"
 

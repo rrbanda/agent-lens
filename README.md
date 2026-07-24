@@ -40,7 +40,7 @@ You are done with first-value when, in one session:
 
 | This repo deploys | You must already have |
 |-------------------|------------------------|
-| Hermes Agent Lens (`analyst-agent/`) | MLflow on RHOAI |
+| Hermes Agent Lens (`agent-lens/`) | MLflow on RHOAI |
 | Skills, soul, OpenShift manifests | **Official MLflow MCP** service `mlflow-mcp` (`mlflow mcp run`) |
 | Instrumentation helpers | Gemini (or compatible) API key |
 
@@ -106,7 +106,7 @@ make deploy-all
 make status   # MCP + Agent Lens + route
 ```
 
-Default MCP URL in [`analyst-agent/config.yaml`](analyst-agent/config.yaml):
+Default MCP URL in [`agent-lens/config.yaml`](agent-lens/config.yaml):
 
 `http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp`
 
@@ -164,7 +164,7 @@ See [docs/architecture.md](docs/architecture.md).
 
 ```
 agent-lens/
-├── analyst-agent/        # Hermes: soul, config, skills, OpenShift deploy
+├── agent-lens/        # Hermes: soul, config, skills, OpenShift deploy
 ├── instrumentation/      # Zero-code autolog + CLI eval helper
 ├── tests/                # Skill ↔ official MCP allowlist tests
 ├── scripts/              # Operator helpers (MCP contract check)
@@ -187,7 +187,7 @@ Skills must reference only allowlisted `mcp_mlflow_*` tools — see [CONTRIBUTIN
 | Area | Notes |
 |------|-------|
 | New skills | Use `mcp_mlflow_*` from `config.yaml` allowlist |
-| Deploy overlays | `analyst-agent/deploy/` |
+| Deploy overlays | `agent-lens/deploy/` |
 | CI / docs | Always welcome |
 | New MCP tools | Contribute **upstream** to MLflow MCP — not a fork in this repo |
 

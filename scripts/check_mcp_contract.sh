@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Compare analyst-agent/config.yaml tools.include against a live MCP tools/list.
+# Compare agent-lens/config.yaml tools.include against a live MCP tools/list.
 # Usage:
 #   MCP_URL=http://host:8080/mcp ./scripts/check_mcp_contract.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CONFIG="${ROOT}/analyst-agent/config.yaml"
+CONFIG="${ROOT}/agent-lens/config.yaml"
 MCP_URL="${MCP_URL:-http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp}"
 
 if ! command -v python3 >/dev/null; then

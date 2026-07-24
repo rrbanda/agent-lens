@@ -13,7 +13,7 @@ This repository does **not** deploy that MCP server.
 | Official MCP | `redhat-ods-applications`, Service `mlflow-mcp`, port **8080**, path `/mcp` |
 | Agent Lens | namespace `agent-lens`, Route `agent-lens` |
 
-Default Hermes URL ([`analyst-agent/config.yaml`](../analyst-agent/config.yaml)):
+Default Hermes URL ([`agent-lens/config.yaml`](../agent-lens/config.yaml)):
 
 ```text
 http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp

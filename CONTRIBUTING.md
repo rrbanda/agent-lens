@@ -109,10 +109,10 @@ Open a [GitHub Issue](https://github.com/rrbanda/agent-lens/issues/new) with:
 
 ### Adding a New Skill
 
-1. Create `analyst-agent/skills/<skill-name>/SKILL.md`
-2. Reference only official tools allowlisted in `analyst-agent/config.yaml` as `mcp_mlflow_<tool>`
-3. Add the skill to `analyst-agent/deploy/kustomization.yaml` configMapGenerator
-4. Add the skill name to the `SKILLS` list in `analyst-agent/deploy/deployment.yaml`
+1. Create `agent-lens/skills/<skill-name>/SKILL.md`
+2. Reference only official tools allowlisted in `agent-lens/config.yaml` as `mcp_mlflow_<tool>`
+3. Add the skill to `agent-lens/deploy/kustomization.yaml` configMapGenerator
+4. Add the skill name to the `SKILLS` list in `agent-lens/deploy/deployment.yaml`
 5. Run `pytest tests/test_skill_alignment.py` to verify
 6. Never include sandbox snippets that `import mlflow`
 
@@ -122,13 +122,13 @@ Agent Lens does **not** ship a custom MCP server. New MLflow MCP tools belong
 [upstream in MLflow](https://mlflow.org/docs/latest/genai/mcp/). After an upstream
 tool ships:
 
-1. Add it to `analyst-agent/config.yaml` `tools.include`
+1. Add it to `agent-lens/config.yaml` `tools.include`
 2. Update skills / `soul.md` to call `mcp_mlflow_<tool>`
 3. Run skill alignment tests
 
 ### Adding a Deployment Target
 
-1. Create `analyst-agent/deploy/overlays/<target>/kustomization.yaml`
+1. Create `agent-lens/deploy/overlays/<target>/kustomization.yaml`
 2. Override environment-specific values (MCP URL, image, resources)
 3. Document in the README under "Getting Started"
 

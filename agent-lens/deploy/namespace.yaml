@@ -4,4 +4,4 @@ metadata:
   name: agent-lens
   labels:
     app.kubernetes.io/part-of: agent-lens
-    app.kubernetes.io/component: analyst-agent
+    app.kubernetes.io/component: agent-lens

@@ -6,7 +6,7 @@
 
 ## Test plan
 - [ ] `pytest` passes (including `tests/test_skill_alignment.py`)
-- [ ] Skills only reference official `mcp_mlflow_*` tools allowlisted in `analyst-agent/config.yaml`
+- [ ] Skills only reference official `mcp_mlflow_*` tools allowlisted in `agent-lens/config.yaml`
 - [ ] Docs updated if user-facing behavior changed
 
 ## Checklist

@@ -41,7 +41,7 @@ Deployed with the platform (RHOAI / MLflow operator stack), not by this repo.
 
 **Stack**: `mlflow mcp run` (often behind `mcp-proxy`) + MLflow SDK
 
-**Contract used by Agent Lens** (allowlisted in `analyst-agent/config.yaml`):
+**Contract used by Agent Lens** (allowlisted in `agent-lens/config.yaml`):
 
 | Category | Tools |
 |----------|-------|
@@ -53,7 +53,7 @@ Hermes exposes these as `mcp_mlflow_<tool_name>`.
 
 See [MLflow MCP docs](https://mlflow.org/docs/latest/genai/mcp/).
 
-### 2. Agent Lens (`analyst-agent/`)
+### 2. Agent Lens (`agent-lens/`)
 
 A [Hermes Agent](https://github.com/hermes-ai/hermes-agent) instance configured as
 an evaluation and governance specialist.

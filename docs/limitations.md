@@ -23,7 +23,7 @@ existed (or were marketed) via a custom FastMCP server are **not** product APIs 
 ## Tool naming
 
 Hermes exposes official tools as `mcp_mlflow_<name>`. The allowlist lives in
-[`analyst-agent/config.yaml`](../analyst-agent/config.yaml). If upstream renames a tool,
+[`agent-lens/config.yaml`](../agent-lens/config.yaml). If upstream renames a tool,
 update the allowlist and skills together, then run:
 
 ```bash
