@@ -24,7 +24,7 @@ Environment Variables:
 import json
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import mlflow
@@ -361,7 +361,7 @@ def run_evaluation(
             "traces_evaluated": len(data) if hasattr(data, "__len__") else "unknown",
             "scorers_used": scorer_names,
             "metrics": {k: round(v, 3) if isinstance(v, float) else v for k, v in metrics.items()},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }, indent=2)
 
     except Exception as e:
@@ -654,7 +654,7 @@ def check_quality_gate(
             "latest_run_id": latest.get("run_id"),
             "checks": checks,
             "all_metrics": metrics,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "recommendation": "Safe to deploy" if passed else "Quality below threshold — investigate before deploying",
         }, indent=2, default=str)
 
@@ -843,7 +843,7 @@ def summarize_experiment_health(
                 })
 
         return json.dumps({
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "fleet_summary": fleet,
             "agents": agents,
             "alerts": alerts,
@@ -938,7 +938,7 @@ def health_check() -> str:
             "tracking_uri": uri,
             "experiments_accessible": len(experiments) > 0,
             "judge_model": JUDGE_MODEL,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }, indent=2)
     except Exception as e:
         return json.dumps({"status": "unhealthy", "error": str(e)})
