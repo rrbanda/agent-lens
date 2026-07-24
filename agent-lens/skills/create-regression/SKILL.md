@@ -3,51 +3,46 @@ name: "create-regression"
 description: "Log a regression follow-up on a failing trace (expectation + tags). Use when asked to add a test case, create a regression, or ensure a bug doesn't happen again. Does not create an MLflow Evaluation Dataset."
 ---
 
-# Create Regression Test
+# Create Regression Follow-up
 
 Failure-to-follow-up via **upstream official MLflow MCP**.
-Official MCP does not expose dataset APIs — capture ground truth with expectations + tags,
-and advise the user how to promote into an eval dataset offline if needed.
+Official MCP has no dataset create API — capture ground truth with expectations + tags.
+Adapted in spirit from [mlflow/skills fix-agent-issue](https://github.com/mlflow/skills/tree/main/fix-agent-issue) (observe/annotate only — Agent Lens does not patch target agent code).
 
 ## When to Use
 
 - "Add this to the regression dataset"
 - "Make sure this never happens again"
 - "Create a test case from this failure"
-- "This trace should be in our eval suite"
 - After reviewing a trace and identifying what went wrong
 
 ## Strategy
 
 ### Step 1: Identify the Failing Trace
 
-Either the user provides a trace_id, or find one:
-- From a review session (review-trace skill)
-- From error search: `mcp_mlflow_search_traces` with filter for ERROR status
+User provides `trace_id`, or find via `mcp_mlflow_search_traces` (ERROR / low score).
 
-### Step 2: Extract the Test Case
+### Step 2: Extract the Case
 
-From the trace (`mcp_mlflow_get_trace`), extract:
-- **Input**: What was the user's query/request?
-- **Expected output**: What should the agent have produced?
-- **Context** (if RAG): What documents were available?
-
-The user must confirm the expected output (or provide it).
+From `mcp_mlflow_get_trace`:
+- **Input** — user query/request
+- **Expected output** — user-confirmed correct answer
+- **Context** (RAG) — documents available, if any
 
 ### Step 3: Persist via official MCP
 
-1. Call `mcp_mlflow_log_trace_expectation` with the confirmed expected output
-2. Call `mcp_mlflow_set_trace_tag` with tags such as:
+1. `mcp_mlflow_log_trace_expectation` with confirmed expected output
+2. `mcp_mlflow_set_trace_tag`:
    - `regression=true`
    - `dataset=<agent-name>-regression` (naming convention)
 3. Optionally `mcp_mlflow_log_trace_feedback` if a quality score was given
 
-### Step 4: Confirm and Advise
+### Step 4: Confirm and advise
 
 Tell the user:
-1. Expectation + tags were logged on the trace
-2. Next `evaluate-agent` run can include / prioritize tagged traces
-3. For a durable GenAI evaluation dataset, export or create records in MLflow UI / SDK outside the sandbox (official MCP has no `create_dataset` tool)
+1. Expectation + tags logged
+2. Next **evaluate-agent** run should request a **regression-focused cert** so tagged traces are prioritized
+3. For a durable GenAI Evaluation Dataset, export/create records in MLflow UI/SDK outside the sandbox
 
 Never `import mlflow` in the sandbox.
 
@@ -63,14 +58,9 @@ Never `import mlflow` in the sandbox.
 | Input | [extracted query] |
 | Expected | [user-provided expected output] |
 
-### Impact
-- Ground-truth expectation is attached to the trace
-- Trace is tagged for regression tracking
-- Future evaluations can prioritize tagged failures
-
 ### Next Steps
-- Run `evaluate-agent` to verify the current version
-- Consider adding 2-3 related variations (annotate sibling traces)
+- Run evaluate-agent with regression-focused sample
+- Add 2–3 related variations on sibling traces if needed
 ```
 
 ## Dataset Naming Convention
@@ -79,12 +69,4 @@ Never `import mlflow` in the sandbox.
 |-----------|-------------|
 | Outreach agent | `outreach-agent-regression` |
 | Support agent | `support-agent-regression` |
-| Code agent | `code-agent-regression` |
 | Generic | `{agent-name}-regression` |
-
-## Best Practices
-
-- Each case should test ONE thing (not compound failures)
-- Expected outputs should be specific enough to score against
-- Add variations: if "query about X" failed, also test related Y
-- Review and prune tagged regressions quarterly

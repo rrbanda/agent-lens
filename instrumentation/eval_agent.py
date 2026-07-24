@@ -1,30 +1,31 @@
 """
-Agent Lens — Agent Evaluation Script
+Agent Lens — offline CLI evaluation helper (target-agent side).
 
-Evaluates an agent's output quality by:
-1. Sending test prompts to the agent's API
-2. Recording responses as an MLflow run
-3. Running MLflow GenAI evaluation scorers (relevance, faithfulness, correctness)
-4. Logging aggregate scores back to MLflow
+Calls an OpenAI-compatible agent API, then scores responses with
+`mlflow.genai.evaluate` and built-in GenAI scorers (yes/no pass rates).
+
+This script runs **outside** Hermes (has tracking credentials). Hermes must
+never `import mlflow` in its sandbox — use official MCP instead.
 
 Usage:
     export MLFLOW_TRACKING_URI="https://your-mlflow:8443"
     export AGENT_API_URL="http://your-agent:8642"
     export AGENT_API_KEY="your-key"
-    python eval_agent.py --experiment-name "my-agent" --workspace "my-namespace"
+    python eval_agent.py --experiment-name "my-agent"
 
-Requires: mlflow>=2.15.0, httpx
+Requires: mlflow>=3.8, httpx, pandas
 """
+
+from __future__ import annotations
 
 import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 
-# Evaluation prompts — customize for your agent's domain
 DEFAULT_EVAL_PROMPTS = [
     {
         "prompt": "Summarize the key benefits of our platform for enterprise customers.",
@@ -42,7 +43,6 @@ DEFAULT_EVAL_PROMPTS = [
 
 
 def call_agent(api_url: str, api_key: str, prompt: str) -> str:
-    """Send a prompt to the agent and return the response."""
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -52,7 +52,7 @@ def call_agent(api_url: str, api_key: str, prompt: str) -> str:
         "model": "default",
     }
     resp = httpx.post(
-        f"{api_url}/v1/chat/completions",
+        f"{api_url.rstrip('/')}/v1/chat/completions",
         json=body,
         headers=headers,
         timeout=120,
@@ -62,15 +62,42 @@ def call_agent(api_url: str, api_key: str, prompt: str) -> str:
     return data["choices"][0]["message"]["content"]
 
 
+def _build_scorers(profile: str):
+    from mlflow.genai.scorers import (
+        Guidelines,
+        RelevanceToQuery,
+        RetrievalGroundedness,
+        ToolCallCorrectness,
+        ToolCallEfficiency,
+    )
+
+    profile = (profile or "chat").lower()
+    if profile == "rag":
+        return [RelevanceToQuery(), RetrievalGroundedness()]
+    if profile in ("tool", "tool-calling", "tool_calling"):
+        return [ToolCallCorrectness(), ToolCallEfficiency(), RelevanceToQuery()]
+    if profile == "chat":
+        return [
+            RelevanceToQuery(),
+            Guidelines(
+                name="helpful_harmless_honest",
+                guidelines="Response is helpful, harmless, and honest.",
+            ),
+        ]
+    raise SystemExit(f"Unknown profile: {profile}. Use rag|tool-calling|chat")
+
+
 def run_evaluation(
     experiment_name: str,
     workspace: str,
     agent_api_url: str,
     agent_api_key: str,
     prompts: list,
+    profile: str,
 ):
-    """Run full evaluation pipeline."""
     import mlflow
+    import pandas as pd
+    from mlflow.genai import evaluate
 
     tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
     if not tracking_uri:
@@ -82,6 +109,7 @@ def run_evaluation(
 
     print(f"Running evaluation: {len(prompts)} prompts against {agent_api_url}")
     print(f"MLflow experiment: {experiment_name} (workspace: {workspace})")
+    print(f"Profile: {profile}")
 
     eval_data = []
     for i, item in enumerate(prompts, 1):
@@ -90,71 +118,68 @@ def run_evaluation(
         print(f"  [{i}/{len(prompts)}] {prompt[:60]}...")
         try:
             response = call_agent(agent_api_url, agent_api_key, prompt)
-            eval_data.append({
-                "inputs": prompt,
-                "context": context,
+            row = {
+                "inputs": {"question": prompt},
                 "outputs": response,
-            })
+            }
+            if context:
+                row["expectations"] = {"context": context}
+            eval_data.append(row)
         except Exception as e:
             print(f"    ERROR: {e}", file=sys.stderr)
-            eval_data.append({
-                "inputs": prompt,
-                "context": context,
-                "outputs": f"ERROR: {e}",
-            })
+            eval_data.append(
+                {
+                    "inputs": {"question": prompt},
+                    "outputs": f"ERROR: {e}",
+                }
+            )
 
     if not eval_data:
-        print("No successful responses to evaluate", file=sys.stderr)
+        print("No responses to evaluate", file=sys.stderr)
         sys.exit(1)
 
-    import pandas as pd
-
-    eval_df = pd.DataFrame(eval_data)
-
-    run_name = f"eval-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-    print(f"\nStarting MLflow evaluation run: {run_name}")
+    scorers = _build_scorers(profile)
+    run_name = f"eval-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
+    print(f"\nStarting mlflow.genai.evaluate run: {run_name}")
 
     with mlflow.start_run(run_name=run_name):
         mlflow.log_param("agent_url", agent_api_url)
         mlflow.log_param("num_prompts", len(prompts))
-        mlflow.log_param("timestamp", datetime.now().isoformat())
+        mlflow.log_param("profile", profile)
         mlflow.log_param("workspace", workspace)
+        mlflow.log_param("timestamp", datetime.now(timezone.utc).isoformat())
 
-        try:
-            from mlflow.metrics.genai import (
-                relevance,
-                faithfulness,
-            )
+        results = evaluate(
+            data=pd.DataFrame(eval_data),
+            scorers=scorers,
+        )
+        print("\n=== Metrics (pass-oriented GenAI scorers) ===")
+        metrics = getattr(results, "metrics", None) or results
+        print(metrics)
 
-            results = mlflow.evaluate(
-                data=eval_df,
-                model_type="question-answering",
-                predictions="outputs",
-                targets="context",
-                extra_metrics=[relevance(), faithfulness()],
-            )
-            print(f"\n=== Results ===")
-            print(results.metrics)
-        except ImportError:
-            print("MLflow GenAI metrics not available, logging raw scores")
-            mlflow.log_metric("num_responses", len(eval_data))
-            mlflow.log_metric("error_rate", sum(1 for d in eval_data if "ERROR" in d["outputs"]) / len(eval_data))
-
-    print(f"\nEvaluation complete. View results in MLflow UI.")
+    print("\nEvaluation complete. View results in MLflow UI.")
+    print("Note: RetrievalGroundedness needs retriever spans — may be N/A for chat-only agents.")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate an AI agent using MLflow")
-    parser.add_argument("--experiment-name", required=True, help="MLflow experiment name")
-    parser.add_argument("--workspace", default="default", help="MLflow workspace (k8s namespace)")
+    parser = argparse.ArgumentParser(
+        description="Evaluate an AI agent with mlflow.genai.evaluate"
+    )
+    parser.add_argument("--experiment-name", required=True)
+    parser.add_argument("--workspace", default="default")
     parser.add_argument("--prompts-file", help="JSON file with custom eval prompts")
+    parser.add_argument(
+        "--profile",
+        default="chat",
+        choices=["rag", "tool-calling", "chat"],
+        help="Scorer profile",
+    )
     args = parser.parse_args()
 
     agent_api_url = os.environ.get("AGENT_API_URL")
     agent_api_key = os.environ.get("AGENT_API_KEY")
-
     if not agent_api_url or not agent_api_key:
-        print("ERROR: Set AGENT_API_URL and AGENT_API_KEY environment variables", file=sys.stderr)
+        print("ERROR: Set AGENT_API_URL and AGENT_API_KEY", file=sys.stderr)
         sys.exit(1)
 
     prompts = DEFAULT_EVAL_PROMPTS
@@ -168,6 +193,7 @@ def main():
         agent_api_url=agent_api_url,
         agent_api_key=agent_api_key,
         prompts=prompts,
+        profile=args.profile,
     )
 
 

@@ -23,103 +23,15 @@ spec:
           type: RuntimeDefault
       containers:
         - name: hermes
+          # Prefer a baked image: `make build-agent` → quay.io/rrbanda/agent-lens:v3
+          # Fallback python:3.11-slim bootstraps deps once (slower; not enterprise-preferred).
           image: python:3.11-slim
-          command: ["/bin/bash", "-c"]
+          command: ["/bin/bash", "/mnt/entrypoint/entrypoint.sh"]
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
-          args:
-            - |
-              set -e
-              SKILLS="evaluate-agent review-trace create-regression trace-explorer quality-dashboard"
-
-              mkdir -p /persistent/memory /persistent/sessions /persistent/profiles /persistent/auto-skills /persistent/db
-              mkdir -p /tmp/work/.local /tmp/work/data /tmp/work/output /tmp/work/.hermes
-
-              ln -sf /persistent/memory /tmp/work/.hermes/memory
-              ln -sf /persistent/sessions /tmp/work/.hermes/sessions
-              ln -sf /persistent/profiles /tmp/work/.hermes/profiles
-              ln -sf /persistent/auto-skills /tmp/work/.hermes/auto-skills
-              ln -sf /persistent/db /tmp/work/.hermes/db
-
-              for f in USER.md MEMORY.md; do
-                [ -f /persistent/$f ] && cp /persistent/$f /tmp/work/.hermes/$f
-              done
-
-              for s in $SKILLS; do
-                mkdir -p /tmp/work/.hermes/skills/$s
-              done
-
-              cp /mnt/skill-evaluate-agent/SKILL.md /tmp/work/.hermes/skills/evaluate-agent/SKILL.md
-              cp /mnt/skill-review-trace/SKILL.md /tmp/work/.hermes/skills/review-trace/SKILL.md
-              cp /mnt/skill-create-regression/SKILL.md /tmp/work/.hermes/skills/create-regression/SKILL.md
-              cp /mnt/skill-trace-explorer/SKILL.md /tmp/work/.hermes/skills/trace-explorer/SKILL.md
-              cp /mnt/skill-quality-dashboard/SKILL.md /tmp/work/.hermes/skills/quality-dashboard/SKILL.md
-
-              cp /mnt/soul/SOUL.md /tmp/work/.hermes/SOUL.md
-              cp /mnt/config/config.yaml /tmp/work/.hermes/config.yaml
-
-              echo "=== Installing Python dependencies ==="
-              pip install --user hermes-agent aiohttp mcp 2>&1 | tail -5
-
-              echo "=== Installing Node.js 22 (for MCP stdio transport support) ==="
-              python3 -c "
-              import urllib.request, tarfile, os, lzma
-              url = 'https://nodejs.org/dist/v22.16.0/node-v22.16.0-linux-x64.tar.xz'
-              path = '/tmp/node.tar.xz'
-              urllib.request.urlretrieve(url, path)
-              with lzma.open(path) as xz:
-                  with tarfile.open(fileobj=xz) as tar:
-                      tar.extractall('/tmp')
-              os.makedirs('/tmp/work/.local/bin', exist_ok=True)
-              for f in ['node', 'npm', 'npx']:
-                  src = f'/tmp/node-v22.16.0-linux-x64/bin/{f}'
-                  dst = f'/tmp/work/.local/bin/{f}'
-                  if os.path.exists(src) and not os.path.exists(dst):
-                      os.symlink(src, dst)
-              print('Node.js 22 installed')
-              "
-
-              HASH=$(python3 -c "
-              import hashlib, secrets, base64, os
-              pw = os.environ.get('DASHBOARD_PASSWORD', '')
-              if not pw:
-                  raise ValueError('DASHBOARD_PASSWORD must be set via secret')
-              salt = secrets.token_bytes(16)
-              key = hashlib.scrypt(pw.encode(), salt=salt, n=16384, r=8, p=1, dklen=32)
-              s = base64.b64encode(salt).decode()
-              k = base64.b64encode(key).decode()
-              print(f'scrypt\$16384\$8\$1\${s}\${k}')
-              ")
-
-              python3 -c "
-              import os, yaml
-              with open('/tmp/work/.hermes/config.yaml') as f:
-                  cfg = yaml.safe_load(f)
-              cfg['dashboard']['basic_auth']['password_hash'] = '${HASH}'
-              # Single source of truth: MLFLOW_MCP_URL env overrides ConfigMap URL
-              mcp_url = os.environ.get('MLFLOW_MCP_URL')
-              if mcp_url:
-                  cfg.setdefault('mcp_servers', {}).setdefault('mlflow', {})['url'] = mcp_url
-              api_key = os.environ.get('API_SERVER_KEY')
-              if api_key:
-                  cfg['api_server_key'] = api_key
-                  cfg.setdefault('platforms', {}).setdefault('api_server', {}).setdefault('extra', {})['key'] = api_key
-              with open('/tmp/work/.hermes/config.yaml', 'w') as f:
-                  yaml.dump(cfg, f, default_flow_style=False)
-              print('Config updated: password hash, MCP URL, API key')
-              "
-
-              trap 'cp /tmp/work/.hermes/USER.md /tmp/work/.hermes/MEMORY.md /persistent/ 2>/dev/null; echo "State saved"' SIGTERM SIGINT
-
-              echo "=== Starting Hermes gateway (background) ==="
-              hermes gateway run > /tmp/hermes-gateway.log 2>&1 &
-              GATEWAY_PID=$!
-              sleep 5
-
-              echo "=== Starting Hermes dashboard ==="
-              hermes dashboard --host 0.0.0.0 --port 18789 --no-open --skip-build
+            readOnlyRootFilesystem: false
           env:
             - name: HOME
               value: /tmp/work
@@ -146,6 +58,9 @@ spec:
                 secretKeyRef:
                   name: agent-lens-auth
                   key: dashboard-password
+            - name: BOOTSTRAP_DEPS
+              # Set to "0" when using the baked Containerfile image
+              value: "1"
           ports:
             - containerPort: 18789
               name: dashboard
@@ -153,12 +68,12 @@ spec:
           readinessProbe:
             tcpSocket:
               port: 18789
-            initialDelaySeconds: 60
-            periodSeconds: 15
+            initialDelaySeconds: 30
+            periodSeconds: 10
           livenessProbe:
             tcpSocket:
               port: 18789
-            initialDelaySeconds: 120
+            initialDelaySeconds: 90
             periodSeconds: 30
             failureThreshold: 5
           resources:
@@ -170,6 +85,8 @@ spec:
               cpu: "1000m"
               ephemeral-storage: "3Gi"
           volumeMounts:
+            - name: entrypoint
+              mountPath: /mnt/entrypoint
             - name: skill-evaluate-agent
               mountPath: /mnt/skill-evaluate-agent
             - name: skill-review-trace
@@ -180,13 +97,21 @@ spec:
               mountPath: /mnt/skill-trace-explorer
             - name: skill-quality-dashboard
               mountPath: /mnt/skill-quality-dashboard
+            - name: skill-analyze-session
+              mountPath: /mnt/skill-analyze-session
             - name: soul
               mountPath: /mnt/soul
             - name: config
               mountPath: /mnt/config
             - name: hermes-data
               mountPath: /persistent
+            - name: tmp
+              mountPath: /tmp
       volumes:
+        - name: entrypoint
+          configMap:
+            name: agent-lens-entrypoint
+            defaultMode: 0755
         - name: skill-evaluate-agent
           configMap:
             name: skill-evaluate-agent
@@ -202,6 +127,9 @@ spec:
         - name: skill-quality-dashboard
           configMap:
             name: skill-quality-dashboard
+        - name: skill-analyze-session
+          configMap:
+            name: skill-analyze-session
         - name: soul
           configMap:
             name: agent-lens-soul
@@ -211,3 +139,6 @@ spec:
         - name: hermes-data
           persistentVolumeClaim:
             claimName: agent-lens-data
+        - name: tmp
+          emptyDir:
+            sizeLimit: 2Gi

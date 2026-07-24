@@ -20,36 +20,35 @@ Adapted from [mlflow/skills analyze-mlflow-trace](https://github.com/mlflow/skil
 
 ### Getting Traces to Review
 
-**Option A: Specific trace** — User provides a trace ID
-- Call `mcp_mlflow_get_trace` with the ID
+**Option A: Specific trace** — User provides a trace ID  
+→ `mcp_mlflow_get_trace`
 
-**Option B: Surface candidates** — No dedicated review-queue tool on official MCP
-- Call `mcp_mlflow_search_traces` with filters for errors / recent activity
-- Optionally sort or sample from returned results for review
+**Option B: Surface candidates** — No dedicated review-queue tool on official MCP  
+→ `mcp_mlflow_search_traces` (errors / recent / low assessments) and sample for review
 
-### Analyzing a Trace
+### Analyzing a Trace (forensic checklist)
 
-1. Get the trace: `mcp_mlflow_get_trace`
-2. Examine the span tree:
-   - What tools were called?
-   - What was the LLM's reasoning?
-   - Where did it go wrong?
-3. Check existing assessments (automated scores already attached)
-4. Present findings to the user
+1. Fetch full trace: `mcp_mlflow_get_trace` (prefer full payload over sparse field extracts).
+2. **Trace state ≠ quality:** `OK` / `STATUS_CODE_OK` only means execution finished.
+3. Walk the span tree:
+   - Root span = `parent_span_id` is null
+   - Inputs/outputs often in `attributes["mlflow.spanInputs"]` / `mlflow.spanOutputs"` (JSON strings)
+   - Error spans: `status.code == STATUS_CODE_ERROR` (or equivalent)
+4. Assessments:
+   - Prefer **rationale** over raw value — values are ambiguous without it
+   - `feedback.error` means the **scorer failed**, not that the agent failed — exclude from quality claims
+5. Present findings, then ask for annotation intent
 
 ### Annotating
 
-When the user provides feedback:
+**Quality feedback:**
+- `mcp_mlflow_log_trace_feedback` — use 0.0–1.0 (or tool schema); include rationale
 
-**Quality feedback** (subjective score):
-- Call `mcp_mlflow_log_trace_feedback` with name, value, and rationale
-  (follow tool schema — e.g. correctness / relevance / safety / helpfulness)
+**Expected output:**
+- `mcp_mlflow_log_trace_expectation`
 
-**Expected output** (ground truth):
-- Call `mcp_mlflow_log_trace_expectation` with the expected output
-
-**Workflow tags**:
-- Call `mcp_mlflow_set_trace_tag` (e.g. `needs_fix=true`, `reviewed=true`)
+**Workflow tags:**
+- `mcp_mlflow_set_trace_tag` — e.g. `needs_fix=true`, `reviewed=true`, `regression=true`
 
 Never `import mlflow` in the sandbox.
 
@@ -61,29 +60,27 @@ Never `import mlflow` in the sandbox.
 ### Summary
 | Field | Value |
 |-------|-------|
-| Status | OK/ERROR |
+| State | OK/ERROR (execution only) |
 | Duration | Xms |
 | Spans | N |
 | Tool Calls | [list] |
 
-### Span Tree
-1. [Root] → LLM call (Xms)
-   2. [Tool] → search_documents (Yms)
-   3. [Tool] → format_response (Zms)
+### Span Tree (abridged)
+1. [Root] → ...
+   2. [Tool/LLM] → ...
 
 ### Existing Assessments
-| Scorer | Score | Source |
-|--------|-------|--------|
-| RelevanceToQuery | X.X | LLM judge |
+| Scorer | Value | Rationale | Scorer error? |
+|--------|-------|-----------|---------------|
+| ... | yes/no or 0–1 | ... | Y/N |
 
 ### Issues Found
-- [Issue description with evidence from spans]
+- [Evidence from spans / assessments]
 
 ### Awaiting Your Feedback
-What would you like to do?
-- Rate this trace (provide a score on correctness, relevance, etc.)
-- Set expected output (what should the answer have been?)
-- Tag for follow-up / regression tracking
+- Rate this trace (0–1) with rationale
+- Set expected output
+- Tag for regression follow-up
 ```
 
 ## Annotation Guidelines for Users
