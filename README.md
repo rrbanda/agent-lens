@@ -2,10 +2,6 @@
 
 **AI agent evaluation platform for platform teams.** Evaluate, annotate, and gate agents you didn't build — powered by MLflow and the Model Context Protocol.
 
-<p align="center">
-  <img src="docs/images/agentops-loop.png" alt="The AgentOps Evaluation Loop" width="800"/>
-</p>
-
 ---
 
 ## The Problem
@@ -21,6 +17,15 @@ Agent Lens orchestrates this entire cycle through a conversational interface bac
 
 ## How It Works
 
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+graph LR
+    User[Platform Engineer] -->|natural language| AL[Agent Lens]
+    AL -->|MCP| MCP[MCP Server]
+    MCP -->|SDK| MLflow[(MLflow)]
+    MLflow -->|traces| Agents[Your Agents]
+```
+
 ```
 Platform Team: "Evaluate the outreach agent"
 
@@ -28,10 +33,12 @@ Agent Lens:   Runs mlflow.genai.evaluate() with ToolCallCorrectness + RelevanceT
               on 50 production traces...
 
               Quality Certification Report:
-              | Dimension      | Score | Rating |
-              |----------------|-------|--------|
-              | Relevance      | 4.2/5 | PASS   |
-              | Tool Correct.  | 3.1/5 | FAIL   |
+              ┌────────────────┬───────┬────────┐
+              │ Dimension      │ Score │ Rating │
+              ├────────────────┼───────┼────────┤
+              │ Relevance      │ 4.2/5 │ PASS   │
+              │ Tool Correct.  │ 3.1/5 │ FAIL   │
+              └────────────────┴───────┴────────┘
 
               CERTIFICATION: NOT CERTIFIED
               Finding: Tool calls failing on date parsing (8/50 traces)
@@ -52,9 +59,29 @@ Agent Lens:   Runs mlflow.genai.evaluate() with ToolCallCorrectness + RelevanceT
 
 ## Architecture
 
-<p align="center">
-  <img src="docs/images/data-flow.png" alt="Agent Lens Data Flow" width="800"/>
-</p>
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+graph TB
+    subgraph cluster[OpenShift Cluster]
+        subgraph ns_al[agent-lens namespace]
+            Agent[Agent Lens<br/><i>Hermes + Skills</i>]
+        end
+
+        subgraph ns_rhoai[redhat-ods-applications]
+            MCP[MCP Server<br/><i>FastMCP + MLflow SDK</i>]
+            MLflow[MLflow Tracking<br/><i>RHOAI Operator</i>]
+        end
+
+        subgraph ns_target[target-agent namespace]
+            Target[Your Agent<br/><i>+ mlflow autolog</i>]
+        end
+    end
+
+    User((Platform<br/>Engineer)) -->|HTTPS| Agent
+    Agent -->|MCP over HTTP| MCP
+    MCP -->|MLflow SDK + TLS| MLflow
+    Target -->|traces| MLflow
+```
 
 ### Components
 
@@ -65,11 +92,25 @@ Agent Lens:   Runs mlflow.genai.evaluate() with ToolCallCorrectness + RelevanceT
 | **Instrumentation** | Zero-code tracing for target agents |
 | **mlflow/skills** | Vendored evaluation patterns and methodology |
 
-### Hybrid MCP Pattern
+## The AgentOps Loop
 
-<p align="center">
-  <img src="docs/images/hybrid-pattern.png" alt="Hybrid MCP Pattern" width="700"/>
-</p>
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+graph LR
+    O[Observe] --> E[Evaluate]
+    E --> A[Annotate]
+    A --> G[Gate]
+    G --> I[Improve]
+    I --> O
+```
+
+| Phase | Action | Tool |
+|-------|--------|------|
+| **Observe** | Agents generate traces via autolog | `search_traces` |
+| **Evaluate** | Run scorers on production traces | `run_evaluation` |
+| **Annotate** | Human feedback on flagged traces | `annotate_trace` |
+| **Gate** | PASS/FAIL for deployment readiness | `check_quality_gate` |
+| **Improve** | Failures become regression tests | `create_test_case` |
 
 ## Quick Start
 
@@ -113,26 +154,15 @@ Pre-configured evaluation dimensions per agent type:
 | **Tool-Calling** | ToolCallCorrectness + ToolCallEfficiency + Relevance | Agents that call APIs/tools |
 | **Chat Agent** | RelevanceToQuery + Guidelines (helpful, harmless) | Conversational assistants |
 
-## The Feedback Loop
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#4A90D9', 'primaryTextColor': '#fff'}}}%%
-flowchart LR
-    P[Production Trace] --> S[Smart Sampling]
-    S --> R[Human Review]
-    R --> A[Annotate Feedback]
-    A --> D[Add to Dataset]
-    D --> E[Next Eval Catches It]
-    E --> G[Quality Gate Blocks Deploy]
-    G -->|"Fixed"| P
-```
-
 ## Project Structure
 
 ```
 agent-lens/
 ├── mcp-server/              # MLflow SDK-based evaluation tools
-│   └── entrypoint.py        # evaluate, annotate, gate, datasets
+│   ├── entrypoint.py        # evaluate, annotate, gate, datasets
+│   ├── Containerfile        # Production container build
+│   ├── requirements.txt     # Python dependencies
+│   └── deploy/              # Kubernetes manifests + NetworkPolicy
 ├── analyst-agent/           # Agent Lens (Hermes + skills)
 │   ├── soul.md              # v2: evaluation platform identity
 │   ├── skills/
@@ -141,8 +171,9 @@ agent-lens/
 │   │   ├── create-regression/ # Failure-to-dataset pipeline
 │   │   ├── trace-explorer/  # Trace search and analysis
 │   │   └── quality-dashboard/ # Fleet health overview
-│   └── deploy/              # Kubernetes manifests
+│   └── deploy/              # Kubernetes manifests + NetworkPolicy
 ├── instrumentation/         # Target agent auto-tracing
+├── tests/                   # Unit + skill alignment tests
 ├── vendor/mlflow-skills/    # Upstream patterns (submodule)
 ├── docs/                    # Architecture + demo script
 ├── Makefile                 # make deploy-all, make eval
@@ -155,13 +186,6 @@ agent-lens/
 - [mlflow/skills](https://github.com/mlflow/skills) — Agent evaluation patterns and methodology
 - [Model Context Protocol](https://modelcontextprotocol.io/) — Tool integration standard
 - [Hermes Agent](https://github.com/hermes-ai/hermes-agent) — Multi-skill agent framework
-
-## Inspiration
-
-- [Harness AgentTrace](https://www.harness.io/blog/introducing-agent-trace) — "Observe, evaluate, govern" framework
-- [Databricks AgentOps](https://community.databricks.com/t5/technical-blog/agentops-on-databricks-operating-production-ai-agents/ba-p/163602) — Closed feedback loop
-- [Braintrust](https://www.braintrust.dev/articles/best-ai-agent-observability-tools-2026) — Evaluation integrated into observability
-- [MLflow 2026 Evaluation Guide](https://mlflow.org/articles/integrating-evaluation-into-ai-workflows-2026-guide/)
 
 ## Contributing
 

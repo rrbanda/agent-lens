@@ -42,6 +42,11 @@ mcp = FastMCP(
 
 JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "gemini:/gemini-2.5-flash")
 
+DEFAULT_TIMEOUT = 30
+EVAL_TIMEOUT = 120
+MAX_RETRIES = 3
+RETRY_BACKOFF = 1.5
+
 
 def _configure():
     """Set up MLflow connection from environment."""
@@ -54,8 +59,9 @@ def _configure():
         with open(token_file) as f:
             os.environ["MLFLOW_TRACKING_TOKEN"] = f.read().strip()
 
-    if os.environ.get("MLFLOW_TRACKING_INSECURE_TLS", "").lower() in ("true", "1"):
-        os.environ.setdefault("MLFLOW_TRACKING_INSECURE_TLS", "true")
+    ca_bundle = os.environ.get("REQUESTS_CA_BUNDLE")
+    if ca_bundle and os.path.isfile(ca_bundle):
+        os.environ.setdefault("CURL_CA_BUNDLE", ca_bundle)
 
     exp_id = os.environ.get("MLFLOW_EXPERIMENT_ID")
     if exp_id:
@@ -65,17 +71,82 @@ def _configure():
 _configure()
 
 
+import functools
+import signal
+import time
+
+
+class TimeoutError(Exception):
+    pass
+
+
+def _timeout_handler(signum, frame):
+    raise TimeoutError("MLflow operation timed out")
+
+
+def with_timeout(timeout_seconds: int = DEFAULT_TIMEOUT):
+    """Decorator to apply a timeout to a function."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(timeout_seconds)
+            try:
+                return func(*args, **kwargs)
+            except TimeoutError:
+                return json.dumps({"error": f"Operation timed out after {timeout_seconds}s"})
+            finally:
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, old_handler)
+        return wrapper
+    return decorator
+
+
+def with_retry(max_retries: int = MAX_RETRIES, backoff: float = RETRY_BACKOFF):
+    """Decorator to retry transient MLflow failures with exponential backoff."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            last_err = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except TimeoutError:
+                    raise
+                except Exception as e:
+                    last_err = e
+                    err_str = str(e).lower()
+                    transient = any(k in err_str for k in [
+                        "connection", "timeout", "503", "502", "429", "unavailable",
+                    ])
+                    if not transient or attempt == max_retries - 1:
+                        return json.dumps({"error": str(e)})
+                    time.sleep(backoff ** attempt)
+            return json.dumps({"error": str(last_err)})
+        return wrapper
+    return decorator
+
+
+def _get_client():
+    """Return the module-level singleton MlflowClient."""
+    return _mlflow_client
+
+
+from mlflow import MlflowClient
+_mlflow_client = MlflowClient()
+
+
 # =============================================================================
 # OBSERVABILITY TOOLS (read)
 # =============================================================================
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
+@with_retry()
 def list_experiments(max_results: int = 100) -> str:
     """List all MLflow experiments with IDs, names, and lifecycle stage."""
-    from mlflow import MlflowClient
-
-    client = MlflowClient()
+    client = _get_client()
     experiments = client.search_experiments(max_results=max_results)
     return json.dumps([{
         "experiment_id": e.experiment_id,
@@ -86,6 +157,8 @@ def list_experiments(max_results: int = 100) -> str:
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
+@with_retry()
 def search_traces(
     experiment_id: str,
     filter_string: str = "",
@@ -115,15 +188,15 @@ def search_traces(
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
+@with_retry()
 def get_trace(trace_id: str) -> str:
     """Get full details of a specific trace including spans and assessments.
 
     Args:
         trace_id: The trace/request ID.
     """
-    from mlflow import MlflowClient
-
-    client = MlflowClient()
+    client = _get_client()
     trace = client.get_trace(trace_id)
     info = trace.info
     spans = trace.data.spans if trace.data else []
@@ -160,6 +233,8 @@ def get_trace(trace_id: str) -> str:
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
+@with_retry()
 def search_runs(
     experiment_id: str,
     filter_string: str = "",
@@ -201,6 +276,8 @@ def search_runs(
 
 
 @mcp.tool()
+@with_timeout(EVAL_TIMEOUT)
+@with_retry(max_retries=2)
 def run_evaluation(
     experiment_id: str,
     dataset_name: str = "",
@@ -223,22 +300,32 @@ def run_evaluation(
         filter_string: Filter for trace selection.
     """
     from mlflow.genai.scorers import (
+        Guidelines,
         RelevanceToQuery,
+        RetrievalGroundedness,
         ToolCallCorrectness,
         ToolCallEfficiency,
     )
 
     scorer_map = {
         "RelevanceToQuery": RelevanceToQuery,
+        "RetrievalGroundedness": RetrievalGroundedness,
         "ToolCallCorrectness": ToolCallCorrectness,
         "ToolCallEfficiency": ToolCallEfficiency,
+        "Guidelines": Guidelines,
     }
 
     selected_scorers = []
     for name in scorer_names.split(","):
         name = name.strip()
         if name in scorer_map:
-            selected_scorers.append(scorer_map[name](model=JUDGE_MODEL))
+            if name == "Guidelines":
+                selected_scorers.append(scorer_map[name](
+                    model=JUDGE_MODEL,
+                    guidelines="The agent response must be helpful, accurate, and safe.",
+                ))
+            else:
+                selected_scorers.append(scorer_map[name](model=JUDGE_MODEL))
 
     if not selected_scorers:
         return json.dumps({"error": f"No valid scorers found in: {scorer_names}"})
@@ -282,6 +369,7 @@ def run_evaluation(
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
 def list_scorers(experiment_id: str = "") -> str:
     """List available and registered scorers for an experiment.
 
@@ -309,6 +397,8 @@ def list_scorers(experiment_id: str = "") -> str:
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
+@with_retry()
 def annotate_trace(
     trace_id: str,
     feedback_name: str,
@@ -351,6 +441,8 @@ def annotate_trace(
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
+@with_retry()
 def set_expectation(
     trace_id: str,
     expected_output: str,
@@ -387,6 +479,8 @@ def set_expectation(
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
+@with_retry()
 def list_datasets(experiment_id: str = "") -> str:
     """List evaluation datasets available in the system.
 
@@ -407,6 +501,8 @@ def list_datasets(experiment_id: str = "") -> str:
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
+@with_retry()
 def create_test_case(
     trace_id: str,
     dataset_name: str,
@@ -426,10 +522,9 @@ def create_test_case(
         experiment_id: Experiment to associate the dataset with.
     """
     try:
-        from mlflow import MlflowClient
         from mlflow.genai.datasets import create_dataset, search_datasets
 
-        client = MlflowClient()
+        client = _get_client()
         trace = client.get_trace(trace_id)
 
         root_span = None
@@ -484,6 +579,8 @@ def create_test_case(
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
+@with_retry()
 def check_quality_gate(
     experiment_id: str,
     baseline_run_id: str = "",
@@ -571,6 +668,8 @@ def check_quality_gate(
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
+@with_retry()
 def get_review_queue(
     experiment_id: str,
     max_results: int = 10,
@@ -635,12 +734,12 @@ def get_review_queue(
 
 
 @mcp.tool()
+@with_timeout(DEFAULT_TIMEOUT)
 def health_check() -> str:
     """Check connectivity to MLflow and return system status."""
     try:
         uri = mlflow.get_tracking_uri()
-        from mlflow import MlflowClient
-        client = MlflowClient()
+        client = _get_client()
         experiments = client.search_experiments(max_results=1)
         return json.dumps({
             "status": "healthy",
@@ -667,4 +766,20 @@ if __name__ == "__main__":
     print(f"  Transport = streamable-http at /mcp", file=sys.stderr)
     print(f"  Tools: evaluation, annotation, datasets, governance", file=sys.stderr)
 
-    mcp.run(transport="streamable-http", host=host, port=port)
+    import uvicorn
+    from starlette.applications import Starlette
+    from starlette.responses import JSONResponse
+    from starlette.routing import Route, Mount
+
+    async def health_check(request):
+        return JSONResponse({"status": "ok", "service": "agent-lens-mcp", "version": "2.0"})
+
+    mcp_app = mcp.streamable_http_app()
+    app = Starlette(
+        routes=[
+            Route("/health", health_check),
+            Mount("/mcp", app=mcp_app),
+        ],
+    )
+
+    uvicorn.run(app, host=host, port=port)

@@ -9,10 +9,10 @@ Fleet-wide observability summary across all tracked agents.
 
 ## Strategy
 
-1. System health — call `mcp_mlflow_list_experiments` to enumerate tracked agents
+1. System health — call `mcp_agent-lens_list_experiments` to enumerate tracked agents
 2. For each active experiment:
-   - Call `mcp_mlflow_search_traces` (recent activity, error rate)
-   - Call `mcp_mlflow_search_runs` (latest eval scores)
+   - Call `mcp_agent-lens_search_traces` (recent activity, error rate)
+   - Call `mcp_agent-lens_search_runs` (latest eval scores)
 3. Compute health status per agent
 4. Surface alerts for anything outside normal bounds
 

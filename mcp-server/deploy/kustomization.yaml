@@ -5,13 +5,11 @@ namespace: agent-lens
 
 resources:
   - rbac.yaml
+  - networkpolicy.yaml
   - deployment.yaml
   - service.yaml
 
 configMapGenerator:
-  - name: mlflow-mcp-server-code
-    files:
-      - entrypoint.py=../entrypoint.py
   - name: mlflow-mcp-config
     literals:
       - tracking-uri=https://mlflow.redhat-ods-applications.svc:8443

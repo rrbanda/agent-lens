@@ -1,30 +1,33 @@
-# Agent Lens — Observability Agent
+# Agent Lens — Evaluation Agent
 
 A [Hermes Agent](https://github.com/hermes-ai/hermes-agent) instance specialized in
-AI agent observability. It connects to MLflow via MCP and provides conversational
-access to experiments, traces, metrics, and evaluation scores.
+AI agent evaluation and governance. It connects to MLflow via MCP and provides
+conversational access to evaluation scoring, trace annotation, quality gates, and
+regression dataset management.
 
 ## What It Does
 
 Ask natural-language questions like:
-- "How is the outreach agent performing today?"
-- "Show me the last 10 traces with errors"
-- "Compare the last two evaluation runs"
-- "Generate a quality dashboard"
+- "Evaluate the outreach agent using the tool-calling profile"
+- "Show me traces that need review"
+- "Annotate that trace as incorrect — tool selection was wrong"
+- "Add the failing trace to the regression dataset"
+- "Can this agent be deployed? Check the quality gate"
+- "Give me a quality dashboard across all agents"
 
 Agent Lens uses a **hybrid architecture**:
-- **Native MCP tools** for simple lookups (list experiments, get a run)
+- **Native MCP tools** for evaluation actions (run scorers, annotate, gate)
 - **Code execution** for complex multi-step analysis (error rate computation, trend analysis)
 
 ## Skills
 
-| Skill | Trigger |
-|-------|---------|
-| `trace-explorer` | "Show traces", "Recent activity", "Error rate" |
-| `eval-report` | "Quality scores", "Evaluation results" |
-| `compare-agents` | "Compare runs", "Before/after" |
-| `diagnose-failure` | "What went wrong", "Debug this trace" |
-| `quality-dashboard` | "Overview", "How are things going" |
+| Skill | Trigger | MCP Tools Used |
+|-------|---------|---------------|
+| `evaluate-agent` | "Evaluate", "Score", "Certify" | `run_evaluation`, `list_scorers` |
+| `review-trace` | "Review", "Annotate", "Feedback" | `get_review_queue`, `annotate_trace`, `set_expectation` |
+| `create-regression` | "Add to dataset", "Regression test" | `create_test_case`, `list_datasets` |
+| `trace-explorer` | "Show traces", "Recent activity", "Errors" | `search_traces`, `get_trace` |
+| `quality-dashboard` | "Overview", "Fleet health", "Dashboard" | `list_experiments`, `search_traces`, `search_runs` |
 
 ## Prerequisites
 
@@ -35,9 +38,14 @@ Agent Lens uses a **hybrid architecture**:
 ## Deploy
 
 ```bash
-# Create the secret first
+# Create secrets
 oc create secret generic agent-lens-llm-key \
-  --from-literal=api-key='YOUR_API_KEY' \
+  --from-literal=api-key='YOUR_GEMINI_API_KEY' \
+  -n agent-lens
+
+oc create secret generic agent-lens-auth \
+  --from-literal=api-server-key='YOUR_API_KEY' \
+  --from-literal=dashboard-password='YOUR_PASSWORD' \
   -n agent-lens
 
 # Deploy via kustomize
@@ -49,7 +57,6 @@ oc apply -k deploy/
 Edit `config.yaml` to change:
 - LLM provider (`model.provider` and `model.default`)
 - MCP server URL (`mcp_servers.mlflow.url`)
-- Dashboard credentials
 - Enabled toolsets
 
 ## Local Development

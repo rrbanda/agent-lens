@@ -70,10 +70,22 @@ python entrypoint.py
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MLFLOW_TRACKING_URI` | (required) | MLflow server URL |
+| `MLFLOW_TRACKING_TOKEN_FILE` | (optional) | Path to bearer token file for MLflow auth |
+| `REQUESTS_CA_BUNDLE` | (optional) | CA bundle path for TLS verification |
 | `MLFLOW_EXPERIMENT_ID` | (optional) | Default experiment |
 | `JUDGE_MODEL` | `gemini:/gemini-2.5-flash` | LLM for scorers |
+| `GEMINI_API_KEY` | (required) | API key for the judge model |
 | `MCP_HOST` | `0.0.0.0` | Bind address |
 | `MCP_PORT` | `8080` | Bind port |
+
+## Production Features
+
+- **Timeout/retry** — all MLflow SDK calls wrapped with 30s timeout (120s for evaluations) and exponential backoff retry for transient failures
+- **Singleton client** — single `MlflowClient` instance, no per-call overhead
+- **Health endpoint** — `/health` returns HTTP 200 for readiness/liveness probes
+- **Security** — runAsNonRoot, readOnlyRootFilesystem, dropped capabilities, NetworkPolicy
+- **TLS verification** — uses cluster CA bundle, no insecure TLS bypass
+- **Pre-built image** — `quay.io/rrbanda/agent-lens-mcp:v2`, no runtime pip install
 
 ## Based On
 

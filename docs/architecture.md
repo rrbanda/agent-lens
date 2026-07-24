@@ -2,146 +2,192 @@
 
 ## Overview
 
-Agent Lens is composed of three independent components that work together to provide
-conversational observability for AI agents running on OpenShift AI (RHOAI).
+Agent Lens is composed of two primary components that work together to provide
+conversational evaluation and governance for AI agents running on OpenShift AI (RHOAI).
 
-<p align="center">
-  <img src="images/architecture-overview.png" alt="Agent Lens Architecture" width="800"/>
-</p>
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+graph TB
+    subgraph Platform Engineer
+        UI[Dashboard / Chat]
+    end
+
+    subgraph agent-lens namespace
+        Hermes[Agent Lens<br/>Hermes Agent]
+    end
+
+    subgraph redhat-ods-applications
+        MCP[MCP Server<br/>FastMCP + MLflow SDK]
+        MLflow[MLflow Tracking Server<br/>RHOAI Operator-managed]
+    end
+
+    subgraph target namespaces
+        A1[Agent A]
+        A2[Agent B]
+        A3[Agent N]
+    end
+
+    UI -->|HTTPS + basic auth| Hermes
+    Hermes -->|MCP over HTTP| MCP
+    MCP -->|MLflow Python SDK<br/>Bearer token + TLS| MLflow
+    A1 & A2 & A3 -->|mlflow autolog<br/>traces| MLflow
+```
 
 ## Components
 
 ### 1. MLflow MCP Server (`mcp-server/`)
 
-A lightweight Python service that bridges MLflow's REST API with the
-[Model Context Protocol](https://modelcontextprotocol.io/).
+A Python service that exposes MLflow's evaluation, annotation, and governance
+capabilities via the [Model Context Protocol](https://modelcontextprotocol.io/).
 
-**Stack**: FastMCP + httpx + Python 3.11
+**Stack**: FastMCP + MLflow SDK + Starlette + Python 3.11
 
 **Key design decisions**:
-- No `mlflow` Python package required — uses raw REST API calls for minimal footprint
+- Uses MLflow Python SDK directly — enables `mlflow.genai.evaluate()`, `log_feedback()`,
+  and dataset management natively
 - ServiceAccount token-based auth — no credentials stored, uses Kubernetes RBAC
-- Workspace header injection — routes requests to the correct Kubernetes namespace
-- Streamable HTTP transport — modern MCP transport that works behind proxies
+- Singleton `MlflowClient` with timeout/retry — production-grade resilience
+- Streamable HTTP transport at `/mcp` — works behind proxies
+- Dedicated `/health` endpoint — proper K8s readiness/liveness probes
+- Pre-built container image — no runtime dependency install
 
-**How it authenticates**:
-```
-Pod → ServiceAccount → Mounted Token → X-MLflow-Workspace header
-                                      → Authorization: Bearer <sa-token>
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+graph LR
+    subgraph MCP Server
+        H[/health]
+        M[/mcp]
+        SDK[MLflow SDK<br/>singleton client]
+    end
+
+    Agent -->|JSON-RPC| M
+    K8s -->|probe| H
+    M --> SDK
+    SDK -->|search_traces<br/>evaluate<br/>log_feedback| MLflow[(MLflow)]
 ```
 
-The `mlflow-operator-mlflow-integration` ClusterRole grants cross-namespace access
-to experiment data.
+**MCP Tools** (13 registered):
+
+| Category | Tools |
+|----------|-------|
+| Observe | `list_experiments`, `search_traces`, `get_trace`, `search_runs` |
+| Evaluate | `run_evaluation`, `list_scorers` |
+| Annotate | `annotate_trace`, `set_expectation` |
+| Datasets | `list_datasets`, `create_test_case` |
+| Govern | `check_quality_gate`, `get_review_queue` |
+| System | `health_check` |
 
 ### 2. Agent Lens (`analyst-agent/`)
 
 A [Hermes Agent](https://github.com/hermes-ai/hermes-agent) instance configured as
-an observability specialist.
+an evaluation and governance specialist.
 
 **Stack**: Hermes Agent + Gemini 2.5 Flash + 5 built-in skills
 
 **Key design decisions**:
-- **Native MCP integration** — MLflow tools are registered at startup via Hermes's
-  built-in MCP client (`mcp_servers` in config.yaml), making them available as
-  first-class tools alongside built-in ones
-- **Hybrid execution model** — simple queries use native tool calls; complex
+- **Native MCP integration** — tools registered at startup via `mcp_servers` in config.yaml
+- **Hybrid execution model** — simple queries use native MCP calls; complex
   aggregation uses Python code execution with the `mcp` SDK
 - **Persistent state** — PVC stores memory, sessions, and learned skills across restarts
-- **Skill-driven** — analytical patterns are encoded as skills (methodology only, no
-  hardcoded protocol code) so the agent can adapt its approach
+- **Skill-driven** — methodologies encoded as skills, not hardcoded logic
 
-**Skills architecture**:
-```
-soul.md          → Identity, tone, constraints, tool catalog
-skills/*.md      → Analytical methodologies (trace-explorer, eval-report, etc.)
-config.yaml      → MCP connections, toolsets, provider settings
-```
+**Skills**:
 
-### 3. Instrumentation (`instrumentation/`)
-
-Tools to add MLflow observability to any existing AI agent with zero code changes.
-
-**`usercustomize.py`** — Python's automatic site-packages loader. When placed in a
-target agent's environment, it:
-1. Imports mlflow on interpreter startup
-2. Calls `mlflow.openai.autolog()` to patch OpenAI-compatible clients
-3. Every LLM call becomes a trace in the configured experiment
-
-**`eval_agent.py`** — Batch evaluation runner that:
-1. Sends test prompts to an agent's API
-2. Records responses in an MLflow run
-3. Computes quality scores (relevance, faithfulness, correctness)
-4. Logs aggregate metrics for trend tracking
+| Skill | Trigger | MCP Tools Used |
+|-------|---------|---------------|
+| `evaluate-agent` | "Evaluate", "Score" | `run_evaluation`, `list_scorers` |
+| `review-trace` | "Review", "Annotate" | `get_review_queue`, `annotate_trace` |
+| `create-regression` | "Add to dataset" | `create_test_case` |
+| `trace-explorer` | "Show traces", "Errors" | `search_traces`, `get_trace` |
+| `quality-dashboard` | "Overview", "Health" | `list_experiments`, `search_traces`, `search_runs` |
 
 ## Data Flow
 
-<p align="center">
-  <img src="images/data-flow.png" alt="Data Flow" width="800"/>
-</p>
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+sequenceDiagram
+    participant T as Target Agent
+    participant ML as MLflow
+    participant MCP as MCP Server
+    participant AL as Agent Lens
+    participant U as Platform Engineer
 
-### Trace Lifecycle
-
-1. **Capture**: Target agent makes LLM call → `usercustomize.py` intercepts →
-   MLflow trace created with spans, tokens, latency
-2. **Store**: MLflow Tracking Server persists trace in experiment (backed by PostgreSQL)
-3. **Query**: Agent Lens calls MCP Server → MCP Server calls MLflow REST API →
-   structured data returned
-4. **Analyze**: Agent Lens processes data (native tool or code execution) →
-   presents insight to user
+    T->>ML: autolog traces (LLM calls)
+    U->>AL: "Evaluate the outreach agent"
+    AL->>MCP: run_evaluation(experiment_id, scorers)
+    MCP->>ML: mlflow.genai.evaluate()
+    ML-->>MCP: scores + run_id
+    MCP-->>AL: evaluation results
+    AL-->>U: Quality Certification Report
+    U->>AL: "That trace is wrong, annotate it"
+    AL->>MCP: annotate_trace(trace_id, feedback)
+    MCP->>ML: mlflow.log_feedback()
+    ML-->>MCP: ok
+    MCP-->>AL: annotation confirmed
+    AL-->>U: Feedback logged
+```
 
 ### Hybrid MCP Pattern
 
-<p align="center">
-  <img src="images/hybrid-pattern.png" alt="Hybrid MCP Pattern" width="700"/>
-</p>
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+flowchart TD
+    Q[User Query] --> D{Complexity?}
+    D -->|Single lookup| N[Native MCP Tool Call]
+    D -->|Aggregation / loops| C[Code Execution + mcp SDK]
+    N --> R[Response]
+    C --> R
+```
 
-| Scenario | Path | Why |
-|----------|------|-----|
+| Scenario | Path | Reason |
+|----------|------|--------|
 | "List experiments" | Native MCP | Single tool call, small response |
-| "Get run details" | Native MCP | Direct lookup, no processing needed |
-| "Error rate this week" | Code Execution | Needs 200+ traces, aggregation logic |
-| "Compare 5 runs" | Code Execution | Loop, delta computation, statistical test |
-| "Quality trend over time" | Code Execution | Time bucketing, metric history merging |
+| "Evaluate the agent" | Native MCP | Single tool call (long-running internally) |
+| "Error rate this week" | Code Execution | 200+ traces, aggregation logic |
+| "Compare 5 runs" | Code Execution | Loop, delta computation |
+| "Quality trend over time" | Code Execution | Time bucketing, metric merging |
 
 ## Deployment Topology
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ OpenShift Cluster                                               │
-│                                                                 │
-│  ┌──────────────────────┐   ┌─────────────────────────────────┐│
-│  │ Namespace: agent-lens│   │ Namespace: <target-agent>       ││
-│  │                      │   │                                 ││
-│  │  ┌────────────────┐  │   │  ┌──────────────────────────┐  ││
-│  │  │ Agent Lens Pod │  │   │  │ Target Agent Pod         │  ││
-│  │  │  (Hermes)      │  │   │  │  + usercustomize.py      │  ││
-│  │  └───────┬────────┘  │   │  └──────────┬───────────────┘  ││
-│  │          │            │   │             │                  ││
-│  │  ┌───────▼────────┐  │   │             │                  ││
-│  │  │ MCP Server Pod │  │   │             │                  ││
-│  │  └───────┬────────┘  │   │             │                  ││
-│  │          │            │   │             │                  ││
-│  └──────────┼────────────┘   └─────────────┼──────────────────┘│
-│             │                              │                   │
-│  ┌──────────▼──────────────────────────────▼──────────────────┐│
-│  │ Namespace: mlflow-system                                   ││
-│  │  ┌─────────────────────────────────────┐                   ││
-│  │  │ MLflow Tracking Server (Operator)   │                   ││
-│  │  │  + PostgreSQL backend               │                   ││
-│  │  └─────────────────────────────────────┘                   ││
-│  └────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+graph TB
+    subgraph OpenShift Cluster
+        subgraph ns1[agent-lens]
+            AL[Agent Lens Pod<br/>Hermes + Dashboard<br/>port 18789]
+            PVC[(PVC<br/>persistent state)]
+            AL --- PVC
+        end
+
+        subgraph ns2[redhat-ods-applications]
+            MCP_POD[MCP Server Pod<br/>port 8080]
+            MLF[MLflow Tracking<br/>port 8443]
+            MCP_POD --> MLF
+        end
+
+        subgraph ns3[target-agent]
+            TA[Target Agent Pod<br/>+ mlflow autolog]
+            TA --> MLF
+        end
+
+        AL -->|NetworkPolicy: allowed| MCP_POD
+    end
+
+    Route[OpenShift Route<br/>HTTPS termination] --> AL
+    User((Engineer)) --> Route
 ```
 
 ## Security Model
 
 | Layer | Mechanism |
 |-------|-----------|
-| Agent Lens → MCP Server | In-cluster HTTP (Service DNS) |
-| MCP Server → MLflow | ServiceAccount token + ClusterRoleBinding |
-| User → Agent Lens | HTTPS Route + basic auth (scrypt hashed) |
-| LLM API Key | Kubernetes Secret mounted as env var |
-| Cross-namespace | NetworkPolicy allows explicit ingress only |
+| User → Agent Lens | HTTPS Route + basic auth (scrypt hashed, secret-sourced) |
+| Agent Lens → MCP Server | In-cluster HTTP, NetworkPolicy restricted |
+| MCP Server → MLflow | ServiceAccount token + TLS (cluster CA bundle) |
+| API authentication | K8s Secret `agent-lens-auth` |
+| LLM API key | K8s Secret `agent-lens-llm-key` |
+| Pod security | `runAsNonRoot`, `readOnlyRootFilesystem`, drop `ALL` capabilities |
+| Network isolation | NetworkPolicy on both deployments |
 
 ## Scaling Considerations
 

@@ -9,8 +9,8 @@ Investigate agent activity by querying trace data from MLflow.
 
 ## Strategy
 
-1. Identify the target experiment — call `mcp_mlflow_list_experiments` if unknown
-2. Search traces — call `mcp_mlflow_search_traces` with the experiment_id
+1. Identify the target experiment — call `mcp_agent-lens_list_experiments` if unknown
+2. Search traces — call `mcp_agent-lens_search_traces` with the experiment_id
 3. Analyze for patterns:
    - **Error rate**: count ERROR status vs total
    - **Latency distribution**: identify p50, p95, outliers

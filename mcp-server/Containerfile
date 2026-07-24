@@ -1,16 +1,15 @@
 FROM python:3.11-slim
 
-RUN pip install --no-cache-dir -r /tmp/requirements.txt || true
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
+    rm -f /tmp/requirements.txt
 
 COPY entrypoint.py /app/entrypoint.py
 WORKDIR /app
 
-ENV MLFLOW_TRACKING_URI=""
-ENV MCP_HOST="0.0.0.0"
-ENV MCP_PORT="8080"
-ENV MLFLOW_TRACKING_INSECURE_TLS="true"
+ENV MLFLOW_TRACKING_URI="" \
+    MCP_HOST="0.0.0.0" \
+    MCP_PORT="8080"
 
 EXPOSE 8080
 

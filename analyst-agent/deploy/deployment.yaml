@@ -17,10 +17,18 @@ spec:
         app: agent-lens
     spec:
       serviceAccountName: agent-lens
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: hermes
           image: python:3.11-slim
           command: ["/bin/bash", "-c"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           args:
             - |
               set -e
@@ -74,9 +82,12 @@ spec:
               "
 
               HASH=$(python3 -c "
-              import hashlib, secrets, base64
+              import hashlib, secrets, base64, os
+              pw = os.environ.get('DASHBOARD_PASSWORD', '')
+              if not pw:
+                  raise ValueError('DASHBOARD_PASSWORD must be set via secret')
               salt = secrets.token_bytes(16)
-              key = hashlib.scrypt(b'${DASHBOARD_PASSWORD:-openshift}', salt=salt, n=16384, r=8, p=1, dklen=32)
+              key = hashlib.scrypt(pw.encode(), salt=salt, n=16384, r=8, p=1, dklen=32)
               s = base64.b64encode(salt).decode()
               k = base64.b64encode(key).decode()
               print(f'scrypt\$16384\$8\$1\${s}\${k}')
@@ -95,7 +106,7 @@ spec:
               trap 'cp /tmp/work/.hermes/USER.md /tmp/work/.hermes/MEMORY.md /persistent/ 2>/dev/null; echo "State saved"' SIGTERM SIGINT
 
               echo "=== Starting Hermes gateway (background) ==="
-              GATEWAY_ALLOW_ALL_USERS=true hermes gateway run > /tmp/hermes-gateway.log 2>&1 &
+              hermes gateway run > /tmp/hermes-gateway.log 2>&1 &
               GATEWAY_PID=$!
               sleep 5
 
@@ -116,13 +127,32 @@ spec:
             - name: PYTHONUSERBASE
               value: "/tmp/work/.local"
             - name: API_SERVER_KEY
-              value: "change-me-in-production"
+              valueFrom:
+                secretKeyRef:
+                  name: agent-lens-auth
+                  key: api-server-key
             - name: MLFLOW_MCP_URL
               value: "http://mlflow-mcp-server.redhat-ods-applications.svc.cluster.local:8080/mcp"
+            - name: DASHBOARD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: agent-lens-auth
+                  key: dashboard-password
           ports:
             - containerPort: 18789
               name: dashboard
               protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: 18789
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: 18789
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 5
           resources:
             requests:
               memory: "512Mi"

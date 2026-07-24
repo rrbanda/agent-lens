@@ -7,6 +7,8 @@ resources:
   - namespace.yaml
   - pvc.yaml
   - rbac.yaml
+  - secret-auth.yaml
+  - networkpolicy.yaml
   - deployment.yaml
   - service.yaml
   - route.yaml
