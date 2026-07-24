@@ -53,6 +53,23 @@ You are done with first-value when, in one session:
 - **Conversational AgentOps** — observe → evaluate → annotate → certify → follow up
 - **Zero-code tracing** for OpenAI-compatible Python agents (`instrumentation/usercustomize.py`)
 
+## Features
+
+What you can do in chat today (each maps to a Hermes skill):
+
+| Feature | Example ask | What you get |
+|---------|-------------|--------------|
+| **Trace explorer** | “Show me the last 20 traces for outreach-agent” | Latency, errors, token patterns from production traces |
+| **Quality evaluation** | “Evaluate outreach-agent with the tool-calling profile” | GenAI scorers via official MCP + Quality Certification Report |
+| **Certification verdict** | “Can this agent be deployed?” | PASS/FAIL vs thresholds in chat ([not a CI block yet](docs/limitations.md)) |
+| **Human review & annotation** | “Annotate that trace as incorrect tool selection” | Feedback / expectations logged on the trace in MLflow |
+| **Regression follow-up** | “Log a regression follow-up for this failure” | Expectation + tags (`regression=true`) for tracking |
+| **Fleet Observatory** | “Give me a quality dashboard across all agents” | HEALTHY / WARNING / CRITICAL / INACTIVE summary (capped scan) |
+| **Scorer profiles** | “Use the RAG profile” | RAG, tool-calling, chat, or custom Guidelines (see below) |
+| **Zero-code instrumentation** | *(on the target agent)* | `usercustomize.py` autolog for OpenAI-compatible Python agents |
+
+Skills live under [`agent-lens/skills/`](agent-lens/skills/). Full skill ↔ MCP tool map: [`agent-lens/README.md`](agent-lens/README.md).
+
 ## Known limitations (read this)
 
 After the official-MCP-only decision, some words in older decks are **skill-side**, not platform APIs:
