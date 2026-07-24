@@ -1,5 +1,0 @@
-fastmcp>=2.3.0
-mlflow>=3.8.0
-uvicorn
-starlette
-pandas

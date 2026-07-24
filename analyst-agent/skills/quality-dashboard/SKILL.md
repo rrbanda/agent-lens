@@ -5,33 +5,26 @@ description: "Generate a full observability summary across all tracked agents: t
 
 # Quality Dashboard
 
-Fleet-wide observability summary across all tracked agents.
+Fleet-wide observability summary across all tracked agents via **upstream official MLflow MCP**.
 
 ## Strategy (MCP-first — required)
 
-### Primary path (preferred)
+1. Call `mcp_mlflow_search_experiments` to list active experiments (agents).
+2. Cap the fleet scan at **20 experiments** (prefer recently updated). Say so in the report if truncated.
+3. For each selected experiment:
+   - `mcp_mlflow_search_traces` with that experiment id (`max_results` 50)
+   - Optionally `mcp_mlflow_list_runs` for recent evaluation metrics
+4. Compute status with the criteria table (code execution may aggregate MCP JSON only).
+5. Format the Observatory output below.
 
-1. Call `mcp_agent-lens_summarize_experiment_health` once.
-   - Omit `experiment_ids` for the full fleet (server caps the scan).
-   - Or pass a comma-separated list (e.g. `"28"`) for a single agent.
-2. Format the JSON into the Observatory output below.
-3. Do **not** open a code-execution session for this skill unless the primary tool fails.
-
-### Fallback (only if summarize tool errors)
-
-1. `mcp_agent-lens_list_experiments`
-2. For each experiment: `mcp_agent-lens_search_traces` + `mcp_agent-lens_search_runs`
-3. Compute status with the criteria table, then format Observatory output
+Do **not** open code execution to call MLflow. Only use it on data already returned by MCP.
 
 ## Anti-patterns (never do this)
 
 > **Do not** `import mlflow`, call `mlflow.set_tracking_uri`, or connect to an MLflow
 > database / tracking server from the Hermes code-execution sandbox. That environment
-> has no ServiceAccount token to RHOAI MLflow and will hang or fail with configuration
-> errors. All MLflow access must go through Agent Lens MCP tools.
-
-If you use code execution at all (rare), call MCP over HTTP using `MLFLOW_MCP_URL`
-(or the registered MCP client) — never the MLflow tracking SDK.
+> has no ServiceAccount token to RHOAI MLflow and will hang or fail. All MLflow access
+> must go through official MCP tools (`mcp_mlflow_*`).
 
 ## Health Status Criteria
 

@@ -7,7 +7,7 @@ resources:
   - namespace.yaml
   - pvc.yaml
   - rbac.yaml
-  - secret-auth.yaml
+  # secret-auth.yaml is a template only — create via `make secret`, do not apply placeholders
   - networkpolicy.yaml
   - deployment.yaml
   - service.yaml

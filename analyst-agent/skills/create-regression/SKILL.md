@@ -1,12 +1,13 @@
 ---
 name: "create-regression"
-description: "Convert production failures into regression test cases that prevent the same issue from recurring. Use when asked to add a test case, create a regression, or ensure a bug doesn't happen again."
+description: "Log a regression follow-up on a failing trace (expectation + tags). Use when asked to add a test case, create a regression, or ensure a bug doesn't happen again. Does not create an MLflow Evaluation Dataset."
 ---
 
 # Create Regression Test
 
-The failure-to-dataset pipeline: production failures become permanent test cases.
-This is what closes the AgentOps feedback loop.
+Failure-to-follow-up via **upstream official MLflow MCP**.
+Official MCP does not expose dataset APIs — capture ground truth with expectations + tags,
+and advise the user how to promote into an eval dataset offline if needed.
 
 ## When to Use
 
@@ -22,60 +23,54 @@ This is what closes the AgentOps feedback loop.
 
 Either the user provides a trace_id, or find one:
 - From a review session (review-trace skill)
-- From error search: `mcp_agent-lens_search_traces` with filter `trace.status = "ERROR"`
-- From low-score search: `mcp_agent-lens_get_review_queue`
+- From error search: `mcp_mlflow_search_traces` with filter for ERROR status
 
 ### Step 2: Extract the Test Case
 
-From the trace, extract:
+From the trace (`mcp_mlflow_get_trace`), extract:
 - **Input**: What was the user's query/request?
 - **Expected output**: What should the agent have produced?
 - **Context** (if RAG): What documents were available?
 
 The user must confirm the expected output (or provide it).
 
-### Step 3: Add to Dataset
+### Step 3: Persist via official MCP
 
-Call `mcp_agent-lens_create_test_case` with:
-- `trace_id`: The source trace
-- `dataset_name`: Agent's regression dataset (convention: `{agent-name}-regression`)
-- `expected_output`: The correct answer
+1. Call `mcp_mlflow_log_trace_expectation` with the confirmed expected output
+2. Call `mcp_mlflow_set_trace_tag` with tags such as:
+   - `regression=true`
+   - `dataset=<agent-name>-regression` (naming convention)
+3. Optionally `mcp_mlflow_log_trace_feedback` if a quality score was given
 
 ### Step 4: Confirm and Advise
 
 Tell the user:
-1. Test case was added
-2. Next eval run will include it
-3. If the agent regresses on this case, it will show in the Quality Gate
+1. Expectation + tags were logged on the trace
+2. Next `evaluate-agent` run can include / prioritize tagged traces
+3. For a durable GenAI evaluation dataset, export or create records in MLflow UI / SDK outside the sandbox (official MCP has no `create_dataset` tool)
+
+Never `import mlflow` in the sandbox.
 
 ## Output Format
 
 ```
-## Regression Test Created
+## Regression Follow-up Logged
 
 | Field | Value |
 |-------|-------|
 | Source Trace | [trace_id] |
-| Dataset | [dataset_name] |
+| Dataset tag | [dataset_name] |
 | Input | [extracted query] |
 | Expected | [user-provided expected output] |
 
 ### Impact
-This test case will:
-- Be included in all future evaluations of [agent name]
-- Block deployment if the agent fails this case (via quality gate)
-- Appear in the Quality Certification Report
-
-### Dataset Status
-| Metric | Value |
-|--------|-------|
-| Total test cases | N |
-| Added today | +1 |
-| Coverage areas | [list] |
+- Ground-truth expectation is attached to the trace
+- Trace is tagged for regression tracking
+- Future evaluations can prioritize tagged failures
 
 ### Next Steps
-- Run `evaluate-agent` to verify the current version passes
-- Consider adding 2-3 related variations to catch similar failures
+- Run `evaluate-agent` to verify the current version
+- Consider adding 2-3 related variations (annotate sibling traces)
 ```
 
 ## Dataset Naming Convention
@@ -89,8 +84,7 @@ This test case will:
 
 ## Best Practices
 
-- Each test case should test ONE thing (not compound failures)
+- Each case should test ONE thing (not compound failures)
 - Expected outputs should be specific enough to score against
-- Add variations: if "query about X" failed, also test "query about Y" (related)
-- 50-100 test cases is a good target per agent
-- Review and prune the dataset quarterly (remove obsolete cases)
+- Add variations: if "query about X" failed, also test related Y
+- Review and prune tagged regressions quarterly

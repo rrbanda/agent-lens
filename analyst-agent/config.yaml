@@ -3,13 +3,26 @@ model:
   provider: gemini
 mcp_servers:
   mlflow:
-    url: "http://mlflow-mcp-server.redhat-ods-applications.svc.cluster.local:8080/mcp"
+    # Always use upstream official MLflow MCP (mlflow mcp run), never Agent Lens FastMCP.
+    url: "http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp"
     timeout: 180
     connect_timeout: 60
     supports_parallel_tool_calls: true
     tools:
       resources: false
       prompts: false
+      include:
+        - search_experiments
+        - get_experiment
+        - search_traces
+        - get_trace
+        - log_trace_feedback
+        - log_trace_expectation
+        - set_trace_tag
+        - evaluate_traces
+        - list_runs
+        - describe_run
+        - list_scorers
 dashboard:
   basic_auth:
     username: admin
@@ -19,7 +32,8 @@ platforms:
     enabled: true
     extra:
       port: 8642
-      key: "agent-lens-api-key-2026"
+      # Overridden at runtime from Secret agent-lens-auth / API_SERVER_KEY when supported.
+      key: "PLACEHOLDER"
   webhook:
     enabled: false
 gateway:
@@ -51,4 +65,5 @@ skills:
   directory: /tmp/work/.hermes/skills
   curator:
     enabled: true
-api_server_key: "agent-lens-api-key-2026"
+# Prefer Secret-injected API_SERVER_KEY in the Deployment over this placeholder.
+api_server_key: "PLACEHOLDER"
