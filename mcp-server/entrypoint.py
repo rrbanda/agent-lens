@@ -48,6 +48,15 @@ def _configure():
     uri = os.environ.get("MLFLOW_TRACKING_URI")
     if uri:
         mlflow.set_tracking_uri(uri)
+
+    token_file = os.environ.get("MLFLOW_TRACKING_TOKEN_FILE")
+    if token_file and os.path.isfile(token_file):
+        with open(token_file) as f:
+            os.environ["MLFLOW_TRACKING_TOKEN"] = f.read().strip()
+
+    if os.environ.get("MLFLOW_TRACKING_INSECURE_TLS", "").lower() in ("true", "1"):
+        os.environ.setdefault("MLFLOW_TRACKING_INSECURE_TLS", "true")
+
     exp_id = os.environ.get("MLFLOW_EXPERIMENT_ID")
     if exp_id:
         os.environ.setdefault("MLFLOW_EXPERIMENT_ID", exp_id)
@@ -235,6 +244,8 @@ def run_evaluation(
         return json.dumps({"error": f"No valid scorers found in: {scorer_names}"})
 
     try:
+        mlflow.set_experiment(experiment_id=experiment_id)
+
         if dataset_name:
             from mlflow.genai.datasets import search_datasets
             datasets = search_datasets(filter_string=f"name = '{dataset_name}'")

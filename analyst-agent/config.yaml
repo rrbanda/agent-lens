@@ -3,7 +3,7 @@ model:
   provider: gemini
 mcp_servers:
   mlflow:
-    url: "${MLFLOW_MCP_URL:-http://mlflow-mcp-server:8080/mcp}"
+    url: "http://mlflow-mcp-server.redhat-ods-applications.svc.cluster.local:8080/mcp"
     timeout: 180
     connect_timeout: 60
     supports_parallel_tool_calls: true
@@ -13,13 +13,13 @@ mcp_servers:
 dashboard:
   basic_auth:
     username: admin
-    password_hash: "${DASHBOARD_PASSWORD_HASH}"
+    password_hash: "PLACEHOLDER"
 platforms:
   api_server:
     enabled: true
     extra:
       port: 8642
-      key: "${API_SERVER_KEY}"
+      key: "agent-lens-api-key-2026"
   webhook:
     enabled: false
 gateway:
@@ -51,4 +51,4 @@ skills:
   directory: /tmp/work/.hermes/skills
   curator:
     enabled: true
-api_server_key: "${API_SERVER_KEY}"
+api_server_key: "agent-lens-api-key-2026"

@@ -24,7 +24,7 @@ spec:
           args:
             - |
               set -e
-              SKILLS="trace-explorer eval-report compare-agents diagnose-failure quality-dashboard"
+              SKILLS="evaluate-agent review-trace create-regression trace-explorer quality-dashboard"
 
               mkdir -p /persistent/memory /persistent/sessions /persistent/profiles /persistent/auto-skills /persistent/db
               mkdir -p /tmp/work/.local /tmp/work/data /tmp/work/output /tmp/work/.hermes
@@ -43,11 +43,11 @@ spec:
                 mkdir -p /tmp/work/.hermes/skills/$s
               done
 
-              cp /mnt/skills-te/SKILL.md /tmp/work/.hermes/skills/trace-explorer/SKILL.md
-              cp /mnt/skills-er/SKILL.md /tmp/work/.hermes/skills/eval-report/SKILL.md
-              cp /mnt/skills-ca/SKILL.md /tmp/work/.hermes/skills/compare-agents/SKILL.md
-              cp /mnt/skills-df/SKILL.md /tmp/work/.hermes/skills/diagnose-failure/SKILL.md
-              cp /mnt/skills-qd/SKILL.md /tmp/work/.hermes/skills/quality-dashboard/SKILL.md
+              cp /mnt/skill-evaluate-agent/SKILL.md /tmp/work/.hermes/skills/evaluate-agent/SKILL.md
+              cp /mnt/skill-review-trace/SKILL.md /tmp/work/.hermes/skills/review-trace/SKILL.md
+              cp /mnt/skill-create-regression/SKILL.md /tmp/work/.hermes/skills/create-regression/SKILL.md
+              cp /mnt/skill-trace-explorer/SKILL.md /tmp/work/.hermes/skills/trace-explorer/SKILL.md
+              cp /mnt/skill-quality-dashboard/SKILL.md /tmp/work/.hermes/skills/quality-dashboard/SKILL.md
 
               cp /mnt/soul/SOUL.md /tmp/work/.hermes/SOUL.md
               cp /mnt/config/config.yaml /tmp/work/.hermes/config.yaml
@@ -118,7 +118,7 @@ spec:
             - name: API_SERVER_KEY
               value: "change-me-in-production"
             - name: MLFLOW_MCP_URL
-              value: "http://mlflow-mcp-server.${MCP_NAMESPACE:-agent-lens}.svc.cluster.local:8080/mcp"
+              value: "http://mlflow-mcp-server.redhat-ods-applications.svc.cluster.local:8080/mcp"
           ports:
             - containerPort: 18789
               name: dashboard
@@ -132,16 +132,16 @@ spec:
               cpu: "1000m"
               ephemeral-storage: "3Gi"
           volumeMounts:
-            - name: skills-te
-              mountPath: /mnt/skills-te
-            - name: skills-er
-              mountPath: /mnt/skills-er
-            - name: skills-ca
-              mountPath: /mnt/skills-ca
-            - name: skills-df
-              mountPath: /mnt/skills-df
-            - name: skills-qd
-              mountPath: /mnt/skills-qd
+            - name: skill-evaluate-agent
+              mountPath: /mnt/skill-evaluate-agent
+            - name: skill-review-trace
+              mountPath: /mnt/skill-review-trace
+            - name: skill-create-regression
+              mountPath: /mnt/skill-create-regression
+            - name: skill-trace-explorer
+              mountPath: /mnt/skill-trace-explorer
+            - name: skill-quality-dashboard
+              mountPath: /mnt/skill-quality-dashboard
             - name: soul
               mountPath: /mnt/soul
             - name: config
@@ -149,19 +149,19 @@ spec:
             - name: hermes-data
               mountPath: /persistent
       volumes:
-        - name: skills-te
+        - name: skill-evaluate-agent
+          configMap:
+            name: skill-evaluate-agent
+        - name: skill-review-trace
+          configMap:
+            name: skill-review-trace
+        - name: skill-create-regression
+          configMap:
+            name: skill-create-regression
+        - name: skill-trace-explorer
           configMap:
             name: skill-trace-explorer
-        - name: skills-er
-          configMap:
-            name: skill-eval-report
-        - name: skills-ca
-          configMap:
-            name: skill-compare-agents
-        - name: skills-df
-          configMap:
-            name: skill-diagnose-failure
-        - name: skills-qd
+        - name: skill-quality-dashboard
           configMap:
             name: skill-quality-dashboard
         - name: soul

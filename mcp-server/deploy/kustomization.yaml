@@ -1,6 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: agent-lens
+
 resources:
   - rbac.yaml
   - deployment.yaml
@@ -12,8 +14,8 @@ configMapGenerator:
       - entrypoint.py=../entrypoint.py
   - name: mlflow-mcp-config
     literals:
-      - tracking-uri=https://mlflow-server:8443
-      - default-workspace=default
+      - tracking-uri=https://mlflow.redhat-ods-applications.svc:8443
+      - judge-model=gemini:/gemini-2.5-flash
 
 generatorOptions:
   disableNameSuffixHash: true

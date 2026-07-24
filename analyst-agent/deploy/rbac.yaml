@@ -16,4 +16,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: agent-lens
-    namespace: ${NAMESPACE:-agent-lens}
+    namespace: agent-lens

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: ${NAMESPACE:-agent-lens}
+  name: agent-lens
   labels:
     app.kubernetes.io/part-of: agent-lens
     app.kubernetes.io/component: analyst-agent

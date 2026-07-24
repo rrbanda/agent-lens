@@ -16,4 +16,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: mlflow-mcp-sa
-    namespace: ${MCP_NAMESPACE}
+    namespace: agent-lens
