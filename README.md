@@ -168,8 +168,10 @@ We welcome contributions of all kinds — new scorers, skills, deployment target
 git clone https://github.com/<you>/agent-lens.git
 cd agent-lens
 
-# Install dev dependencies
-pip install -e ".[dev]"
+# Install dependencies
+python -m venv .venv && source .venv/bin/activate
+pip install -r mcp-server/requirements.txt
+pip install pytest
 
 # Run tests
 pytest
@@ -213,13 +215,21 @@ Found a bug or have a feature request? [Open an issue](https://github.com/rrband
 
 ## Roadmap
 
-- [ ] GitHub Actions CI (lint, test, image build, kustomize validate)
-- [ ] Kustomize overlays for dev/staging/production
-- [ ] Prometheus metrics (`mcp_tool_calls_total`, `mcp_tool_duration_seconds`)
-- [ ] Additional scorers: Safety, Conciseness, custom `make_judge()` integration
-- [ ] Multi-tenant support (workspace-per-team routing)
-- [ ] Webhook integration for quality gate → CI/CD pipeline notifications
-- [ ] Grafana dashboard template for MCP server metrics
+Work is tracked on the **[Agent Lens Roadmap](https://github.com/users/rrbanda/projects/3)** project board and these milestones:
+
+| Milestone | Goal |
+|-----------|------|
+| [M0 — Upstream foundation](https://github.com/rrbanda/agent-lens/milestone/1) | CI, templates, contracts, immutable deploy path |
+| [M1 — MVP pilot](https://github.com/rrbanda/agent-lens/milestone/2) | First-trace activation, GenAI-only eval, trusted gate, regression loop |
+| [M2 — Production hardening](https://github.com/rrbanda/agent-lens/milestone/3) | SSO, CI gate webhook, audit, overlays, Prometheus |
+| [M3 — Platform scale](https://github.com/rrbanda/agent-lens/milestone/4) | Multi-tenant, custom scorers, Grafana, session skill |
+
+### How we track work
+
+- Every change should have a GitHub issue
+- Priority labels: `P0` (current milestone must), `P1`, `P2`
+- Area labels: `area:mcp`, `area:hermes`, `area:instrumentation`, `area:deploy`, `area:ci`, `area:docs`, `area:security`
+- Good starter tasks: [`good first issue`](https://github.com/rrbanda/agent-lens/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
 ## Built With
 

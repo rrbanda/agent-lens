@@ -127,9 +127,11 @@ class TestCheckQualityGate:
 
         result = json.loads(check_quality_gate(
             experiment_id="1",
-            threshold=4.0,
+            threshold_relevance=4.0,
+            threshold_correctness=4.0,
         ))
-        assert result["decision"] in ("PASS", "FAIL", "NO_DATA")
+        # Entrypoint returns "gate" (PASS/FAIL/ERROR), not "decision"
+        assert result["gate"] in ("PASS", "FAIL", "ERROR")
 
 
 class TestHealthCheck:
@@ -160,8 +162,9 @@ class TestListScorers:
         from entrypoint import list_scorers
 
         result = json.loads(list_scorers())
-        assert "available_scorers" in result
-        scorers = result["available_scorers"]
+        # Entrypoint key is built_in_scorers (not available_scorers)
+        assert "built_in_scorers" in result
+        scorers = result["built_in_scorers"]
         scorer_names = [s["name"] for s in scorers]
         assert "RelevanceToQuery" in scorer_names
         assert "RetrievalGroundedness" in scorer_names

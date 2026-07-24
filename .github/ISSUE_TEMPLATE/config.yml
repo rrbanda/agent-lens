@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Architecture & demo docs
+    url: https://github.com/rrbanda/agent-lens/blob/main/docs/architecture.md
+    about: Read the design before filing large feature requests

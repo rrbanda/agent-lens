@@ -14,6 +14,29 @@ This project follows the [Contributor Covenant Code of Conduct](https://www.cont
 - Access to an OpenShift cluster with RHOAI (for integration testing)
 - `oc` CLI (for deployment testing)
 
+### How we track work
+
+All work flows through GitHub Issues and the **[Agent Lens Roadmap](https://github.com/users/rrbanda/projects/3)** project.
+
+| Milestone | Purpose |
+|-----------|---------|
+| [M0](https://github.com/rrbanda/agent-lens/milestone/1) | Upstream foundation |
+| [M1](https://github.com/rrbanda/agent-lens/milestone/2) | MVP pilot |
+| [M2](https://github.com/rrbanda/agent-lens/milestone/3) | Production hardening |
+| [M3](https://github.com/rrbanda/agent-lens/milestone/4) | Platform scale |
+
+**Labels**
+
+| Kind | Labels |
+|------|--------|
+| Type | `type:bug`, `type:feature`, `type:chore`, `type:docs` |
+| Area | `area:mcp`, `area:hermes`, `area:instrumentation`, `area:deploy`, `area:ci`, `area:docs`, `area:security` |
+| Priority | `P0`, `P1`, `P2` |
+| Size | `size:S`, `size:M`, `size:L` |
+| Other | `epic`, `good first issue`, `needs-design`, `blocked` |
+
+PRs should reference an issue (`Fixes #N`). Skills must pass `pytest tests/test_skill_alignment.py`.
+
 ### Development Setup
 
 ```bash

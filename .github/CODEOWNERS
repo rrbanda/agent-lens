@@ -1,0 +1,14 @@
+# Default
+* @rrbanda
+
+# Core product surfaces
+/mcp-server/ @rrbanda
+/analyst-agent/ @rrbanda
+/instrumentation/ @rrbanda
+/tests/ @rrbanda
+
+# Upstream project hygiene
+/.github/ @rrbanda
+/docs/ @rrbanda
+/README.md @rrbanda
+/CONTRIBUTING.md @rrbanda
