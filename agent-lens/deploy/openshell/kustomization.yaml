@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: openshell
+
+resources:
+  - sandbox.yaml
+  - services.yaml
+  - network-policies.yaml
+
+configMapGenerator:
+  - name: agent-lens-startup
+    files:
+      - startup.sh=startup.sh
+  - name: agent-lens-openshell-policy
+    files:
+      - policy.yaml=policy.yaml
+      - sandbox-policy.rego=sandbox-policy.rego
+  - name: skill-evaluate-agent
+    files:
+      - SKILL.md=../../skills/evaluate-agent/SKILL.md
+  - name: skill-review-trace
+    files:
+      - SKILL.md=../../skills/review-trace/SKILL.md
+  - name: skill-create-regression
+    files:
+      - SKILL.md=../../skills/create-regression/SKILL.md
+  - name: skill-trace-explorer
+    files:
+      - SKILL.md=../../skills/trace-explorer/SKILL.md
+  - name: skill-quality-dashboard
+    files:
+      - SKILL.md=../../skills/quality-dashboard/SKILL.md
+  - name: skill-analyze-session
+    files:
+      - SKILL.md=../../skills/analyze-session/SKILL.md
+  - name: agent-lens-soul
+    files:
+      - SOUL.md=../../soul.md
+  - name: agent-lens-config
+    files:
+      - config.yaml=../../config.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true

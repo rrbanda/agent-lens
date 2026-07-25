@@ -1,0 +1,206 @@
+apiVersion: agents.x-k8s.io/v1beta1
+kind: Sandbox
+metadata:
+  name: agent-lens
+  labels:
+    app: agent-lens
+    app.kubernetes.io/name: agent-lens
+    app.kubernetes.io/part-of: agent-lens
+spec:
+  replicas: 1
+  shutdownPolicy: Retain
+  podTemplate:
+    metadata:
+      labels:
+        app: agent-lens
+    spec:
+      serviceAccountName: openshell-sandbox
+      securityContext:
+        fsGroup: 1001310000
+      initContainers:
+        - name: openshell-supervisor-install
+          image: ghcr.io/nvidia/openshell/supervisor:0.0.85
+          imagePullPolicy: IfNotPresent
+          command: ["/openshell-sandbox", "copy-self", "/opt/openshell/bin/openshell-sandbox"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: openshell-supervisor-bin
+              mountPath: /opt/openshell/bin
+        - name: workspace-init
+          image: image-registry.openshift-image-registry.svc:5000/agent-lens/agent-lens:latest
+          imagePullPolicy: Always
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /workspace-pvc/.workspace-initialized ]; then
+                [ -d /sandbox ] && tar -C /sandbox -cf - . | tar -C /workspace-pvc -xpf -
+                touch /workspace-pvc/.workspace-initialized
+              fi
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace-pvc
+      containers:
+        - name: agent
+          image: image-registry.openshift-image-registry.svc:5000/agent-lens/agent-lens:latest
+          imagePullPolicy: Always
+          # Local policy mode — supervisor enforces Landlock + seccomp sandbox.
+          command:
+            - /opt/openshell/bin/openshell-sandbox
+          args:
+            - --mode=process
+            - --log-level=debug
+            - --policy-rules
+            - /etc/openshell/sandbox-policy.rego
+            - --policy-data
+            - /etc/openshell/policy.yaml
+            - --
+            - bash
+            - /mnt/startup/startup.sh
+          env:
+            - name: OPENSHELL_SANDBOX
+              value: agent-lens
+            - name: OPENSHELL_ENDPOINT
+              value: "https://openshell.openshell.svc.cluster.local:8080"
+            - name: OPENSHELL_TLS_CA
+              value: /etc/openshell-tls/ca.crt
+            - name: OPENSHELL_TLS_CERT
+              value: /etc/openshell-tls/tls.crt
+            - name: OPENSHELL_TLS_KEY
+              value: /etc/openshell-tls/tls.key
+            - name: OPENSHELL_POLICY_RULES
+              value: /etc/openshell/sandbox-policy.rego
+            - name: OPENSHELL_POLICY_DATA
+              value: /etc/openshell/policy.yaml
+            - name: OPENSHELL_TELEMETRY_ENABLED
+              value: "true"
+            - name: OPENSHELL_SSH_SOCKET_PATH
+              value: /run/openshell/ssh.sock
+            - name: OPENSHELL_SANDBOX_UID
+              value: "1001310000"
+            - name: OPENSHELL_SANDBOX_GID
+              value: "1001310000"
+            - name: HOME
+              value: /sandbox
+            - name: HERMES_HOME
+              value: /sandbox/.hermes
+            - name: OPENAI_API_KEY
+              value: not-needed
+            - name: OPENAI_BASE_URL
+              value: "http://llamastack-service.llamastack.svc:8321/v1"
+            - name: LLAMASTACK_MODEL
+              value: "gemini/models/gemini-2.5-flash"
+            - name: MLFLOW_MCP_URL
+              value: "http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp"
+            - name: HERMES_DASHBOARD_BASIC_AUTH_USERNAME
+              value: "admin"
+            - name: HERMES_DASHBOARD_BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: agent-lens-auth
+                  key: dashboard-password
+            - name: HERMES_DASHBOARD_HOST
+              value: "0.0.0.0"
+            - name: HERMES_DASHBOARD_PORT
+              value: "9119"
+            - name: PATH
+              value: "/sandbox/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+          securityContext:
+            runAsUser: 0
+            appArmorProfile:
+              type: Unconfined
+            capabilities:
+              add: [SYS_ADMIN, NET_ADMIN, SYS_PTRACE, SYSLOG]
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "2"
+          volumeMounts:
+            - name: openshell-supervisor-bin
+              mountPath: /opt/openshell/bin
+              readOnly: true
+            - name: openshell-policy
+              mountPath: /etc/openshell
+              readOnly: true
+            - name: openshell-client-tls
+              mountPath: /etc/openshell-tls
+              readOnly: true
+            - name: workspace
+              mountPath: /sandbox
+            - name: startup
+              mountPath: /mnt/startup
+            - name: soul
+              mountPath: /mnt/soul
+            - name: config
+              mountPath: /mnt/config
+            - name: skill-evaluate-agent
+              mountPath: /mnt/skill-evaluate-agent
+            - name: skill-review-trace
+              mountPath: /mnt/skill-review-trace
+            - name: skill-create-regression
+              mountPath: /mnt/skill-create-regression
+            - name: skill-trace-explorer
+              mountPath: /mnt/skill-trace-explorer
+            - name: skill-quality-dashboard
+              mountPath: /mnt/skill-quality-dashboard
+            - name: skill-analyze-session
+              mountPath: /mnt/skill-analyze-session
+          ports:
+            - containerPort: 9119
+              name: dashboard
+          readinessProbe:
+            tcpSocket:
+              port: 9119
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: openshell-supervisor-bin
+          emptyDir: {}
+        - name: openshell-client-tls
+          secret:
+            secretName: openshell-client-tls
+        - name: openshell-policy
+          configMap:
+            name: agent-lens-openshell-policy
+        - name: startup
+          configMap:
+            name: agent-lens-startup
+            defaultMode: 0755
+        - name: soul
+          configMap:
+            name: agent-lens-soul
+        - name: config
+          configMap:
+            name: agent-lens-config
+        - name: skill-evaluate-agent
+          configMap:
+            name: skill-evaluate-agent
+        - name: skill-review-trace
+          configMap:
+            name: skill-review-trace
+        - name: skill-create-regression
+          configMap:
+            name: skill-create-regression
+        - name: skill-trace-explorer
+          configMap:
+            name: skill-trace-explorer
+        - name: skill-quality-dashboard
+          configMap:
+            name: skill-quality-dashboard
+        - name: skill-analyze-session
+          configMap:
+            name: skill-analyze-session
+  volumeClaimTemplates:
+    - metadata:
+        name: workspace
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 5Gi

@@ -1,0 +1,114 @@
+# One-shot in-cluster image build (no local podman). Uses a PVC so the build
+# is not BuildPodEvicted for ephemeral-storage. Apply manually:
+#   oc apply -f agent-lens/deploy/openshell/buildah-job.yaml
+#   oc logs -f job/agent-lens-buildah -n agent-lens
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: agent-lens-buildah
+  namespace: agent-lens
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 30Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-lens-containerfile
+  namespace: agent-lens
+data:
+  Containerfile: |
+    ARG OPENSHELL_BASE=image-registry.openshift-image-registry.svc:5000/agent-lens/openshell-sandbox-base:latest
+    FROM ${OPENSHELL_BASE}
+    USER root
+    RUN /sandbox/.venv/bin/pip install --no-cache-dir --ignore-requires-python \
+          "hermes-agent>=0.19.0" \
+          aiohttp \
+          mcp \
+          pyyaml \
+          fastapi \
+          "uvicorn[standard]" \
+          websockets
+    ARG NODE_VERSION=22.16.0
+    RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+          | tar -xJf - -C /usr/local --strip-components=1 \
+        && node --version && npm --version
+    ENV HERMES_HOME=/sandbox/.hermes \
+        HOME=/sandbox \
+        PATH="/sandbox/.venv/bin:/usr/local/bin:$PATH" \
+        OPENAI_API_KEY=not-needed \
+        BOOTSTRAP_DEPS=0
+    EXPOSE 9119
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: agent-lens-buildah
+  namespace: agent-lens
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: builder
+      containers:
+        - name: buildah
+          image: quay.io/buildah/stable:latest
+          securityContext:
+            privileged: true
+          env:
+            - name: STORAGE_DRIVER
+              value: overlay
+          volumeMounts:
+            - name: storage
+              mountPath: /var/lib/containers
+            - name: containerfile
+              mountPath: /build
+            - name: push-secret
+              mountPath: /var/run/secrets/openshift.io/push
+              readOnly: true
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              AUTH=/tmp/auth.json
+              if [ -f /var/run/secrets/openshift.io/push/.dockercfg ]; then
+                # Convert dockercfg to authfile
+                python3 - <<'PY'
+              import json, os
+              cfg=json.load(open("/var/run/secrets/openshift.io/push/.dockercfg"))
+              auths={}
+              for host,v in cfg.items():
+                import base64
+                user=v.get("username") or ""
+                pw=v.get("password") or ""
+                if "auth" in v and not user:
+                  raw=base64.b64decode(v["auth"]).decode()
+                  user,pw=raw.split(":",1)
+                auths[host]={"username":user,"password":pw}
+              json.dump({"auths":auths}, open("/tmp/auth.json","w"))
+              PY
+              elif [ -f /var/run/secrets/openshift.io/push/.dockerconfigjson ]; then
+                cp /var/run/secrets/openshift.io/push/.dockerconfigjson "$AUTH"
+              fi
+              OUT=image-registry.openshift-image-registry.svc:5000/agent-lens/agent-lens:latest
+              # Internal registry uses cluster CA; buildah in this image lacks it.
+              buildah bud --tls-verify=false --authfile "$AUTH" \
+                --build-arg OPENSHELL_BASE=image-registry.openshift-image-registry.svc:5000/agent-lens/openshell-sandbox-base:latest \
+                -t "$OUT" -f /build/Containerfile /build
+              buildah push --tls-verify=false --authfile "$AUTH" "$OUT" "docker://$OUT"
+              echo "Pushed $OUT"
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: agent-lens-buildah
+        - name: containerfile
+          configMap:
+            name: agent-lens-containerfile
+        - name: push-secret
+          secret:
+            secretName: builder-dockercfg-4g9d8
+            optional: true

@@ -41,11 +41,11 @@ You are done with first-value when, in one session:
 
 | This repo deploys | You must already have |
 |-------------------|------------------------|
-| Hermes Agent Lens (`agent-lens/`) | MLflow on RHOAI |
+| Hermes Agent Lens OpenShell Sandbox (`agent-lens/deploy/openshell/`) | MLflow on RHOAI |
 | Skills, soul, OpenShift manifests | **Official MLflow MCP** service `mlflow-mcp` (`mlflow mcp run`) |
-| Instrumentation helpers | Gemini (or compatible) API key |
+| Instrumentation helpers | OpenShell + LlamaStack on cluster |
 
-`make deploy-all` deploys **Agent Lens only**. It does **not** install MLflow or MCP. See [docs/operator-mcp.md](docs/operator-mcp.md).
+`make deploy-all` builds the OpenShell-base image and deploys the **Sandbox** into `openshell`. It does **not** install MLflow, MCP, or OpenShell. See [docs/operator-mcp.md](docs/operator-mcp.md).
 
 ## Why Agent Lens?
 
@@ -110,19 +110,21 @@ graph LR
 
 - OpenShift + [RHOAI](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-ai) with MLflow
 - Official MLflow MCP reachable as `mlflow-mcp` (see [operator guide](docs/operator-mcp.md))
-- `oc` authenticated; Gemini API key
+- OpenShell (`openshell` ns) + LlamaStack; `oc` authenticated
 
 ### Install Agent Lens
 
 ```bash
 git clone https://github.com/rrbanda/agent-lens.git
 cd agent-lens
-cp .env.example .env
 
-# Creates LLM + dashboard/API secrets interactively, then deploys Hermes
+# Dashboard/API secret in openshell (no Gemini key — LlamaStack inference)
+DASH_PW=... API_KEY=... make secret-openshell
+
+# Build OpenShell-base image + deploy Sandbox
 make deploy-all
 
-make status   # MCP + Agent Lens + route
+make status   # MCP + OpenShell Sandbox + route
 ```
 
 Default MCP URL in [`agent-lens/config.yaml`](agent-lens/config.yaml):

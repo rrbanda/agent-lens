@@ -1,0 +1,80 @@
+# OpenShell local sandbox policy for Agent Lens (Hermes + official MLflow MCP + LlamaStack).
+version: 1
+
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /usr
+    - /lib
+    - /lib64
+    - /bin
+    - /sbin
+    - /etc
+    - /var/log
+    - /proc
+    - /dev/urandom
+    - /opt/openshell
+  read_write:
+    - /sandbox
+    - /tmp
+    - /dev/null
+    - /dev/pts
+    - /mnt
+    - /run
+
+landlock:
+  compatibility: best_effort
+
+process:
+  run_as_user: ""
+  run_as_group: ""
+
+network_policies:
+  mlflow_mcp:
+    name: Official MLflow MCP
+    endpoints:
+      - host: mlflow-mcp.redhat-ods-applications.svc.cluster.local
+        port: 8080
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /**
+
+  llamastack:
+    name: LlamaStack inference
+    endpoints:
+      - host: llamastack-service.llamastack.svc.cluster.local
+        port: 8321
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: llamastack-service.llamastack.svc
+        port: 8321
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /**
+
+  openshell_gateway:
+    name: OpenShell gateway
+    endpoints:
+      - host: openshell.openshell.svc.cluster.local
+        port: 8080
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /**
+
+  # OpenShift cluster DNS Service IP (resolv.conf nameserver)
+  cluster_dns:
+    name: Cluster DNS
+    endpoints:
+      - host: "172.30.0.10"
+        port: 53
+      - host: "172.30.0.10"
+        port: 5353
+    binaries:
+      - path: /**

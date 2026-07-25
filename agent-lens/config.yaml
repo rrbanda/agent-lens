@@ -1,9 +1,10 @@
 model:
-  default: "gemini-2.5-flash"
-  provider: gemini
+  default: "gemini/models/gemini-2.5-flash"
+  base_url: "http://llamastack-service.llamastack.svc:8321/v1"
+  provider: custom
+  api_key: "not-needed"
 mcp_servers:
   mlflow:
-    # Always use upstream official MLflow MCP (mlflow mcp run), never Agent Lens FastMCP.
     url: "http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp"
     timeout: 180
     connect_timeout: 60
@@ -23,19 +24,6 @@ mcp_servers:
         - list_runs
         - describe_run
         - list_scorers
-dashboard:
-  basic_auth:
-    username: admin
-    password_hash: "PLACEHOLDER"
-platforms:
-  api_server:
-    enabled: true
-    extra:
-      port: 8642
-      # Overridden at runtime from Secret agent-lens-auth / API_SERVER_KEY when supported.
-      key: "PLACEHOLDER"
-  webhook:
-    enabled: false
 gateway:
   enabled: true
 tools:
@@ -62,8 +50,6 @@ memory:
   providers: []
 skills:
   enabled: true
-  directory: /tmp/work/.hermes/skills
+  directory: /sandbox/.hermes/skills
   curator:
     enabled: true
-# Prefer Secret-injected API_SERVER_KEY in the Deployment over this placeholder.
-api_server_key: "PLACEHOLDER"

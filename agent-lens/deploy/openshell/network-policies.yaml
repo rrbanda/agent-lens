@@ -1,0 +1,71 @@
+# Egress from Agent Lens sandbox (openshell ns).
+# OpenShift CoreDNS pods listen on 5353 — allowing only :53 breaks DNS (and MCP hostnames).
+# LlamaStack ingress from openshell is already allowed by o-reach NetPol allow-oreach-to-llamastack.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-lens
+  labels:
+    app: agent-lens
+    app.kubernetes.io/part-of: agent-lens
+spec:
+  podSelector:
+    matchLabels:
+      app: agent-lens
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+      ports:
+        - protocol: TCP
+          port: 9119
+  egress:
+    # Official MLflow MCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redhat-ods-applications
+      ports:
+        - protocol: TCP
+          port: 8080
+    # LlamaStack inference
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: llamastack
+      ports:
+        - protocol: TCP
+          port: 8321
+    # OpenShell gateway
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshell
+      ports:
+        - protocol: TCP
+          port: 8080
+    # HTTPS
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+    # Cluster DNS (OpenShift: 5353 on dns pods)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

@@ -54,6 +54,8 @@ import os, yaml
 with open('/tmp/work/.hermes/config.yaml') as f:
     cfg = yaml.safe_load(f)
 cfg['dashboard']['basic_auth']['password_hash'] = """${HASH}"""
+# Rollback Deployment path uses /tmp/work (OpenShell uses /sandbox via startup.sh).
+cfg.setdefault('skills', {})['directory'] = '/tmp/work/.hermes/skills'
 mcp_url = os.environ.get('MLFLOW_MCP_URL')
 if mcp_url:
     cfg.setdefault('mcp_servers', {}).setdefault('mlflow', {})['url'] = mcp_url

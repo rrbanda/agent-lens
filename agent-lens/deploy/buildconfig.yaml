@@ -13,9 +13,18 @@ spec:
     type: Docker
     dockerStrategy:
       dockerfilePath: Containerfile
+  resources:
+    requests:
+      cpu: "500m"
+      memory: 2Gi
+      ephemeral-storage: 8Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi
+      ephemeral-storage: 20Gi
   output:
     to:
       kind: ImageStreamTag
       name: agent-lens:latest
-  successfulBuildsHistoryLimit: 3
-  failedBuildsHistoryLimit: 3
+  successfulBuildsHistoryLimit: 2
+  failedBuildsHistoryLimit: 2

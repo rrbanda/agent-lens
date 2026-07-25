@@ -1,0 +1,75 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: agent-lens-configure-inference
+  labels:
+    app: agent-lens
+    app.kubernetes.io/part-of: agent-lens
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: agent-lens-config
+    spec:
+      serviceAccountName: openshell-sandbox
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: quay-push-secret
+      containers:
+        - name: configure
+          image: quay.io/rbrhssa/o-reach-hermes:latest
+          imagePullPolicy: Always
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              export PATH="/sandbox/.venv/bin:/usr/local/bin:$PATH"
+
+              if ! command -v openshell >/dev/null 2>&1; then
+                echo "WARNING: openshell CLI not in image — skipping gateway configure"
+                echo "  Hermes still uses OPENAI_BASE_URL → LlamaStack directly."
+                exit 0
+              fi
+
+              mkdir -p ~/.config/openshell/gateways/openshift/mtls
+              cp /etc/openshell-tls/client/ca.crt ~/.config/openshell/gateways/openshift/mtls/ca.crt
+              cp /etc/openshell-tls/client/tls.crt ~/.config/openshell/gateways/openshift/mtls/tls.crt
+              cp /etc/openshell-tls/client/tls.key ~/.config/openshell/gateways/openshift/mtls/tls.key
+
+              openshell gateway add https://openshell.openshell.svc.cluster.local:8080 --local --name openshift
+
+              openshell provider create \
+                --name llamastack \
+                --type openai \
+                --credential OPENAI_API_KEY=not-needed \
+                --config OPENAI_BASE_URL=http://llamastack-service.llamastack.svc:8321/v1 \
+                2>&1 || echo "Provider may already exist"
+
+              openshell settings set --global --key providers_v2_enabled --value true --yes 2>&1 || true
+
+              openshell inference set \
+                --provider llamastack \
+                --model gemini/models/gemini-2.5-flash \
+                2>&1 || echo "Inference may already be configured"
+
+              echo "=== Configuration complete ==="
+              openshell provider list || true
+              openshell inference get || true
+          securityContext:
+            runAsUser: 0
+            capabilities:
+              add: [SYS_ADMIN, NET_ADMIN]
+          volumeMounts:
+            - name: openshell-client-tls
+              mountPath: /etc/openshell-tls/client
+              readOnly: true
+      volumes:
+        - name: openshell-client-tls
+          secret:
+            secretName: openshell-client-tls
+            defaultMode: 256
