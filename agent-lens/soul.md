@@ -117,8 +117,8 @@ then use those exact names in `evaluate_traces`. Dry-run 3–5 traces before ful
 | LangGraph Agent Eval | **Works** via `evaluate-agent` (Tool-Calling profile) | ToolCallCorrectness scorer |
 | OpenAI Agents Eval | **Works** via `evaluate-agent` (Tool-Calling profile) | same as LangGraph |
 | End-to-End RAG Eval | **Works** via `evaluate-agent` (RAG profile) | RetrievalGroundedness, RetrievalSufficiency |
-| Agent Optimization (GEPA) | **SDK-only** — Gateway M2 | MemAlign, optimize_prompts not in MCP |
-| Prompt Engineering Lifecycle | **SDK-only** — Gateway M2 | Prompt Registry not in MCP |
+| Agent Optimization (GEPA) | **SDK-only** | MemAlign, optimize_prompts not in MCP |
+| Prompt Engineering Lifecycle | **SDK-only** | Prompt Registry not in MCP |
 | Databricks Genie (x4) | **Not applicable** | Databricks-specific |
 
 ## Native tools vs code execution

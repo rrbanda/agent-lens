@@ -16,7 +16,6 @@ agent-lens/
 │   ├── skills/              # SKILL.md files (evaluation workflows)
 │   └── deploy/              # OpenShift manifests (kustomize)
 │       └── openshell/       # OpenShell Sandbox deployment
-├── gateway/                 # CI/CD gate API + audit trail (M2, Python/FastAPI)
 ├── instrumentation/         # Zero-code autolog + CLI eval helper
 │   ├── usercustomize.py     # Drop-in autolog for target Python agents
 │   └── eval_agent.py        # Offline CLI evaluation helper
@@ -38,10 +37,9 @@ agent-lens/
 Skills may reference **only** tools from the `config.yaml` allowlist:
 
 - `mcp_mlflow_*` — official MLflow MCP tools
-- `mcp_agentlens_*` — Gateway MCP tools (M2)
 
 Never reference a tool that is not in the allowlist. If you need a tool that does
-not exist, it must be contributed upstream to MLflow or added to the Gateway.
+not exist, it must be contributed upstream to MLflow.
 
 ### 2. Never `import mlflow` in the sandbox
 
@@ -101,18 +99,11 @@ installed at build time.
 
 ---
 
-## How to Add a Gateway Endpoint (M2)
+## CI/CD Quality Gate
 
-The Gateway is a Python/FastAPI service under `gateway/`.
-
-1. Add the route in `gateway/api/routes/`
-2. If the endpoint needs MLflow data, call MLflow MCP through the Gateway's MCP
-   client — do not import the MLflow SDK
-3. If the endpoint creates a governance decision, log it to the audit trail with
-   `log_audit_event` (actor identity, SHA-256 chain)
-4. Add tests in `tests/test_gateway_*.py`
-5. Update the Gateway MCP tool definitions if the endpoint should be accessible
-   from Hermes skills
+For CI/CD integration, use `mlflow.genai.evaluate()` directly in your pipeline
+script. MLflow AI Gateway (built into the MLflow Tracking Server) provides governed
+LLM access, automatic tracing, and cost tracking — no custom gateway service needed.
 
 ---
 

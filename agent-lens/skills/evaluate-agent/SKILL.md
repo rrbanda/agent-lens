@@ -119,7 +119,7 @@ Record the qualification result as a run with structured tags:
    - `status`: `FINISHED`
 
 > **Note:** Writing qualification to LoggedModel tags (`search_logged_models`, `set_logged_model_tags`)
-> requires the Gateway MCP (M2). Until then, qualification verdicts are recorded as evaluation runs.
+> `search_logged_models` is not yet in the MLflow MCP tool set. Until then, qualification verdicts are recorded as evaluation runs.
 
 ### Step 7: Generate Quality Qualification Report
 

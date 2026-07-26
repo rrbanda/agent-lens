@@ -152,22 +152,25 @@ You:   "Log a regression follow-up for this failure"
 
 Log human feedback and expectations directly on MLflow traces. Tag traces with `regression=true` for follow-up evaluation. When a bad answer makes it to production, capture it immediately so the next qualification run includes it.
 
-### CI/CD quality gate (M2)
+### CI/CD quality gate
+
+Use MLflow's evaluation API directly in your CI pipeline — no custom gateway needed:
 
 ```bash
 # In your Tekton / GitHub Actions / GitLab CI pipeline:
-curl -X POST https://agent-lens-gateway/api/v1/gate/evaluate \
-  -H "Authorization: Bearer $API_KEY" \
-  -d '{"experiment": "outreach-agent", "profile": "tool-calling", "threshold": 0.85}'
-
-# Exit code: 0=PASS, 1=FAIL, 2=ERROR
+python -c "
+import mlflow
+from mlflow.genai.scorers import Correctness
+traces = mlflow.search_traces(experiment_names=['outreach-agent'], max_results=50)
+results = mlflow.genai.evaluate(data=traces, scorers=[Correctness()])
+pass_rate = results.metrics.get('correctness/mean', 0)
+exit(0 if pass_rate >= 0.85 else 1)
+"
 ```
 
-The Gateway provides a synchronous REST endpoint that blocks the pipeline until evaluation completes. MLflow webhooks are async — pipelines need blocking verdicts.
+### Governed LLM access and audit trail
 
-### Governance audit trail (M2)
-
-Every qualification decision is recorded in an append-only JSONL store with SHA-256 hash chain, actor identity, and compliance export. MLflow stores evidence (scorer assessments on traces) — Agent Lens stores decisions (who qualified what, when, and against which thresholds).
+MLflow AI Gateway (built into the MLflow Tracking Server) provides centralized LLM access with automatic tracing, cost tracking, and RBAC. Every request becomes an MLflow trace — your audit trail is built in.
 
 ### Zero-code instrumentation
 
@@ -204,7 +207,7 @@ Works with any OpenAI-compatible Python agent. No code changes required.
 | Executive summary | `executive-summary` | "Give me a summary for leadership" | Shipping |
 | Compliance export | `compliance-export` | "Export qualification history for auditors" | Shipping |
 | Trace aggregation | `aggregate-traces` | "What's the error rate this week?" | Shipping |
-| CI/CD quality gate | Gateway API | `POST /api/v1/gate/evaluate` | M2 |
+| CI/CD quality gate | `mlflow.genai.evaluate()` | Callable from any CI pipeline | Use MLflow directly |
 
 Skills live under [`agent-lens/skills/`](agent-lens/skills/).
 
@@ -216,12 +219,12 @@ Skills live under [`agent-lens/skills/`](agent-lens/skills/).
 %%{init: {'theme': 'neutral'}}%%
 graph LR
     User[Platform_Engineer] -->|chat| AL[Agent_Lens]
-    CICD[CI_CD_Pipeline] -->|POST| GW[Gateway_API]
+    CICD[CI_CD_Pipeline] -->|mlflow.genai.evaluate| MLflow
     AL -->|MCP| MCP[MLflow_MCP]
-    AL -->|MCP| GW
-    GW -->|MCP| MCP
     MCP --> MLflow[(MLflow)]
     MLflow -->|traces| Agents[Your_Agents]
+    MLflow --> GW[AI_Gateway]
+    GW -->|governed access| LLMs[LLM_Providers]
 ```
 
 Agent Lens follows a five-phase loop on every interaction:
@@ -241,8 +244,8 @@ Agent Lens follows a five-phase loop on every interaction:
 | Pillar | What it covers |
 |---|---|
 | **Qualification Lifecycle** | Aggregate MLflow scorer results into PASS/FAIL verdicts against configurable thresholds. Track state (QUALIFIED / PENDING / EXPIRED) over time. Enforce TTL-based re-qualification. |
-| **CI/CD Quality Gate** | Synchronous REST API (`POST /api/v1/gate/evaluate`) for Tekton, GitHub Actions, GitLab CI. Exit code 0=PASS, 1=FAIL, 2=ERROR. MLflow webhooks are async — pipelines need blocking verdicts. |
-| **Governance Audit Trail** | Append-only JSONL store with SHA-256 hash chain, actor identity, and compliance export. MLflow stores evidence (assessments on traces) — Agent Lens stores decisions. |
+| **CI/CD Quality Gate** | Use `mlflow.genai.evaluate()` directly in your pipeline. Agent Lens skills define the scorer profiles and thresholds — MLflow runs the evaluation. |
+| **Governed Access + Audit** | MLflow AI Gateway provides centralized LLM access, automatic tracing, cost tracking, and RBAC. Agent Lens adds qualification decisions on top of the trace evidence. |
 | **Fleet Observatory** | Cross-experiment health aggregation, qualification status overview, cost-per-agent trending. MLflow operates per-experiment — Agent Lens operates fleet-wide. |
 
 ---
@@ -254,18 +257,17 @@ block-beta
     columns 4
     block:agentlens["AGENT LENS"]:4
         columns 4
-        QL["Qualification\nLifecycle"] CICD["CI/CD Gate\nAPI"] AT["Audit Trail\n(JSONL+SHA)"] FO["Fleet\nObservatory"]
-        SP["Scorer Profiles\n(YAML)"] SK["16 Hermes\nSkills (SKILL.md)"] CF["Config\n(YAML)"] DP["Deploy\n(K8s)"]
+        QL["Qualification\nLifecycle"] SK["16 Hermes\nSkills (SKILL.md)"] CF["Config\n(YAML)"] DP["Deploy\n(K8s)"]
+        SP["Scorer\nProfiles"] FO["Fleet\nObservatory"] EDD["EDD\nLoop"] RT["Red Team\n+ Judges"]
     end
     space:4
-    MLflow["MLflow MCP\n(19 tools)"] GW["Gateway MCP\n(M2)"] Prom["Prometheus MCP\n(M3)"] space
+    MLflow["MLflow MCP\n(19 tools)"]:2 GW["MLflow AI Gateway\n(built-in)"]:2
 
     agentlens --> MLflow
     agentlens --> GW
-    agentlens --> Prom
 ```
 
-The Gateway is the **only new service** Agent Lens builds. Everything else is either a SKILL.md file (prompt document, not code), a YAML config file (scorer profiles, thresholds), or a K8s manifest (OAuth Proxy, NetworkPolicy).
+Agent Lens builds **no custom services**. Everything is either a SKILL.md file (prompt document, not code), a YAML config file (scorer profiles, thresholds), or a K8s manifest. MLflow AI Gateway handles governed LLM access, cost tracking, and automatic evaluation.
 
 See [DESIGN.md](DESIGN.md) for the design principles behind these decisions.
 
@@ -344,14 +346,14 @@ Can this agent be deployed?
 
 ## Known limitations
 
-| Phrase | What you actually get today | M2 status |
+| Phrase | What you actually get today | Path forward |
 |---|---|---|
-| Gate / deploy block | Qualification verdict in chat — not a CI webhook ([#18](https://github.com/rrbanda/agent-lens/issues/18)) | Gateway API in M2 |
-| Audit trail | No governance record | Checksummed JSONL in M2 |
-| Agent registry | No fleet inventory | LoggedModel-backed registry in M2 |
+| Gate / deploy block | Qualification verdict in chat | Use `mlflow.genai.evaluate()` in CI pipeline |
+| Audit trail | MLflow traces via AI Gateway | Already built into MLflow AI Gateway |
+| Agent registry | Experiment-derived fleet view via `agent-registry` skill | LoggedModel MCP tools (when upstream adds them) |
 | Regression dataset | Expectation + tags on a trace — not an MLflow Evaluation Dataset API | Unchanged |
 | Review queue | Heuristic error/recent search — not a dedicated queue tool | Unchanged |
-| Fleet health | Multi-call MCP aggregation — not a single server summary tool | Improved in M2 |
+| Automatic evaluation | On-demand via chat | MLflow AI Gateway supports automatic judge execution |
 
 Full detail: [docs/product/limitations.md](docs/product/limitations.md).
 
@@ -366,7 +368,6 @@ agent-lens/
 │   ├── config.yaml      # MCP endpoint URL + tool allowlist
 │   ├── skills/          # SKILL.md files — evaluation workflows
 │   └── deploy/          # K8s manifests (kustomize, OpenShell)
-├── gateway/             # CI/CD gate API, audit trail, MCP server (planned — M2)
 ├── instrumentation/     # Zero-code autolog + CLI eval helper
 ├── tests/               # Integration tests (41 tests against real MCP)
 │   ├── mcp_client.py    # Reusable JSON-RPC MCP client (stdio transport)
@@ -447,7 +448,7 @@ Skills must reference only allowlisted `mcp_mlflow_*` tools — see [CONTRIBUTIN
 | Area | Notes |
 |------|-------|
 | New skills | Use `mcp_mlflow_*` or `mcp_agentlens_*` from `config.yaml` allowlist |
-| Gateway endpoints | Python/FastAPI under `gateway/` (M2 — not yet implemented) |
+| MLflow AI Gateway | Already built into MLflow — no custom code needed |
 | Deploy overlays | `agent-lens/deploy/` |
 | CI / docs | Always welcome |
 | New MCP tools | Contribute **upstream** to MLflow MCP — not a fork in this repo |

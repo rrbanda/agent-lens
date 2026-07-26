@@ -23,8 +23,8 @@ Non-technical fleet health summary for Chief AI Officer (CAIO), VP of AI, and ex
 2. Per experiment: `mcp_mlflow_search_traces` — recent trace metrics (success rate, errors)
 3. Per experiment: `mcp_mlflow_list_runs` — evaluation run history for qualification status
 
-> **Note:** Agent registry data (`search_logged_models`) requires the Gateway MCP (M2).
-> Until then, derive fleet composition and qualification status from experiments, traces, and evaluation runs.
+> **Note:** `search_logged_models` is not yet in the MLflow MCP tool set.
+> Derive fleet composition and qualification status from experiments, traces, and evaluation runs.
 
 ### Step 2: Compute fleet health indicators
 

@@ -61,7 +61,7 @@ Derive qualification status from evaluation run history:
 | NOT_QUALIFIED | Latest eval failed thresholds | Fix issues, re-evaluate |
 | NEEDS_REVIEW | Inconclusive evaluation | Manual review required |
 
-> **Note:** Full agent registry with LoggedModel metadata requires the Gateway MCP (M2).
+> **Note:** `search_logged_models` is not yet in the MLflow MCP tool set.
 > Until then, fleet status is derived from experiments, evaluation runs, and trace data.
 
 ## Constraints

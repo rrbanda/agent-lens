@@ -61,18 +61,15 @@ hardcoded application logic.
 - Skills declare which MCP tools they use — the allowlist is enforced by CI
 - New evaluation workflows are added by writing a new `SKILL.md`, not by modifying
   the Hermes agent source
-- The Gateway is the **only** net-new service component with custom code
+- There are **no** custom service components — only skills, configs, and K8s manifests
 
 **Why:**
 - Skills are auditable — a security reviewer can read markdown
 - Skills are composable — the agent chains them as needed
 - Skills are portable — if we switch from Hermes to another harness, skills transfer
 - Custom code means custom bugs; skills leverage MLflow's tested judge implementations
-
-**The Gateway exception:** CI/CD pipelines need a synchronous HTTP API. Chat is
-async by nature. The Gateway bridges this gap as a thin REST + MCP service. It
-calls the same MLflow MCP tools that skills call — it does not embed a separate
-evaluation engine.
+- MLflow AI Gateway already provides governed LLM access, automatic tracing,
+  cost tracking, and automatic evaluation — no need to rebuild any of that
 
 ---
 
@@ -114,14 +111,18 @@ authoritative reference.
 - Tag-based filtering → LoggedModel `filter_string` supports tags (not a custom index)
 
 **Examples of "build" decisions:**
-- CI/CD gate → MLflow webhooks are async; pipelines need synchronous pass/fail
-- Audit trail → MLflow assessments are mutable and lack actor identity
 - Fleet observatory → MLflow is per-experiment; fleet view needs cross-experiment aggregation
 - Qualification lifecycle → MLflow has no concept of QUALIFIED/PENDING/EXPIRED states
 
+**Formerly "build", now "consume" (MLflow AI Gateway):**
+- CI/CD evaluation → `mlflow.genai.evaluate()` callable from any CI script
+- Audit trail → MLflow AI Gateway traces every request with full payload
+- Cost tracking → MLflow AI Gateway captures token counts automatically
+- Automatic evaluation → MLflow AI Gateway runs LLM judges as traces arrive
+
 **The test:** If you can implement a feature using only existing MCP tools + a
-SKILL.md file, do that. If you need a REST endpoint, it belongs in the Gateway.
-If you need a new MCP tool, contribute it upstream.
+SKILL.md file, do that. If you need a new MCP tool, contribute it upstream.
+If MLflow AI Gateway already does it, consume it — do not rebuild.
 
 ---
 
@@ -139,7 +140,7 @@ Security is not a layer added later.
   manager in the final image
 - **OAuth Proxy** for SSO/OIDC — authentication handled at the infrastructure
   level, not in application code
-- **API key auth** for the Gateway — scrypt-hashed, never stored in plaintext
+- **API key auth** for the dashboard — scrypt-hashed, never stored in plaintext
 
 **Why:**
 - Enterprise customers require these controls before production approval
@@ -156,19 +157,15 @@ reporting process.
 ```mermaid
 flowchart TB
     subgraph builds ["AGENT LENS BUILDS"]
-        GW["Gateway API\nonly net-new service (Python/FastAPI)"]
-        Skills["SKILL.md files\nevaluation workflows (markdown)"]
+        Skills["SKILL.md files\n16 evaluation workflows (markdown)"]
         YAML["YAML configs\nscorer profiles, thresholds"]
-        K8s["K8s manifests\ndeploy, NetworkPolicy, OAuth Proxy"]
-        Audit["Audit trail\nJSONL + SHA-256 chain (in Gateway)"]
+        K8s["K8s manifests\ndeploy, NetworkPolicy"]
         Note["EVERYTHING ELSE IS CONSUMED\nFROM MLFLOW VIA MCP"]
     end
 
-    builds -->|16 tools| MLflow["MLflow MCP"]
-    builds -->|4 tools| GatewayMCP["Gateway MCP"]
-
+    builds -->|19 tools| MLflow["MLflow MCP"]
     MLflow --> MLflowStore["MLflow Tracking\nTraces, Scorers,\nLoggedModel, Runs"]
-    GatewayMCP --> AuditStore["Audit store (JSONL)\nQualification records\nFleet aggregation cache"]
+    MLflow --> Gateway["MLflow AI Gateway\nGoverned LLM access,\nautomatic tracing + eval"]
 ```
 
 ---
@@ -180,7 +177,7 @@ flowchart TB
 | [Identity](docs/product/identity.md) | What Agent Lens is and is not |
 | [MLflow Capability Audit](docs/product/mlflow-capability-audit.md) | Build vs. consume for every planned feature |
 | [Vision](docs/product/vision.md) | Market context, ICP, north star metrics |
-| [Architecture](docs/architecture.md) | Technical implementation details |
+| [Architecture](docs/product/architecture.md) | Technical implementation details |
 | [SECURITY.md](SECURITY.md) | Security model and vulnerability reporting |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute code and skills |
 | [AGENTS.md](AGENTS.md) | Instructions for AI coding agents |

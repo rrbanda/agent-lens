@@ -42,7 +42,7 @@ mcp_servers:
         - create_run
         - create_experiment
 gateway:
-  enabled: true
+  enabled: false
 tools:
   code_execution:
     enabled: "on"

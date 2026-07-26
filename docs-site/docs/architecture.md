@@ -25,7 +25,6 @@ graph TB
     
     subgraph MCP["MCP Layer"]
         MLflowMCP[MLflow MCP Server]
-        GatewayMCP[Gateway MCP - M2]
     end
     
     subgraph Data["Data Plane"]
@@ -36,13 +35,12 @@ graph TB
     
     PE -->|chat| Hermes
     DEV -->|chat| Hermes
-    CICD -->|REST API| GatewayMCP
+    CICD -->|mlflow.genai.evaluate| MLflow
     
     Hermes --> Soul
     Hermes --> Skills
     Hermes --> Config
     Hermes -->|MCP tools| MLflowMCP
-    Hermes -->|MCP tools| GatewayMCP
     
     MLflowMCP --> MLflow
     MLflow --> Traces
@@ -103,13 +101,15 @@ tools:
     - create_experiment
 ```
 
-### Gateway MCP (M2)
+### MLflow AI Gateway (built into MLflow)
 
-A custom FastAPI service adding:
-- CI/CD quality gate (`POST /api/v1/gate/evaluate`)
-- Governance audit trail (append-only JSONL + SHA-256)
-- Agent registry (LoggedModel lifecycle)
-- Prometheus metrics export
+MLflow AI Gateway runs as part of the MLflow Tracking Server and provides:
+- Governed LLM access for all providers (OpenAI, Anthropic, Gemini, etc.)
+- Automatic tracing of all LLM requests with token counts
+- Automatic evaluation — LLM judges run as traces arrive
+- RBAC and credential management
+
+No custom gateway service needed — Agent Lens consumes these features directly.
 
 ## Deployment Topology
 

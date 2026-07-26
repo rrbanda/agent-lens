@@ -32,8 +32,8 @@ Agent Lens audit records are derived from MLflow data:
 2. **Evaluation runs** — `mcp_mlflow_list_runs` + `mcp_mlflow_describe_run` for evaluation run metadata (who ran it, when, which scorers)
 3. **Experiment context** — `mcp_mlflow_search_experiments` to resolve experiment names
 
-> **Note:** Qualification history via LoggedModel tags (`search_logged_models`) requires the Gateway MCP (M2).
-> Until then, reconstruct qualification events from evaluation run metadata and tags.
+> **Note:** `search_logged_models` is not yet in the MLflow MCP tool set.
+> Reconstruct qualification events from evaluation run metadata and tags.
 
 ### Step 3: Reconstruct timeline
 

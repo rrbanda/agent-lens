@@ -31,8 +31,8 @@ Identify:
 2. `mcp_mlflow_list_runs` + `mcp_mlflow_describe_run` — evaluation run details
 3. `mcp_mlflow_search_experiments` — list experiments for fleet-wide export
 
-> **Note:** `search_logged_models` and `experiments_csv` are not available in the official MLflow MCP.
-> Agent registry data requires the Gateway MCP (M2). For CSV export, use code execution to format the MCP JSON output.
+> **Note:** `search_logged_models` is not yet in the MLflow MCP tool set.
+> For CSV export, use code execution to format the MCP JSON output.
 
 ### Step 3: Structure export records
 
