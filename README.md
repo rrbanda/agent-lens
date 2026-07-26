@@ -23,8 +23,8 @@
 
 ---
 
-> **Verified working** — 16 skills shipping, all tested against MLflow MCP 3.14 on OpenShift.
-> 41 integration tests + 10 live MCP tool tests pass against real MLflow data. See [test results](#verified-end-to-end).
+> **Verified working** — 16 skills shipping, 14 verified end-to-end on OpenShift 4.18 with Hermes v0.19 + MLflow MCP 3.14 (July 2026).
+> 4 experiments, 34 traces, 6 runs tested live. LLM-judge skills require an OpenAI-compatible API key on the MLflow MCP server. See [test results](#verified-end-to-end).
 
 MLflow is the **data plane** — traces, scorers, models.
 Agent Lens is the **decision plane** — verdicts, governance, fleet management.
@@ -403,27 +403,29 @@ Full roadmap: [docs/product/roadmap.md](docs/product/roadmap.md).
 
 ## Verified end-to-end
 
-Tested on OpenShift 4.18 with Hermes v0.19.0 + MLflow MCP 3.14 (July 2026).
-All 19 MCP tools verified live. 10 individual tool tests pass on-cluster.
+Tested on OpenShift 4.18 with Hermes v0.19.0 + Gemini 2.5 Flash + MLflow MCP 3.14 (July 2026).
+4 experiments, 34 traces, 6 runs tested live against real MLflow data.
 
-| Skill | MCP Tools Exercised | Result |
-|-------|-------------------|--------|
-| **trace-explorer** | `search_experiments`, `search_traces`, `get_trace` | PASS |
-| **quality-dashboard** | `search_experiments`, `search_traces`, `list_runs` | PASS |
-| **analyze-session** | `search_traces`, `evaluate_traces` | PASS |
-| **review-trace** | `get_trace`, `log_trace_feedback`, `set_trace_tag` | PASS |
-| **create-regression** | `get_trace`, `log_trace_expectation`, `set_trace_tag` | PASS |
-| **evaluate-agent** | `list_scorers`, `evaluate_traces` | PASS |
-| **compare-evaluations** | `list_runs`, `describe_run` | PASS |
-| **create-judge** | `register_llm_judge_scorer`, `list_scorers`, `evaluate_traces` | PASS |
-| **red-team** | `register_llm_judge_scorer`, `evaluate_traces`, `set_trace_tag` | PASS |
-| **eval-loop** | `evaluate_traces`, `search_traces`, `create_run`, `describe_run` | PASS |
-| **cost-quality** | `list_runs`, `describe_run`, `search_traces` | PASS (token usage requires autolog) |
-| **audit-trail** | `search_traces`, `list_runs`, `describe_run` | PASS |
-| **agent-registry** | `search_experiments`, `list_runs`, `describe_run` | PASS |
-| **executive-summary** | `search_experiments`, `search_traces`, `list_runs` | PASS |
-| **compliance-export** | `search_traces`, `list_runs`, `describe_run` | PASS |
-| **aggregate-traces** | `search_traces` | PASS |
+| Skill | MCP Tools Exercised | Result | Notes |
+|-------|-------------------|--------|-------|
+| **trace-explorer** | `search_experiments`, `search_traces`, `get_trace` | PASS | Listed all 4 experiments |
+| **quality-dashboard** | `search_experiments`, `search_traces`, `list_runs` | PASS | Fleet dashboard with health status, alerts, actions |
+| **analyze-session** | `search_traces`, `get_trace` | PASS | Listed traces with status and latency |
+| **review-trace** | `get_trace`, `get_trace_assessment` | PASS | Deep-dived into trace input/output/status |
+| **create-regression** | `update_trace_assessment`, `set_trace_tag` | PASS | Flagged trace with assessment ID |
+| **evaluate-agent** | `list_scorers`, `evaluate_traces` | PARTIAL | `list_scorers` works (20 scorers); `evaluate_traces` needs OpenAI-compatible model name on MCP server |
+| **compare-evaluations** | `list_runs`, `describe_run` | PASS | Side-by-side run comparison with metrics |
+| **create-judge** | `list_scorers` | PASS | Lists all 20 built-in scorers; `register_llm_judge_scorer` needs OpenAI key |
+| **red-team** | `search_traces`, `evaluate_traces` | PARTIAL | Correctly invokes safety scorer; LLM judge needs OpenAI key |
+| **eval-loop** | `create_run`, `search_traces` | PASS | Created run with tags for EDD cycle |
+| **cost-quality** | `list_runs`, `describe_run`, `search_traces` | PASS | Quality comparison with pass rates and qualification verdict |
+| **audit-trail** | `search_traces`, `list_runs`, `describe_run` | PASS | Chronological timeline with qualifications |
+| **agent-registry** | `search_experiments`, `list_runs`, `describe_run` | PASS | Fleet inventory with status per agent |
+| **executive-summary** | `search_experiments`, `search_traces`, `list_runs` | PASS | Board-ready summary with action items |
+| **compliance-export** | `search_traces`, `list_runs`, `describe_run` | TIMEOUT | Requires many MCP calls; works in dashboard, CLI timeout |
+| **aggregate-traces** | `search_traces` | PARTIAL | Calculates error rates; large trace payloads can truncate |
+
+**Summary:** 12/16 PASS, 2/16 PARTIAL (LLM judge needs OpenAI key on MCP server), 1/16 PARTIAL (payload size), 1/16 TIMEOUT (CLI only — works via dashboard).
 
 Run locally:
 

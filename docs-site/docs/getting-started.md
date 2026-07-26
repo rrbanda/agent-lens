@@ -40,6 +40,12 @@ make deploy-all
 make status
 ```
 
+:::important MLflow MCP Server Configuration
+The MLflow MCP server needs `MLFLOW_TRACKING_INSECURE_TLS=true` if your MLflow Tracking Server uses self-signed TLS certificates (common on OpenShift). Without this, MCP tool calls will hang silently.
+
+For LLM-judge scorers (`evaluate_traces`, `register_llm_judge_scorer`), the MLflow MCP server also needs `OPENAI_API_KEY` and `OPENAI_BASE_URL` configured. MLflow's built-in scorers default to OpenAI model names — use a real OpenAI API key or configure a compatible endpoint.
+:::
+
 ## Your First Interaction
 
 Once deployed, open the dashboard route and try:

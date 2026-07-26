@@ -7,7 +7,7 @@ function Hero() {
   return (
     <section className="hero-section">
       <div className="container">
-        <div className="hero-badge">16 skills · 19 MCP tools · Verified on OpenShift with MLflow MCP 3.14</div>
+        <div className="hero-badge">16 skills · 19 MCP tools · 14 verified end-to-end on OpenShift 4.18</div>
         <h1 className="hero-title">
           Trust your agents.<br />Verify with evidence.
         </h1>
