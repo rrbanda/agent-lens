@@ -159,19 +159,49 @@ All 19 MLflow MCP tools, zero custom services. Skills are markdown, config is YA
 
 ---
 
-## Architecture
+## Sandboxed and secure
 
-Agent Lens builds **no custom services**. Everything is a SKILL.md (prompt), a YAML config, or a K8s manifest.
+Agent Lens runs inside an [OpenShell](https://github.com/NVIDIA/OpenShell) sandbox — the same defense-in-depth isolation used for production agent workloads. The qualification agent itself is sandboxed, not just the agents it evaluates.
 
-| Layer | What it is | Portable? |
-|-------|-----------|-----------|
-| Skills (`agent-lens/skills/`) | Markdown prompt documents | Yes — works with any MCP agent |
-| Soul (`agent-lens/soul.md`) | Agent identity and constraints | Yes |
-| Config (`agent-lens/config.yaml`) | MCP URL + tool allowlist | Yes |
-| Container + startup | Agent harness (ships with Hermes) | Swappable — replace for your runtime |
-| K8s manifests | Deployment, service, route | Yes — any Kubernetes distribution |
+```
+Infrastructure → Sandbox → Harness → Skills → Model
+     K8s          OpenShell   Hermes    Agent Lens   LLM
+                  (constrains) (enables) (qualifies)
+```
 
-The reference deployment ships with [Hermes](https://github.com/hermes-ai/hermes-agent) as the agent runtime. Skills are portable to any MCP-capable harness. See [Architecture](https://rrbanda.github.io/agentlens/docs/architecture).
+| Layer | What it provides |
+|-------|-----------------|
+| **[OpenShell Sandbox](https://github.com/NVIDIA/OpenShell)** | Linux namespaces, Landlock filesystem ACLs, seccomp syscall filtering, L7 network proxy with binary identity binding, OCSF audit events |
+| **Agent harness** | MCP tool calling, skill routing, session management, chat UI |
+| **Agent Lens skills** | 16 qualification workflows — the additive "harness" layer that enables quality judgment |
+
+The sandbox is **subtractive** — it constrains what the agent can do. The skills are **additive** — they layer on knowledge and MCP tool access. These are [separate concerns](https://medium.com/@ralphbean/what-even-is-the-harness-2e7ac2fba905) with different failure modes: a sandbox failure means the agent did something it shouldn't have been able to do; a skill failure means it did something poorly that it should have done well.
+
+## Pick your agent harness
+
+Agent Lens ships with [Hermes](https://github.com/hermes-ai/hermes-agent) as the reference runtime. But the skills, soul, and config are **portable artifacts** — plain markdown and YAML that work with any MCP-capable agent harness.
+
+```
+┌─────────────────────────────────────────────┐
+│           OpenShell Sandbox                 │
+│  ┌───────────────────────────────────────┐  │
+│  │  Your choice of agent harness         │  │
+│  │  ┌─────────────────────────────────┐  │  │
+│  │  │  Agent Lens skills + soul.md    │  │  │
+│  │  └─────────────────────────────────┘  │  │
+│  └───────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
+```
+
+| | Harness-independent | Harness-specific |
+|---|---|---|
+| **Keep** | `skills/*.md`, `soul.md`, `config.yaml` | |
+| **Swap** | | `Containerfile`, `startup.sh` |
+| **Your harness needs** | | MCP tool calling, skill/prompt loading, chat interface |
+
+Any MCP-capable agent runtime works: [Hermes](https://github.com/hermes-ai/hermes-agent), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenClaw](https://github.com/openclaw), [Goose](https://github.com/block/goose), or your own. The skills use standard MCP tool patterns that any MCP client can execute. Choose a commodity runtime — the qualification logic lives in the skills, not the harness.
+
+See [Architecture](https://rrbanda.github.io/agentlens/docs/architecture) for the full design.
 
 ---
 
@@ -208,6 +238,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) · For AI coding agents: [AGENTS.md](AGEN
 
 - [MLflow](https://mlflow.org/) — GenAI evaluation, 20+ built-in scorers
 - [MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/) — 19 tools via Model Context Protocol
+- [OpenShell](https://github.com/NVIDIA/OpenShell) — defense-in-depth agent sandboxing
+- Any MCP-capable agent harness (ships with [Hermes](https://github.com/hermes-ai/hermes-agent))
 - Any OpenAI-compatible LLM (Gemini, OpenAI, Azure, Ollama, vLLM)
 - [Kubernetes](https://kubernetes.io/) — tested on OpenShift, EKS, GKE
 
