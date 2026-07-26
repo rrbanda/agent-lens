@@ -19,7 +19,7 @@ function Hero() {
           <Link className="btn-primary" to="/docs/">
             Get Started
           </Link>
-          <Link className="btn-secondary" href="https://github.com/rrbanda/agent-lens">
+          <Link className="btn-secondary" href="https://github.com/rrbanda/agentlens">
             GitHub
           </Link>
         </div>
@@ -46,7 +46,7 @@ function Terminal() {
             </div>
             <div className="terminal-line">
               <span className="terminal-prompt">$ </span>
-              <span className="terminal-command">git clone https://github.com/rrbanda/agent-lens && cd agent-lens</span>
+              <span className="terminal-command">git clone https://github.com/rrbanda/agentlens && cd agentlens</span>
             </div>
             <div className="terminal-line">
               <span className="terminal-prompt">$ </span>
@@ -199,7 +199,7 @@ function CTA() {
           Open source. Self-hosted. Runs on any Kubernetes cluster with MLflow.
         </p>
         <div className="hero-buttons">
-          <Link className="btn-primary" href="https://github.com/rrbanda/agent-lens">
+          <Link className="btn-primary" href="https://github.com/rrbanda/agentlens">
             Star on GitHub
           </Link>
           <Link className="btn-secondary" to="/docs/">
