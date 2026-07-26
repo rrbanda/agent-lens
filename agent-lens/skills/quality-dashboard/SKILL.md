@@ -6,6 +6,7 @@ description: "Generate a full observability summary across all tracked agents: t
 # Quality Dashboard
 
 Fleet-wide observability summary for agent platform engineers across all tracked agents via **upstream official MLflow MCP**.
+Inspired by [MLflow Cookbook: Production Observability with MLflow Tracing](https://mlflow.org/cookbook/production-observability).
 
 Quality from GenAI scorers is a **pass rate** (yes/no), not a 1–5 Likert. Prefer error rate +
 latency for health when evaluation metrics are absent.
@@ -17,8 +18,13 @@ latency for health when evaluation metrics are absent.
 3. For each selected experiment:
    - `mcp_mlflow_search_traces` with that experiment id (`max_results` 50)
    - Optionally `mcp_mlflow_list_runs` for recent evaluation metrics / pass rates
-4. Compute status with the criteria table (code execution may aggregate MCP JSON only).
-5. Format the Observatory output below.
+4. Extract operational metrics from trace data:
+   - **Error rate**: count of `state: ERROR` / total traces
+   - **Latency**: compute p50 and p95 from trace `duration_ms` values
+   - **Token cost**: extract `mlflow.chat.tokenUsage` and `mlflow.llm.cost` from span attributes when available
+   - **Throughput**: traces per hour (from trace timestamps)
+5. Compute status with the criteria table (code execution may aggregate MCP JSON only).
+6. Format the Observatory output below.
 
 Do **not** open code execution to call MLflow. Only use it on data already returned by MCP.
 
@@ -33,7 +39,7 @@ Do **not** open code execution to call MLflow. Only use it on data already retur
 
 | Status | Conditions |
 |--------|-----------|
-| HEALTHY | Has traces; error rate < 5%; if eval metrics exist, primary pass rate ≥ 80% |
+| HEALTHY | Has traces; error rate < 5%; if eval metrics exist, primary pass rate >= 80% |
 | WARNING | Error rate 5–15%; or active with traces but no eval scores; or pass rate 50–80% |
 | CRITICAL | Error rate > 15%; or pass rate < 50%; or MCP tool error fetching data |
 | INACTIVE | No traces recorded in the experiment |
@@ -55,6 +61,15 @@ Scan cap: N experiments (truncated: yes/no)
 | Critical | N |
 | Inactive | N |
 
+### Fleet Operational Metrics
+| Metric | Fleet Total | Fleet Average |
+|--------|-------------|---------------|
+| Total Traces (sample) | N | N/agent |
+| Throughput | N traces/hr | N/agent/hr |
+| Avg Latency (p50) | — | Xms |
+| Avg Latency (p95) | — | Xms |
+| Est. Token Cost (24h) | $X.XX | $X.XX/agent |
+
 ---
 
 ### [Agent Name] (Experiment [id]) — [STATUS]
@@ -62,7 +77,10 @@ Scan cap: N experiments (truncated: yes/no)
 |--------|-------|-------|
 | Traces (sample) | N | up/down/stable |
 | Error Rate | X% | up/down/stable |
-| Avg Latency | Xms | up/down/stable |
+| Latency (p50) | Xms | up/down/stable |
+| Latency (p95) | Xms | up/down/stable |
+| Throughput | N/hr | up/down/stable |
+| Token Cost (est.) | $X.XX/trace | up/down/stable |
 | Eval pass rate | XX% or n/a | up/down/stable |
 
 ---
@@ -73,11 +91,34 @@ Scan cap: N experiments (truncated: yes/no)
 | CRITICAL | ... | ... |
 | WARNING | ... | ... |
 
+### Cost Hotspots
+| Agent | Est. Cost/Trace | Traces/Day | Est. Daily Cost |
+|-------|----------------|------------|-----------------|
+| [most expensive] | $X.XXX | N | $X.XX |
+| [second] | $X.XXX | N | $X.XX |
+
 ### Recommended Actions
 1. [Most urgent — backed by data]
 2. [Second priority]
-3. [Optimization opportunity]
+3. [Optimization opportunity — e.g., cost reduction via `cost-quality` skill]
 ```
+
+## Token Cost Extraction
+
+When traces contain cost/token data in span attributes:
+- `mlflow.chat.tokenUsage.input_tokens` — prompt tokens
+- `mlflow.chat.tokenUsage.output_tokens` — completion tokens
+- `mlflow.llm.cost` — direct cost in USD (if provider reports it)
+
+If cost data is unavailable for an agent, show "n/a" and recommend enabling MLflow cost tracking.
+Never fabricate cost numbers.
+
+## Throughput Calculation
+
+Compute from trace timestamps within the sample:
+- `throughput = num_traces / (latest_timestamp - earliest_timestamp) * 3600`
+- If all traces are from same second, report "burst" not hourly rate
+- Use "traces/hr" as the unit
 
 When status is INACTIVE, recommend instrumentation (`usercustomize.py` / MLflow autolog)
 and optionally running `evaluate-agent` after traces exist — do not claim a configuration

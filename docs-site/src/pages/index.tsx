@@ -7,7 +7,7 @@ function Hero() {
   return (
     <section className="hero-section">
       <div className="container">
-        <div className="hero-badge">Verified on OpenShift with MLflow MCP 3.14</div>
+        <div className="hero-badge">11 skills verified on OpenShift with MLflow MCP 3.14</div>
         <h1 className="hero-title">
           Trust your agents.<br />Verify with evidence.
         </h1>
@@ -86,22 +86,32 @@ const features = [
   {
     icon: '⚡',
     title: 'MLflow MCP Native',
-    description: 'Built entirely on the official MLflow MCP server. 11 tools, zero custom forks. Your data stays in MLflow.',
+    description: 'Built entirely on the official MLflow MCP server. 19 tools, zero custom forks. Your data stays in MLflow.',
   },
   {
     icon: '🛡️',
-    title: 'Fleet Observatory',
-    description: 'See all your agents in one view. HEALTHY, WARNING, CRITICAL, INACTIVE. Error rates, latency, pass rates at a glance.',
+    title: 'Red-Team Safety',
+    description: 'Test for prompt injection, data exfiltration, jailbreaks, and PII leakage with attack-specific judges.',
   },
   {
     icon: '📊',
-    title: 'Qualification Verdicts',
-    description: '≥80% scorer pass rate + <5% error rate = QUALIFIED. Evidence-based decisions, not gut feelings.',
+    title: 'EDD Loop',
+    description: 'Evaluation-Driven Development: baseline, diagnose failures, fix, re-evaluate, compare. The full MLflow cookbook workflow — conversational.',
+  },
+  {
+    icon: '⚖️',
+    title: 'Cost-Quality Tradeoff',
+    description: 'Compare quality vs cost across models and configurations. Find the optimal tradeoff for your budget.',
+  },
+  {
+    icon: '🧪',
+    title: 'Custom Judges',
+    description: 'Create domain-specific LLM judges from natural language. "Check if the agent mentions our privacy policy" becomes a registered scorer.',
   },
   {
     icon: '🏷️',
-    title: 'Regression Tracking',
-    description: 'Flag bad traces, log expectations, tag regressions. Build a dataset of failures for re-evaluation.',
+    title: 'Qualification Verdicts',
+    description: '>=80% scorer pass rate + <5% error rate = QUALIFIED. Evidence-based decisions, not gut feelings.',
   },
   {
     icon: '✅',
@@ -133,19 +143,23 @@ function Features() {
 function Skills() {
   const skills = [
     { name: 'trace-explorer', tools: 'search_experiments, search_traces, get_trace', desc: 'Search and drill into any trace' },
-    { name: 'quality-dashboard', tools: 'search_experiments, search_traces, list_runs', desc: 'Fleet-wide health overview' },
-    { name: 'analyze-session', tools: 'search_traces', desc: 'Multi-turn session forensics' },
+    { name: 'quality-dashboard', tools: 'search_experiments, search_traces, list_runs', desc: 'Fleet-wide health + cost + latency' },
+    { name: 'analyze-session', tools: 'search_traces, evaluate_traces', desc: 'Multi-turn session forensics + quality' },
     { name: 'review-trace', tools: 'get_trace, log_trace_feedback, set_trace_tag', desc: 'Deep-dive + human annotation' },
     { name: 'create-regression', tools: 'get_trace, log_trace_expectation, set_trace_tag', desc: 'Flag failures for follow-up' },
     { name: 'evaluate-agent', tools: 'list_scorers, evaluate_traces', desc: 'Run LLM judges on traces' },
     { name: 'compare-evaluations', tools: 'list_runs, describe_run', desc: 'Track quality over time' },
+    { name: 'create-judge', tools: 'register_llm_judge_scorer, list_scorers', desc: 'Build custom scorers from English' },
+    { name: 'red-team', tools: 'register_llm_judge_scorer, evaluate_traces', desc: 'Adversarial safety evaluation' },
+    { name: 'eval-loop', tools: 'evaluate_traces, search_traces, create_run', desc: 'Full EDD improvement cycle' },
+    { name: 'cost-quality', tools: 'list_runs, describe_run, search_traces', desc: 'Cost vs quality tradeoff analysis' },
   ];
 
   return (
     <section className="skills-section">
       <div className="container">
         <p className="section-label">Skills</p>
-        <h2 className="section-title">7 skills. All verified.</h2>
+        <h2 className="section-title">11 skills. All verified.</h2>
         <div className="skills-table">
           <table>
             <thead>

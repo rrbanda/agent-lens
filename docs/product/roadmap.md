@@ -42,11 +42,15 @@
 | Quality evaluation | `evaluate-agent` | Done | GenAI scorers, pass rates, 3 profiles |
 | Qualification verdict | `evaluate-agent` | Done | QUALIFIED / NOT QUALIFIED / NEEDS REVIEW (chat-only) |
 | Trace review and annotation | `review-trace` | Done | Feedback, expectations via MCP (Domain Expert / SME) |
-| Multi-turn session analysis | `analyze-session` | Done | Timeline via `mlflow.trace.session` |
+| Multi-turn session analysis | `analyze-session` | Done | Timeline via `mlflow.trace.session` + conversational eval |
 | Regression follow-up | `create-regression` | Done | Expectations + tags (not full Evaluation Dataset) |
-| Fleet observatory | `quality-dashboard` | Done | HEALTHY / WARNING / CRITICAL / INACTIVE (cap 20) |
+| Fleet observatory | `quality-dashboard` | Done | HEALTHY / WARNING / CRITICAL / INACTIVE (cap 20) + cost/latency |
 | Zero-code instrumentation | `usercustomize.py` | Done | OpenAI-compatible Python agents |
 | CLI evaluation | `eval_agent.py` | Done | Offline MLflow GenAI evaluation |
+| Custom judge creation | `create-judge` | Done | Declarative scorer via `register_llm_judge_scorer` |
+| Red-team evaluation | `red-team` | Done | Adversarial safety with attack profiles |
+| EDD loop orchestration | `eval-loop` | Done | Baseline → diagnose → fix → compare cycle |
+| Cost-quality tradeoff | `cost-quality` | Done | Cross-run quality/cost/latency comparison |
 
 **Limitations carried forward:** qualification is advisory only, basic auth only, no audit trail, cap 20 experiments in fleet scan, regression = tags not Evaluation Dataset API.
 
@@ -177,7 +181,7 @@ Decision deferred to M3 design phase. Option C is the likely path for M3 with Op
 | F21 | **Regulatory Control Mapping** | Map qualification evidence to ISO 42001, SOX, HIPAA controls | Compliance |
 | F22 | **Configuration Drift Detection** | Compare approved agent config (registry) vs. running config (K8s) | CISO, APE |
 | F23 | **Adoption Metrics** | User interaction rates, acceptance rates, usage depth per agent | Business Sponsor |
-| F24 | **Red Team Evaluation Profile** | Adversarial testing scorer profile with attack success rate tracking | CISO |
+| F24 | **Red Team Evaluation Profile** | Advanced adversarial testing with multi-vector campaigns (extends M1 `red-team`) | CISO |
 | F25 | **PII/PHI Scanner** | Detect sensitive data patterns in trace outputs | CISO, Compliance |
 | F26 | **Qualification Expiry and Re-eval** | Auto-flag agents past qualification TTL; trigger re-evaluation | APE, CISO |
 | F27 | **Team-Scoped Views** | Business sponsors see only their team's agents | Business Sponsor |
@@ -258,15 +262,23 @@ Agent Lens skills are the primary interface. This table maps planned features to
 |---|---|---|---|
 | `evaluate-agent` | Add Safety + Comprehensive profiles; custom thresholds | Trend comparison | GPA-aligned scoring |
 | `review-trace` | Write to audit trail; Domain Expert / SME annotation | Pattern grouping; SME review queue | PII detection |
-| `analyze-session` | No changes | Enhanced multi-agent tracing | No changes |
+| `analyze-session` | No changes (conversational eval added in M1) | Enhanced multi-agent tracing | No changes |
 | `create-regression` | Write to audit trail; Domain Expert / SME expectations | Regression trend analysis | No changes |
 | `trace-explorer` | Enhanced aggregation (F5) | Cost + latency overlay | Adoption metrics |
 | `quality-dashboard` | Registry integration (F4) | Pagination (F16); cost column | Team-scoped views |
+| `create-judge` | Judge alignment with expert feedback | Judge versioning | Auto-calibration |
+| `red-team` | Automated attack generation | Multi-vector campaigns | Continuous red-teaming |
+| `eval-loop` | Integration with CI/CD gate | Automated regression triggers | No changes |
+| `cost-quality` | Budget alerts integration | Provider comparison automation | No changes |
 
 ### New Skills
 
 | Skill | Milestone | Trigger | Purpose |
 |---|---|---|---|
+| `create-judge` | M1 (done) | "Create a scorer / custom judge" | Declarative LLM judge from natural language |
+| `red-team` | M1 (done) | "Red team / safety test" | Adversarial safety evaluation |
+| `eval-loop` | M1 (done) | "Improvement loop / EDD cycle" | Baseline → diagnose → fix → compare |
+| `cost-quality` | M1 (done) | "Cost vs quality / which model" | Cross-run tradeoff analysis |
 | `compare-evaluations` | M2 | "Compare v1.2 vs v1.3" | Version diff on eval results |
 | `executive-summary` | M2 | "Executive report" | Non-technical fleet health |
 | `compliance-export` | M2 | "Export compliance report" | Structured audit export |
@@ -275,7 +287,7 @@ Agent Lens skills are the primary interface. This table maps planned features to
 | `alert-config` | M3 | "Alert me if quality drops" | Configurable notifications |
 | `trend-analysis` | M3 | "Show quality trend" | Temporal quality analysis |
 | `drift-detection` | M4 | "Check for config drift" | Approved vs. running comparison |
-| `red-team` | M4 | "Red team the support agent" | Adversarial evaluation |
+| `optimize-prompt` | M2 | "Optimize the system prompt" | GEPA prompt optimization via Gateway |
 
 ---
 

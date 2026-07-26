@@ -5,19 +5,28 @@ title: Skills Reference
 
 # Skills Reference
 
-Agent Lens ships with 7 verified skills. Each skill is a `SKILL.md` file that guides the LLM on which MCP tools to call and how to format results.
+Agent Lens ships with 11 skills — 7 core skills verified end-to-end on OpenShift, plus 4 cookbook-inspired skills that leverage the same MCP tool surface. Each skill is a `SKILL.md` file that guides the LLM on which MCP tools to call and how to format results.
 
 ## Verified End-to-End (July 2026)
 
 | Skill | MCP Tools | Status |
 |-------|-----------|--------|
-| [trace-explorer](#trace-explorer) | `search_experiments`, `search_traces`, `get_trace` | ✅ Verified |
-| [quality-dashboard](#quality-dashboard) | `search_experiments`, `search_traces`, `list_runs` | ✅ Verified |
-| [analyze-session](#analyze-session) | `search_traces` | ✅ Verified |
-| [review-trace](#review-trace) | `get_trace`, `log_trace_feedback`, `set_trace_tag` | ✅ Verified |
-| [create-regression](#create-regression) | `get_trace`, `log_trace_expectation`, `set_trace_tag` | ✅ Verified |
-| [evaluate-agent](#evaluate-agent) | `list_scorers`, `evaluate_traces` | ✅ Verified |
-| [compare-evaluations](#compare-evaluations) | `list_runs`, `describe_run` | ✅ Verified |
+| [trace-explorer](#trace-explorer) | `search_experiments`, `search_traces`, `get_trace` | Verified |
+| [quality-dashboard](#quality-dashboard) | `search_experiments`, `search_traces`, `list_runs` | Verified |
+| [analyze-session](#analyze-session) | `search_traces`, `evaluate_traces` | Verified |
+| [review-trace](#review-trace) | `get_trace`, `log_trace_feedback`, `set_trace_tag` | Verified |
+| [create-regression](#create-regression) | `get_trace`, `log_trace_expectation`, `set_trace_tag` | Verified |
+| [evaluate-agent](#evaluate-agent) | `list_scorers`, `evaluate_traces` | Verified |
+| [compare-evaluations](#compare-evaluations) | `list_runs`, `describe_run` | Verified |
+
+## Cookbook-Inspired Skills (July 2026)
+
+| Skill | MCP Tools | Cookbook Source |
+|-------|-----------|----------------|
+| [create-judge](#create-judge) | `register_llm_judge_scorer`, `list_scorers`, `evaluate_traces` | Building Custom LLM Judges |
+| [red-team](#red-team) | `register_llm_judge_scorer`, `evaluate_traces`, `set_trace_tag` | Red-Teaming Your LLM Application |
+| [eval-loop](#eval-loop) | `evaluate_traces`, `search_traces`, `list_runs`, `describe_run`, `create_run` | Evaluation-Driven Development |
+| [cost-quality](#cost-quality) | `list_runs`, `describe_run`, `search_traces` | Cost-Quality Tradeoff Analysis |
 
 ---
 
@@ -133,3 +142,103 @@ Agent Lens ships with 7 verified skills. Each skill is a `SKILL.md` file that gu
 ```
 
 **Output:** Run comparison with metrics, trends, and certification status.
+
+---
+
+## create-judge
+
+**Purpose:** Create domain-specific LLM judge scorers from natural language criteria.
+
+**Cookbook source:** [Building Custom LLM Judges](https://mlflow.org/cookbook/building-custom-llm-judges)
+
+**Example prompts:**
+```
+"Create a scorer that checks if my agent mentions the privacy policy"
+"I need a judge that validates tool calls follow our rate-limiting rules"
+"Build an evaluator for tone — professional but not robotic"
+```
+
+**How it works:**
+1. Interview for evaluation criteria (what to evaluate, pass/fail definition)
+2. Generate judge instructions with template variables (`{{ inputs }}`, `{{ outputs }}`, `{{ trace }}`)
+3. Register via `register_llm_judge_scorer`
+4. Dry-run on 3-5 traces to validate
+5. Report results and suggest next steps
+
+**Output:** Registered scorer with validation results.
+
+---
+
+## red-team
+
+**Purpose:** Adversarial safety evaluation with attack-specific judges.
+
+**Cookbook source:** [Red-Teaming Your LLM Application](https://mlflow.org/cookbook/red-teaming-your-llm-application)
+
+**Example prompts:**
+```
+"Red-team the financial advisor agent for prompt injection"
+"Test our support agent for data exfiltration attempts"
+"Run a safety evaluation on the onboarding agent"
+```
+
+**Attack profiles:**
+
+| Profile | Tests For |
+|---------|-----------|
+| prompt-injection | Override of system instructions |
+| data-exfiltration | Leakage of internal tools/prompts |
+| jailbreak | Bypass of safety constraints |
+| pii-leakage | Exposure of personal information |
+| hallucination-exploit | Fabricated authoritative claims |
+| comprehensive | All of the above |
+
+**Output:** Red Team Report with attack success rates, severity, and remediation.
+
+---
+
+## eval-loop
+
+**Purpose:** Orchestrate the full Evaluation-Driven Development cycle in one conversation.
+
+**Cookbook source:** [Evaluation-Driven Development](https://mlflow.org/cookbook/eval-driven-development/)
+
+**Example prompts:**
+```
+"Start an eval-driven development cycle on the support agent"
+"I fixed the prompt — re-run and compare to baseline"
+"Show me what failed and why, then help me improve"
+```
+
+**The EDD loop:**
+1. **Baseline** — evaluate current traces, record metrics
+2. **Diagnose** — find failures, group by pattern, identify root causes
+3. **Fix** — recommend changes, wait for user to implement
+4. **Re-evaluate** — same scorers on new traces
+5. **Compare** — delta table showing improvement
+
+**Output:** Comparison report with baseline vs improved metrics and verdict.
+
+---
+
+## cost-quality
+
+**Purpose:** Analyze cost vs quality tradeoffs across evaluation runs.
+
+**Cookbook source:** [Cost-Quality Tradeoff Analysis](https://mlflow.org/cookbook/cost-quality-tradeoff-analysis)
+
+**Example prompts:**
+```
+"Compare quality vs cost across my evaluation runs"
+"Which model gives the best quality for the support agent?"
+"Show me the cost-quality tradeoff for the RAG agent"
+```
+
+**Key metrics:**
+- Pass rate per run
+- Average cost per trace
+- Cost per qualified trace
+- Quality/cost ratio
+- Latency comparison
+
+**Output:** Tradeoff matrix with recommendation (best value, best quality, most economical).

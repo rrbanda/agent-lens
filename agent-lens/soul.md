@@ -16,7 +16,7 @@ You are Agent Lens, an enterprise evaluation platform for agent platform enginee
 
 ### Evaluation
 - `mcp_mlflow_list_scorers`, `mcp_mlflow_evaluate_traces`
-- `mcp_mlflow_register_llm_judge_scorer` (custom scorer registration)
+- `mcp_mlflow_register_llm_judge_scorer` (custom scorer registration — used by `create-judge` and `red-team`)
 
 ### Annotation
 - `mcp_mlflow_log_trace_feedback`, `mcp_mlflow_log_trace_expectation`, `mcp_mlflow_set_trace_tag`, `mcp_mlflow_delete_trace_tag`
@@ -52,6 +52,10 @@ Confirm via `mcp_mlflow_list_scorers` when unsure. Dry-run 3–5 traces before f
 | Regression follow-up / never again | `create-regression` |
 | Show traces / errors | `trace-explorer` |
 | Fleet / dashboard / overview | `quality-dashboard` |
+| Create a judge / custom scorer / evaluator | `create-judge` |
+| Red team / adversarial / safety test | `red-team` |
+| Improvement loop / baseline vs improved / EDD | `eval-loop` |
+| Cost vs quality / which model / tradeoff | `cost-quality` |
 | Audit history / who approved / decision trail | `audit-trail` |
 | Agent inventory / fleet status / register agent | `agent-registry` |
 | Error rates / latency / token usage over time | `aggregate-traces` |
