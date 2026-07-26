@@ -1,6 +1,6 @@
 # Enterprise readiness
 
-Honest status of Agent Lens for production / enterprise pilots on OpenShift AI (RHOAI).
+Honest status of Agent Lens for production / enterprise pilots.
 
 ## What “production-grade” means here
 
@@ -20,7 +20,7 @@ Honest status of Agent Lens for production / enterprise pilots on OpenShift AI (
 | CI/CD quality gate webhook | **Roadmap** | [#18](https://github.com/rrbanda/agent-lens/issues/18) |
 | SSO / OIDC for dashboard | **Roadmap** | [#17](https://github.com/rrbanda/agent-lens/issues/17) |
 | Multi-tenant isolation | **Roadmap** | [#23](https://github.com/rrbanda/agent-lens/issues/23) |
-| Audit trail of certify decisions | **Roadmap** | [#19](https://github.com/rrbanda/agent-lens/issues/19) |
+| Audit trail of qualify decisions | **Roadmap** | [#19](https://github.com/rrbanda/agent-lens/issues/19) |
 | HA / multi-replica Hermes | **Not yet** | Sticky sessions / shared PVC constraints |
 
 ## Production deploy checklist
@@ -41,13 +41,13 @@ Honest status of Agent Lens for production / enterprise pilots on OpenShift AI (
    ```
 8. Seed traces -- [first-trace.md](first-trace.md)
 9. `make check-mcp` / demo preflight -- [demo-script.md](demo-script.md)
-10. Certification uses **>=80% pass rate**, error rate **<5%** -- see skills
+10. Qualification uses **>=80% pass rate**, error rate **<5%** -- see skills
 
 Legacy `make deploy-agent` (plain Deployment) remains for rollback only.
 
 ## Enterprise gaps (do not oversell)
 
-- Chat **certification ≠ pipeline block** until #18 ships
+- Chat **qualification ≠ pipeline block** until #18 ships
 - Regression **tags ≠ Evaluation Dataset API**
 - Single-namespace pilot topology (not hard multi-tenant)
 - Judge/LLM dependency lives on the MLflow / MCP side
@@ -60,7 +60,7 @@ Ship a **controlled pilot** when:
 
 - [ ] Official MCP contract check passes
 - [ ] Secrets managed via K8s Secrets (not ConfigMap)
-- [ ] At least one real agent produces traces + CERTIFIED/NOT CERTIFIED report
+- [ ] At least one real agent produces traces + QUALIFIED/NOT QUALIFIED report
 - [ ] Observatory does not invent `/5` scores
 - [ ] Baked image deployed (runtime pip is blocked by Landlock -- no bootstrap risk)
 - [ ] SSO/CI-gate accepted as follow-on (#17 / #18)

@@ -79,7 +79,7 @@ MCP_URL=http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp \
 | `MLFLOW_WORKSPACE` | Match your MLflow workspace (often `default`) |
 | TLS bundles | `REQUESTS_CA_BUNDLE` / `SSL_CERT_FILE` for cluster CA |
 
-Exact manifests are owned by the RHOAI / MLflow operator stack — not this repo.
+Exact manifests are owned by the MLflow operator or your deployment stack — not this repo.
 
 ## Network
 

@@ -34,6 +34,24 @@ configMapGenerator:
   - name: skill-analyze-session
     files:
       - SKILL.md=../../skills/analyze-session/SKILL.md
+  - name: skill-audit-trail
+    files:
+      - SKILL.md=../../skills/audit-trail/SKILL.md
+  - name: skill-agent-registry
+    files:
+      - SKILL.md=../../skills/agent-registry/SKILL.md
+  - name: skill-aggregate-traces
+    files:
+      - SKILL.md=../../skills/aggregate-traces/SKILL.md
+  - name: skill-compare-evaluations
+    files:
+      - SKILL.md=../../skills/compare-evaluations/SKILL.md
+  - name: skill-executive-summary
+    files:
+      - SKILL.md=../../skills/executive-summary/SKILL.md
+  - name: skill-compliance-export
+    files:
+      - SKILL.md=../../skills/compliance-export/SKILL.md
   - name: agent-lens-soul
     files:
       - SOUL.md=../../soul.md

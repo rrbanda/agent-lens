@@ -1,6 +1,6 @@
 ---
 name: "evaluate-agent"
-description: "Run a systematic evaluation of any agent's quality using MLflow GenAI scorers. Use when asked to evaluate, score, certify, or assess an agent's performance. Produces a Quality Certification Report."
+description: "Run a systematic evaluation of any agent's quality using MLflow GenAI scorers. Use when asked to evaluate, score, qualify, or assess an agent's performance. Produces a Quality Qualification Report."
 ---
 
 # Evaluate Agent
@@ -62,13 +62,28 @@ If scorers error, tools are broken, or all traces empty — stop and report; do 
 Call `mcp_mlflow_evaluate_traces` with chosen scorers:
 
 - Quick check: `max_traces` 50
-- Certification: `max_traces` 200 (follow tool schema)
+- Qualification: `max_traces` 200 (follow tool schema)
 
 **Regression-focused cert:** If the user asks to include regression follow-ups, first
 `mcp_mlflow_search_traces` with tags/filter for `regression=true` (or dataset tag), evaluate
 those traces preferentially, and state the sample composition in the report.
 
-### Step 6: Generate Quality Certification Report
+### Step 6: Record qualification on LoggedModel (M2)
+
+If the agent has a LoggedModel in MLflow, write the qualification verdict as tags:
+
+1. `mcp_mlflow_search_logged_models` — find the LoggedModel for this agent/experiment
+2. `mcp_mlflow_set_logged_model_tags` — write:
+   - `agentlens.qualification.status` = `QUALIFIED` / `NOT_QUALIFIED` / `NEEDS_REVIEW`
+   - `agentlens.qualification.timestamp` = ISO-8601 timestamp
+   - `agentlens.qualification.scorer_profile` = profile used (RAG, Tool-Calling, etc.)
+   - `agentlens.qualification.pass_rate` = aggregate pass rate
+   - `agentlens.qualification.ttl_days` = re-qualification window (default 30)
+3. `mcp_mlflow_finalize_logged_model` — set status to READY if QUALIFIED
+
+If no LoggedModel exists, skip this step and note it in the report.
+
+### Step 7: Generate Quality Qualification Report
 
 Aggregate MCP JSON only (optional code execution on returned data). Never `import mlflow`.
 
@@ -77,7 +92,7 @@ Aggregate MCP JSON only (optional code execution on returned data). Never `impor
 | Signal | How to report | Default threshold |
 |--------|---------------|-------------------|
 | Built-in GenAI scorer | Pass rate = (# yes or positive) / (# scored) | **≥ 80%** PASS |
-| Trace status ERROR | Error rate on sample | **< 5%** for CERTIFIED |
+| Trace status ERROR | Error rate on sample | **< 5%** for QUALIFIED |
 | Scorer `feedback.error` | Scorer failure — exclude from pass rate; call out separately | — |
 
 `state: OK` / `STATUS_CODE_OK` means the run completed — **not** that the answer is correct.
@@ -85,7 +100,7 @@ Aggregate MCP JSON only (optional code execution on returned data). Never `impor
 ## Output Format
 
 ```
-# Quality Certification Report
+# Quality Qualification Report
 ## Agent: [name] | Experiment: [id]
 ## Date: [timestamp] | Evaluator: Agent Lens
 
@@ -98,12 +113,12 @@ Aggregate MCP JSON only (optional code execution on returned data). Never `impor
 | RetrievalGroundedness | XX% or N/A | PASS/FAIL/SKIPPED | >= 80% |
 | ToolCallCorrectness | XX% | PASS/FAIL | >= 80% |
 
-### Certification verdict (chat — not a CI pipeline block)
-**[CERTIFIED / NOT CERTIFIED / NEEDS REVIEW]**
+### Qualification verdict (chat — not a CI pipeline block)
+**[QUALIFIED / NOT QUALIFIED / NEEDS REVIEW]**
 
 Rules of thumb:
-- CERTIFIED: all required scorers PASS and error rate < 5%
-- NOT CERTIFIED: any required scorer FAIL or error rate >= 5%
+- QUALIFIED: all required scorers PASS and error rate < 5%
+- NOT QUALIFIED: any required scorer FAIL or error rate >= 5%
 - NEEDS REVIEW: missing retriever spans, scorer errors, or insufficient sample
 
 ### Evidence
@@ -112,7 +127,7 @@ Rules of thumb:
 - Avg latency: Xms
 - Regression-tagged traces included: Y/N
 
-### Findings (if NOT CERTIFIED / NEEDS REVIEW)
+### Findings (if NOT QUALIFIED / NEEDS REVIEW)
 1. [Issue with evidence]
 2. [Recommended action]
 

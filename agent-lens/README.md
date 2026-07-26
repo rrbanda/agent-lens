@@ -287,7 +287,7 @@ mcp_servers:
 - Scoring truth: GenAI scorers are yes/no categorical; report **pass rates**, never
   invent Likert scores
 - Scorer profiles: RAG, Tool-Calling, Chat
-- Certification threshold: >= 80% pass rate, < 5% error rate
+- Qualification threshold: >= 80% pass rate, < 5% error rate
 - Intent routing table maps user intents to skills
 
 ### Skills
@@ -296,7 +296,7 @@ Six skills in [skills/](skills/), each a `SKILL.md` mounted as a ConfigMap:
 
 | Skill | Trigger | MCP tools used |
 |-------|---------|---------------|
-| `evaluate-agent` | Evaluate, Score, Certify | `evaluate_traces`, `list_scorers` |
+| `evaluate-agent` | Evaluate, Score, Qualify | `evaluate_traces`, `list_scorers` |
 | `review-trace` | Review, Annotate | `get_trace`, `search_traces`, `log_trace_feedback`, `log_trace_expectation` |
 | `analyze-session` | Chat session / multi-turn | `search_traces`, `get_trace` |
 | `create-regression` | Regression follow-up | `log_trace_expectation`, `set_trace_tag` |

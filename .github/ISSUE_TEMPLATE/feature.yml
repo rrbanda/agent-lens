@@ -40,6 +40,9 @@ body:
       options:
         - mcp
         - hermes
+        - gateway
+        - audit
+        - registry
         - instrumentation
         - deploy
         - ci

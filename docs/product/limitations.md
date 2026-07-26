@@ -34,5 +34,5 @@ pytest tests/test_skill_alignment.py -v
 ## Demo implications
 
 - Empty experiments → Observatory rows show **INACTIVE** (not a cluster outage)
-- “Can this agent be deployed?” → advisory certification, not a pipeline block
+- “Can this agent be deployed?” → advisory qualification, not a pipeline block
 - “Add to regression dataset” → expectation + tags; promote to a real dataset offline if required

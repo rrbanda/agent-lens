@@ -34,7 +34,8 @@ Adapted from [mlflow/skills analyze-mlflow-trace](https://github.com/mlflow/skil
    - Root span = `parent_span_id` is null
    - Inputs/outputs often in `attributes["mlflow.spanInputs"]` / `mlflow.spanOutputs"` (JSON strings)
    - Error spans: `status.code == STATUS_CODE_ERROR` (or equivalent)
-4. Assessments:
+4. Read existing assessments (M2):
+   - `mcp_mlflow_get_assessment` — retrieve individual assessments by ID for full detail
    - Prefer **rationale** over raw value — values are ambiguous without it
    - `feedback.error` means the **scorer failed**, not that the agent failed — exclude from quality claims
 5. Present findings, then ask for annotation intent
@@ -47,8 +48,12 @@ Adapted from [mlflow/skills analyze-mlflow-trace](https://github.com/mlflow/skil
 **Expected output:**
 - `mcp_mlflow_log_trace_expectation`
 
+**Correct existing feedback (M2):**
+- `mcp_mlflow_update_assessment` — update a previous assessment's value or rationale
+
 **Workflow tags:**
 - `mcp_mlflow_set_trace_tag` — e.g. `needs_fix=true`, `reviewed=true`, `regression=true`
+- `mcp_mlflow_delete_trace_tag` — remove stale or incorrect tags
 
 Never `import mlflow` in the sandbox.
 

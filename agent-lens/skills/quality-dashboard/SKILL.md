@@ -26,7 +26,7 @@ Do **not** open code execution to call MLflow. Only use it on data already retur
 
 > **Do not** `import mlflow`, call `mlflow.set_tracking_uri`, or connect to an MLflow
 > database / tracking server from the Hermes code-execution sandbox. That environment
-> has no ServiceAccount token to RHOAI MLflow and will hang or fail. All MLflow access
+> has no ServiceAccount token to the MLflow tracking server and will hang or fail. All MLflow access
 > must go through official MCP tools (`mcp_mlflow_*`).
 
 ## Health Status Criteria

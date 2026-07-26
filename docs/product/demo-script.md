@@ -9,7 +9,7 @@ Complete **before** opening the dashboard:
 - [ ] `make status` shows official MCP pod(s) and Agent Lens Ready
 - [ ] Secrets exist: `agent-lens-llm-key` and `agent-lens-auth` (see `make secret`)
 - [ ] Target agent has traces — [first-trace.md](first-trace.md) (≥5 recommended)
-- [ ] You understand [limitations.md](limitations.md) (certify ≠ CI gate; tags ≠ dataset API)
+- [ ] You understand [limitations.md](limitations.md) (qualify ≠ CI gate; tags ≠ dataset API)
 
 ```bash
 make status
@@ -25,7 +25,7 @@ MCP_URL=http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp \
 2. Login with credentials from `agent-lens-auth` (`dashboard-password`)
 3. Start a new chat
 
-**Say:** "Agent Lens is a conversational certification layer on official MLflow MCP —
+**Say:** "Agent Lens is a conversational qualification layer on official MLflow MCP —
 not a custom scoring sidecar."
 
 ### Act 2: Discovery (3 min)
@@ -44,14 +44,14 @@ Show me the last 20 traces for <experiment-name>
 
 **Expected:** trace-explorer → `mcp_mlflow_search_traces` table (status, latency, tokens).
 
-### Act 3: Evaluation / certify (4 min)
+### Act 3: Evaluation / qualify (4 min)
 
 **Prompt:**
 ```
 Evaluate the outreach agent using the tool-calling profile
 ```
 
-**Expected:** dry-run then full `mcp_mlflow_evaluate_traces` → Quality Certification
+**Expected:** dry-run then full `mcp_mlflow_evaluate_traces` → Quality Qualification
 Report with **pass rates** (yes/no scorers, ≥80% threshold) — not `/5` scores.
 
 **Prompt:**
@@ -59,7 +59,7 @@ Report with **pass rates** (yes/no scorers, ≥80% threshold) — not `/5` score
 Can this agent be deployed?
 ```
 
-**Expected:** Skill-side **certification verdict** from scores vs thresholds.
+**Expected:** Skill-side **qualification verdict** from scores vs thresholds.
 Clarify for the audience: this does **not** block a pipeline yet
 ([issue #18](https://github.com/rrbanda/agent-lens/issues/18)).
 
@@ -107,7 +107,7 @@ Give me a quality dashboard across all agents
 ## Key points
 
 1. Evaluation on production traces via official MCP
-2. Honest AgentOps: certify in chat today; CI gate on the roadmap
+2. Honest AgentOps: qualify in chat today; CI gate on the roadmap
 3. Skills encode methodology; MCP owns MLflow access
 4. Empty fleet is an instrumentation problem, not an Agent Lens outage
 

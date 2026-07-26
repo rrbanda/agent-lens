@@ -33,7 +33,7 @@ graph TB
 
     subgraph redhat-ods-applications
         MCP[Official MLflow MCP<br/>mlflow-mcp:8080]
-        MLflow[MLflow Tracking Server<br/>RHOAI Operator-managed]
+        MLflow[MLflow Tracking Server<br/>cluster-managed]
     end
 
     subgraph llamastack namespace
@@ -79,7 +79,7 @@ controller reconciles `Sandbox` CRs into pods. Available as:
 
 ### 3. Official MLflow MCP (`mlflow-mcp`)
 
-Deployed with the platform (RHOAI / MLflow operator stack), not by this repo.
+Deployed with the platform (MLflow operator or standalone install), not by this repo.
 
 **Stack**: `mlflow mcp run` (often behind `mcp-proxy`) + MLflow SDK
 
@@ -103,7 +103,7 @@ an evaluation and governance specialist.
 **Key design decisions**:
 - **Official MCP only** -- `mcp_servers.mlflow.url` points at `mlflow-mcp`
 - **MCP-first** -- all MLflow access via native tools; code execution only formats MCP JSON
-- **No sandbox `import mlflow`** -- Hermes has no RHOAI ServiceAccount for tracking
+- **No sandbox `import mlflow`** -- Hermes has no ServiceAccount for MLflow tracking
 - **Persistent state** -- PVC stores memory/sessions across restarts
 - **Skill-driven** -- methodologies encoded as skills, not hardcoded logic
 - **Harness-pluggable** -- only the Containerfile and startup.sh are harness-specific
@@ -141,7 +141,7 @@ sequenceDiagram
     MCP->>ML: GenAI evaluate / scorers
     ML-->>MCP: scores
     MCP-->>AL: evaluation results
-    AL-->>U: Quality Certification Report
+    AL-->>U: Quality Qualification Report
     U->>AL: "Annotate that trace"
     AL->>MCP: log_trace_feedback(...)
     MCP->>ML: log feedback
@@ -170,7 +170,7 @@ flowchart TD
 | "Evaluate the agent" | Native MCP | `evaluate_traces` |
 | "Error rate / dashboard" | Native MCP + local format | `search_experiments` + `search_traces` |
 | "Compare runs" | Code exec on MCP JSON | After `list_runs` / `describe_run` |
-| Sandbox `import mlflow` | Forbidden | No SA token to RHOAI MLflow |
+| Sandbox `import mlflow` | Forbidden | No SA token to MLflow tracking |
 
 ## Deployment Topology
 
@@ -238,5 +238,5 @@ Official MLflow MCP and LlamaStack must already exist in the cluster.
 
 - **Official MLflow MCP**: Managed with the platform; scale with that deploy
 - **Agent Lens**: Single replica (stateful sessions), scale via Hermes delegation if enabled
-- **MLflow**: Managed by RHOAI operator, scales independently
+- **MLflow**: Managed independently (operator, Helm, or standalone), scales separately
 - **OpenShell Gateway**: StatefulSet, single replica sufficient for sandbox coordination

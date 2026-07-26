@@ -36,12 +36,12 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: OpenShift / RHOAI / Python / MLflow versions if known
+      description: Kubernetes distribution, MLflow, Python versions if known
       value: |
-        - OpenShift:
-        - RHOAI:
-        - Python:
+        - Kubernetes (distribution + version):
         - MLflow:
+        - Python:
+        - Hermes Agent:
     validations:
       required: false
   - type: textarea

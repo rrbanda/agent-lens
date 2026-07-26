@@ -14,7 +14,7 @@ fi
 
 echo "Hermes $(hermes --version 2>&1 || true)"
 
-SKILLS="evaluate-agent review-trace create-regression trace-explorer quality-dashboard analyze-session"
+SKILLS="evaluate-agent review-trace create-regression trace-explorer quality-dashboard analyze-session audit-trail agent-registry aggregate-traces compare-evaluations executive-summary compliance-export"
 
 mkdir -p \
   /sandbox/.hermes/skills \

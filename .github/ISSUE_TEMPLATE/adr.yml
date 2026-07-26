@@ -1,0 +1,63 @@
+name: Architecture Decision Record
+description: Propose or document an architecture decision
+title: "[ADR]: "
+labels: ["type:adr", "needs-design"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What is the issue that motivates this decision? What forces are at play?
+    validations:
+      required: true
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision
+      description: What is the change that we are proposing and/or doing?
+    validations:
+      required: true
+  - type: textarea
+    id: consequences
+    attributes:
+      label: Consequences
+      description: What becomes easier or harder as a result of this decision?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      value: |
+        1.
+        2.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - mcp
+        - hermes
+        - gateway
+        - audit
+        - registry
+        - instrumentation
+        - deploy
+        - ci
+        - docs
+        - security
+    validations:
+      required: true
+  - type: dropdown
+    id: status
+    attributes:
+      label: Status
+      options:
+        - proposed
+        - accepted
+        - deprecated
+        - superseded
+    validations:
+      required: true
