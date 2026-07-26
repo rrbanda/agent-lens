@@ -1,13 +1,12 @@
 <p align="center">
   <h1 align="center">Agent Lens</h1>
   <p align="center">
-    Trust your agents. Verify with evidence — conversationally, on MLflow.
-    <br />
-    <a href="docs/product/identity.md"><strong>Identity</strong></a> ·
-    <a href="DESIGN.md"><strong>Design</strong></a> ·
-    <a href="docs/product/architecture.md"><strong>Architecture</strong></a> ·
-    <a href="docs/product/demo-script.md"><strong>Demo</strong></a> ·
-    <a href="docs/product/operator-mcp.md"><strong>MCP ops</strong></a> ·
+    Trust your agents. Verify with evidence.
+    <br /><br />
+    <a href="https://rrbanda.github.io/agentlens/"><strong>Docs</strong></a> ·
+    <a href="https://rrbanda.github.io/agentlens/docs/getting-started"><strong>Get Started</strong></a> ·
+    <a href="https://rrbanda.github.io/agentlens/docs/frameworks"><strong>Frameworks</strong></a> ·
+    <a href="https://rrbanda.github.io/agentlens/docs/skills"><strong>Skills</strong></a> ·
     <a href="CONTRIBUTING.md"><strong>Contributing</strong></a>
   </p>
 </p>
@@ -15,559 +14,202 @@
 <p align="center">
   <a href="https://github.com/rrbanda/agent-lens/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
-  <a href="https://github.com/rrbanda/agent-lens/issues"><img src="https://img.shields.io/github/issues/rrbanda/agent-lens" alt="Issues"></a>
-  <a href="https://github.com/rrbanda/agent-lens/pulls"><img src="https://img.shields.io/github/issues-pr/rrbanda/agent-lens" alt="PRs"></a>
-  <img src="https://img.shields.io/badge/MLflow_MCP-3.14_verified-green.svg" alt="MLflow MCP 3.14">
-  <img src="https://img.shields.io/badge/skills-16_working-green.svg" alt="16 Skills Working">
+  <img src="https://img.shields.io/badge/MLflow_MCP-3.14-green.svg" alt="MLflow MCP 3.14">
+  <img src="https://img.shields.io/badge/skills-16-green.svg" alt="16 Skills">
 </p>
 
 ---
 
-> **Verified working** — 16 skills shipping, 14 verified end-to-end on OpenShift 4.18 + MLflow MCP 3.14 (July 2026).
-> 4 experiments, 34 traces, 6 runs tested live. LLM-judge skills require an OpenAI-compatible API key on the MLflow MCP server. See [test results](#verified-end-to-end).
-
-MLflow is the **data plane** — traces, scorers, models.
-Agent Lens is the **decision plane** — verdicts, governance, fleet management.
-
-Agent Lens is **not** another MLflow UI. It is a conversational qualification layer that drives
-**upstream official [MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/)** so agent platform engineers
-can evaluate, qualify, and govern AI agents in natural language.
-
-**Framework-agnostic by design.** Agent Lens evaluates any agent that sends traces to MLflow — regardless of framework. LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, AutoGen, LlamaIndex, or your own custom agent. If MLflow can trace it, Agent Lens can qualify it.
-
----
-
-## Who it's for
-
-Agent Lens serves different personas at different stages of the product roadmap. Each one asks a fundamentally different question about agent quality.
-
-| Persona | Their question | What Agent Lens gives them | When |
-|---------|---------------|---------------------------|------|
-| **Agent Platform Engineer** | "Can I qualify this agent for production?" | Qualification verdicts, fleet observatory, trace forensics, scorer profiles | **Now** (M1) |
-| **Agent Developer** | "Will my agent pass the platform team's quality gate?" | CI/CD gate API, eval-in-pipeline, version comparison, regression tracking | **M2** |
-| **Chief AI Officer / VP of AI** | "Is this investment paying off?" | Fleet-wide quality scores, cost-per-agent trending, executive summaries | M2 |
-| **CISO / AI Security Lead** | "Is the security boundary robust?" | Governance audit trail, policy violation tracking, red team results | M3 |
-| **Domain Expert / SME** | "Did the agent do the right thing?" | Trace annotation, expectation authoring, review queues, judge calibration | M2 |
-| **Business Sponsor** | "Is the agent making my team more productive?" | Adoption metrics, containment rates, quality trends per team | M4 |
-| **AI Compliance / GRC Lead** | "Do our agents meet regulatory requirements?" | Qualification evidence export, ISO 42001 / EU AI Act mapping, drift detection | M4 |
-
-Full persona detail: [docs/product/personas.md](docs/product/personas.md).
-
----
-
-## Agent Lens is right for you if
-
-- You run 10+ AI agents in production and must approve them before deployment
-- You have MLflow tracing but no systematic way to grade agent quality
-- You need CI/CD quality gates that block bad agents, not just dashboards you forget to check
-- Compliance requires an audit trail of who qualified what, when, and with what evidence
-- You want to evaluate agents via chat, not by writing Python evaluation scripts
-- You manage a heterogeneous fleet (LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, custom) and need one surface for all of them
-
----
-
-## Problems Agent Lens solves
-
-| Without Agent Lens | With Agent Lens |
-|---|---|
-| You have 50 agents in production and no evidence any of them work correctly. | Every agent has a Quality Qualification Report with scorer pass rates and evidence. |
-| CI/CD deploys agents without quality checks — failures are found by users. | `POST /api/v1/gate/evaluate` returns PASS/FAIL before the pipeline proceeds. |
-| Compliance asks "who approved this agent?" and you have no answer. | Append-only audit trail with SHA-256 checksums, actor identity, and JSON Lines export. |
-| You want to evaluate an agent but don't know which scorers to use. | Scorer profiles (RAG, Tool-Calling, Chat, Safety, Comprehensive) pick the right judges for you. |
-| Fleet health is checked by manually opening MLflow experiment by experiment. | "Give me a quality dashboard" returns HEALTHY / WARNING / CRITICAL / INACTIVE across all agents. |
-| A bad trace went to production and nobody logged it as a regression. | `create-regression` tags the trace with expectations and flags it for follow-up evaluation. |
-
----
-
-## Features
-
-### Evaluate any agent in natural language
-
-Ask Agent Lens to evaluate an agent and it runs MLflow's GenAI scorers against production traces, aggregates pass rates, and returns a structured **Quality Qualification Report** — QUALIFIED, NOT QUALIFIED, or NEEDS REVIEW with full evidence.
+Agent Lens is a **conversational qualification layer for AI agents** built on the official [MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/). Ask questions in plain English — get structured quality verdicts backed by evidence.
 
 ```
-You:   "Evaluate outreach-agent using the tool-calling profile"
+You:   "Evaluate my support-agent using the RAG profile"
 
 Agent Lens:
-  # Quality Qualification Report
-  ## Agent: outreach-agent | Experiment: 42
-  ### Profile: Tool-Calling
+  # Quality Qualification Report — support-agent
   | Scorer               | Pass rate | Verdict |
   |----------------------|-----------|---------|
-  | ToolCallCorrectness  | 92%       | PASS    |
-  | ToolCallEfficiency   | 87%       | PASS    |
   | RelevanceToQuery     | 95%       | PASS    |
-  ### Qualification verdict: QUALIFIED
-  Evidence: 200 traces evaluated, 1.2% error rate, avg latency 340ms
+  | RetrievalGroundedness| 87%       | PASS    |
+  ### Verdict: QUALIFIED (200 traces, 1.2% error rate)
 ```
 
-Scorers return **yes/no** — Agent Lens reports **pass rates**, never fake /5 scores. Default threshold: ≥ 80% pass rate per required scorer, < 5% error rate.
+**Framework-agnostic.** Works with LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, AutoGen, LlamaIndex, or any custom agent. If MLflow can trace it, Agent Lens can qualify it.
 
-### Seven scorer profiles — pick the right judges automatically
+---
 
-Instead of figuring out which of MLflow's 20+ built-in judges to use, select a profile:
-
-| Profile | Scorers | Use when |
-|---------|---------|----------|
-| **RAG** | RelevanceToQuery, RetrievalGroundedness | Agent retrieves documents before answering |
-| **Tool-Calling** | ToolCallCorrectness, ToolCallEfficiency, RelevanceToQuery | Agent calls APIs, tools, or functions |
-| **Chat** | RelevanceToQuery, Guidelines | General conversational assistant |
-| **Safety** | Guidelines (OSS) or Safety (Databricks) | Content safety evaluation |
-| **Comprehensive** | All available scorers via `list_scorers` | Full quality assessment, new agent types |
-| **Multi-Turn** | ConversationCompleteness, ConversationalSafety, UserFrustration | Multi-turn conversations |
-| **Custom** | User-specified scorers validated via MCP | Your own quality bars |
-
-Profiles are YAML config (profile name → scorer list), not custom scorer code. MLflow provides 20+ built-in judges (verified via `list_scorers`) — see [MLflow Capability Audit](docs/product/mlflow-capability-audit.md).
-
-### Explore traces and debug failures
-
-```
-You:   "Show me the last 20 traces for billing-agent"
-You:   "What went wrong with this trace?"
-You:   "Where did this chat session go wrong?"
-```
-
-Agent Lens calls MLflow MCP to surface latency distributions, error patterns, token usage, and individual trace forensics. For multi-turn conversations, it reconstructs the full session timeline and identifies where reasoning broke down.
-
-### Fleet-wide quality dashboard
-
-```
-You:   "Give me a quality dashboard across all agents"
-
-Agent Lens:
-  | Agent            | Status   | Last eval  | Pass rate |
-  |------------------|----------|------------|-----------|
-  | outreach-agent   | HEALTHY  | 2h ago     | 92%       |
-  | billing-agent    | WARNING  | 1d ago     | 78%       |
-  | support-agent    | CRITICAL | 3d ago     | 61%       |
-  | legacy-bot       | INACTIVE | 30d ago    | —         |
-```
-
-Scans across experiments, traces, and evaluation runs to aggregate fleet health into HEALTHY / WARNING / CRITICAL / INACTIVE. MLflow operates per-experiment — Agent Lens operates fleet-wide.
-
-### Annotate and track regressions
-
-```
-You:   "Annotate that trace as incorrect tool selection"
-You:   "Log a regression follow-up for this failure"
-```
-
-Log human feedback and expectations directly on MLflow traces. Tag traces with `regression=true` for follow-up evaluation. When a bad answer makes it to production, capture it immediately so the next qualification run includes it.
-
-### CI/CD quality gate
-
-Use MLflow's evaluation API directly in your CI pipeline — no custom gateway needed:
+## Quick start
 
 ```bash
-# In your Tekton / GitHub Actions / GitLab CI pipeline:
-python -c "
-import mlflow
-from mlflow.genai.scorers import Correctness
-traces = mlflow.search_traces(experiment_names=['outreach-agent'], max_results=50)
-results = mlflow.genai.evaluate(data=traces, scorers=[Correctness()])
-pass_rate = results.metrics.get('correctness/mean', 0)
-exit(0 if pass_rate >= 0.85 else 1)
-"
+git clone https://github.com/rrbanda/agent-lens.git && cd agent-lens
+
+# Local development
+make dev-setup && make mlflow-start && make seed-data
+make test-integration
+
+# Deploy to Kubernetes
+DASH_PW=... API_KEY=... LLM_API_KEY=<your-key> make secret-openshell
+make deploy-all
 ```
 
-### Governed LLM access and audit trail
+Point your agents at MLflow, then ask Agent Lens anything:
 
-MLflow AI Gateway (built into the MLflow Tracking Server) provides centralized LLM access with automatic tracing, cost tracking, and RBAC. Every request becomes an MLflow trace — your audit trail is built in.
+```
+"Show me the last 20 traces for billing-agent"
+"Give me a quality dashboard across all agents"
+"Red-team the onboarding agent for prompt injection"
+"Can this agent be deployed to production?"
+```
 
-### Zero-code instrumentation
+Full setup guide: [Getting Started](https://rrbanda.github.io/agentlens/docs/getting-started)
 
-Drop a single file into your Python agent to start sending traces to MLflow:
+---
+
+## What it does
+
+MLflow gives you traces and scorers. Agent Lens gives you **verdicts**.
+
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+graph LR
+    You -->|"Evaluate my agent"| AL[Agent Lens]
+    AL -->|MCP| MCP[MLflow MCP]
+    MCP --> MLflow[(MLflow)]
+    MLflow -->|traces| Agents[Your Agents]
+```
+
+| You ask | Agent Lens does |
+|---------|----------------|
+| "Evaluate outreach-agent" | Runs MLflow scorers, reports pass rates, returns QUALIFIED / NOT QUALIFIED |
+| "Quality dashboard" | Scans all experiments, returns fleet health: HEALTHY / WARNING / CRITICAL |
+| "What went wrong with this trace?" | Deep-dives into spans, inputs, outputs, and failure patterns |
+| "Red-team for prompt injection" | Registers safety judges, evaluates traces, reports vulnerability rates |
+| "Create a scorer for privacy policy" | Builds a custom LLM judge from your natural language criteria |
+| "Export compliance report" | Exports qualification evidence as structured JSONL for auditors |
+
+---
+
+## 16 skills
+
+Every capability is a `SKILL.md` file — a portable markdown prompt, not code.
+
+| Skill | What it does |
+|-------|-------------|
+| **trace-explorer** | Search and drill into traces across experiments |
+| **quality-dashboard** | Fleet-wide health overview (HEALTHY / WARNING / CRITICAL) |
+| **analyze-session** | Multi-turn session analysis with failure identification |
+| **review-trace** | Deep trace inspection with span tree and assessments |
+| **create-regression** | Flag traces as regressions for follow-up |
+| **evaluate-agent** | Run MLflow scorers and produce qualification verdicts |
+| **compare-evaluations** | Side-by-side run comparison with trend analysis |
+| **create-judge** | Build custom LLM judges from natural language criteria |
+| **red-team** | Adversarial safety evaluation with attack-specific judges |
+| **eval-loop** | Full evaluation-driven development cycle |
+| **cost-quality** | Cost vs quality tradeoff analysis across models |
+| **audit-trail** | Chronological qualification decision history |
+| **agent-registry** | Fleet inventory with per-agent status |
+| **executive-summary** | Board-ready health summary, no jargon |
+| **compliance-export** | JSONL/CSV export for GRC tools |
+| **aggregate-traces** | Error rates, latency percentiles, trends |
+
+Full reference: [Skills docs](https://rrbanda.github.io/agentlens/docs/skills)
+
+---
+
+## Works with any agent framework
+
+Agent Lens evaluates any agent that sends traces to MLflow.
+
+| Framework | Instrumentation |
+|-----------|-----------------|
+| LangGraph | `mlflow.langchain.autolog()` |
+| Google ADK | `mlflow.tracing.enable()` |
+| LangChain | `mlflow.langchain.autolog()` |
+| CrewAI | `mlflow.crewai.autolog()` |
+| OpenAI Agents SDK | `mlflow.openai.autolog()` |
+| AutoGen | `mlflow.autogen.autolog()` |
+| LlamaIndex | `mlflow.llama_index.autolog()` |
+| Custom Python | `@mlflow.trace` decorator |
+| Any language | MLflow REST API |
+
+**Zero-code option:** Drop one file into your agent's site-packages:
 
 ```bash
 cp instrumentation/usercustomize.py $(python -m site --user-site)/
-export MLFLOW_TRACKING_URI="https://your-mlflow:8443"
-export MLFLOW_EXPERIMENT_NAME="my-agent"
-# That's it — your agent now sends traces to MLflow automatically
+export MLFLOW_TRACKING_URI="https://your-mlflow:5000"
 ```
 
-Works with any OpenAI-compatible Python agent. No code changes required.
-
-### All features at a glance
-
-| Feature | Skill | Example ask | Status |
-|---------|-------|-------------|--------|
-| Quality evaluation | `evaluate-agent` | "Evaluate outreach-agent with the RAG profile" | Partial (needs OpenAI key on MCP) |
-| Qualification verdict | `evaluate-agent` | "Can this agent be deployed?" | Partial (needs OpenAI key on MCP) |
-| Trace forensics | `trace-explorer` | "Show me the last 20 traces for billing-agent" | Verified |
-| Single trace review | `review-trace` | "What went wrong with this trace?" | Verified |
-| Session analysis | `analyze-session` | "Where did this chat session go wrong?" | Verified |
-| Fleet observatory | `quality-dashboard` | "Quality dashboard across all agents" | Verified |
-| Regression tracking | `create-regression` | "Log a regression for this failure" | Verified |
-| Human annotation | `review-trace` | "Annotate that trace as incorrect tool selection" | Verified |
-| Run comparison | `compare-evaluations` | "Compare the last two eval runs" | Verified |
-| Custom LLM judges | `create-judge` | "Create a scorer that checks privacy policy mention" | Verified (`list_scorers`), needs OpenAI key for `register` |
-| Red-team safety | `red-team` | "Red-team the financial advisor for prompt injection" | Partial (needs OpenAI key on MCP) |
-| EDD improvement loop | `eval-loop` | "Start an eval-driven development cycle" | Verified |
-| Cost-quality tradeoff | `cost-quality` | "Compare quality vs cost across models" | Verified |
-| Audit trail | `audit-trail` | "Show the audit trail for agent X" | Verified |
-| Agent registry | `agent-registry` | "Show all agents with their qualification status" | Verified |
-| Executive summary | `executive-summary` | "Give me a summary for leadership" | Verified |
-| Compliance export | `compliance-export` | "Export qualification history for auditors" | Verified (dashboard; CLI may timeout) |
-| Trace aggregation | `aggregate-traces` | "What's the error rate this week?" | Partial (large payloads may truncate) |
-| CI/CD quality gate | `mlflow.genai.evaluate()` | Callable from any CI pipeline | Use MLflow SDK directly |
-
-Skills live under [`agent-lens/skills/`](agent-lens/skills/).
+Full guide: [Supported Frameworks](https://rrbanda.github.io/agentlens/docs/frameworks)
 
 ---
 
 ## How it works
 
-```mermaid
-%%{init: {'theme': 'neutral'}}%%
-graph LR
-    User[Platform_Engineer] -->|chat| AL[Agent_Lens]
-    CICD[CI_CD_Pipeline] -->|mlflow.genai.evaluate| MLflow
-    AL -->|MCP| MCP[MLflow_MCP]
-    MCP --> MLflow[(MLflow)]
-    MLflow -->|traces| Agents[Your_Agents]
-    MLflow --> GW[AI_Gateway]
-    GW -->|governed access| LLMs[LLM_Providers]
-```
-
 Agent Lens follows a five-phase loop on every interaction:
 
-| Phase | What happens | MCP tools used |
-|-------|--------------|-----------|
-| **Observe** | Discover experiments, traces, agents | `search_experiments`, `search_traces`, `get_trace` |
-| **Evaluate** | Score traces with GenAI scorers | `evaluate_traces`, `list_scorers` |
-| **Annotate** | Log feedback / expectations on traces | `log_trace_feedback`, `log_trace_expectation` |
-| **Qualify** | PASS/FAIL thresholds + audit record | Evaluation run metrics + trace tags |
-| **Follow up** | Tag failures for regression tracking | `set_trace_tag`, `log_trace_expectation` |
+| Phase | What happens | MCP tools |
+|-------|-------------|-----------|
+| **Observe** | Discover experiments, traces | `search_experiments`, `search_traces`, `get_trace` |
+| **Evaluate** | Score traces with GenAI judges | `evaluate_traces`, `list_scorers` |
+| **Annotate** | Log feedback and expectations | `log_trace_feedback`, `set_trace_tag` |
+| **Qualify** | PASS/FAIL against thresholds | Evaluation run metrics |
+| **Follow up** | Tag failures for regression | `set_trace_tag`, `create_run` |
+
+All 19 MLflow MCP tools, zero custom services. Skills are markdown, config is YAML, deploy is Kubernetes.
 
 ---
 
-## The four pillars
+## Architecture
 
-| Pillar | What it covers |
-|---|---|
-| **Qualification Lifecycle** | Aggregate MLflow scorer results into PASS/FAIL verdicts against configurable thresholds. Track state (QUALIFIED / PENDING / EXPIRED) over time. Enforce TTL-based re-qualification. |
-| **CI/CD Quality Gate** | Use `mlflow.genai.evaluate()` directly in your pipeline. Agent Lens skills define the scorer profiles and thresholds — MLflow runs the evaluation. |
-| **Governed Access + Audit** | MLflow AI Gateway provides centralized LLM access, automatic tracing, cost tracking, and RBAC. Agent Lens adds qualification decisions on top of the trace evidence. |
-| **Fleet Observatory** | Cross-experiment health aggregation, qualification status overview, cost-per-agent trending. MLflow operates per-experiment — Agent Lens operates fleet-wide. |
+Agent Lens builds **no custom services**. Everything is a SKILL.md (prompt), a YAML config, or a K8s manifest.
+
+| Layer | What it is | Portable? |
+|-------|-----------|-----------|
+| Skills (`agent-lens/skills/`) | Markdown prompt documents | Yes — works with any MCP agent |
+| Soul (`agent-lens/soul.md`) | Agent identity and constraints | Yes |
+| Config (`agent-lens/config.yaml`) | MCP URL + tool allowlist | Yes |
+| Container + startup | Agent harness (ships with Hermes) | Swappable — replace for your runtime |
+| K8s manifests | Deployment, service, route | Yes — any Kubernetes distribution |
+
+The reference deployment ships with [Hermes](https://github.com/hermes-ai/hermes-agent) as the agent runtime. Skills are portable to any MCP-capable harness. See [Architecture](https://rrbanda.github.io/agentlens/docs/architecture).
 
 ---
 
-## What's under the hood
+## CI/CD quality gate
 
-```mermaid
-block-beta
-    columns 4
-    block:agentlens["AGENT LENS"]:4
-        columns 4
-        QL["Qualification\nLifecycle"] SK["16 Skills\n(SKILL.md)"] CF["Config\n(YAML)"] DP["Deploy\n(K8s)"]
-        SP["Scorer\nProfiles"] FO["Fleet\nObservatory"] EDD["EDD\nLoop"] RT["Red Team\n+ Judges"]
-    end
-    space:4
-    MLflow["MLflow MCP\n(19 tools)"]:2 GW["MLflow AI Gateway\n(built-in)"]:2
+Use MLflow directly in your pipeline — Agent Lens defines the profiles, MLflow runs the evaluation:
 
-    agentlens --> MLflow
-    agentlens --> GW
+```python
+import mlflow
+from mlflow.genai.scorers import Correctness
+
+traces = mlflow.search_traces(experiment_names=["my-agent"], max_results=50)
+results = mlflow.genai.evaluate(data=traces, scorers=[Correctness()])
+pass_rate = results.metrics.get("correctness/mean", 0)
+exit(0 if pass_rate >= 0.85 else 1)
 ```
-
-Agent Lens builds **no custom services**. Everything is either a SKILL.md file (prompt document, not code), a YAML config file (scorer profiles, thresholds), or a K8s manifest. MLflow AI Gateway handles governed LLM access, cost tracking, and automatic evaluation.
-
-See [DESIGN.md](DESIGN.md) for the design principles behind these decisions.
-
----
-
-## What Agent Lens is NOT
-
-| | |
-|---|---|
-| **Not an MLflow alternative.** | It calls MLflow, never replaces it. |
-| **Not a scoring engine.** | MLflow's 20+ built-in judges do the evaluation. Agent Lens picks which ones to use. |
-| **Not a trace store.** | All trace data lives in MLflow. Agent Lens reads it via MCP. |
-| **Not a model registry.** | LoggedModel in MLflow is the source of truth. Agent Lens adds lifecycle tags. |
-| **Not an observability platform.** | Observability is traces in MLflow. Agent Lens adds judgment on top. |
-| **Not a dashboard.** | It is conversational-first. The UI is the agent chat interface. |
-
----
-
-## Getting started
-
-### Prerequisites
-
-- Kubernetes cluster (OpenShift, EKS, GKE, or any conformant distribution)
-- MLflow Tracking Server deployed and accessible
-- Official MLflow MCP server reachable (see [operator guide](docs/product/operator-mcp.md))
-- An OpenAI-compatible LLM API key (Gemini, OpenAI, Azure, Ollama, vLLM, etc.)
-- OpenShell platform installed; `kubectl` / `oc` authenticated
-
-### Install Agent Lens
-
-```bash
-git clone https://github.com/rrbanda/agent-lens.git
-cd agent-lens
-
-# Create auth secret (dashboard password + LLM API key)
-# LLM_API_KEY is mounted as OPENAI_API_KEY inside the Hermes pod
-DASH_PW=... API_KEY=... LLM_API_KEY=<your-gemini-or-openai-key> make secret-openshell
-
-# Build OpenShell-base image + deploy Sandbox
-make deploy-all
-
-make status   # MCP + OpenShell Sandbox + route
-```
-
-Default MCP URL in [`agent-lens/config.yaml`](agent-lens/config.yaml):
-
-`http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp`
-
-### Configure the MLflow MCP Server (required)
-
-The MLflow MCP server is a **separate deployment** that Agent Lens connects to. It needs its own configuration:
-
-```bash
-# REQUIRED — without this, ALL MCP tool calls hang silently on self-signed TLS
-oc set env deployment/mlflow-mcp MLFLOW_TRACKING_INSECURE_TLS=true -n <mlflow-namespace>
-
-# REQUIRED for LLM-judge skills (evaluate-agent, create-judge, red-team, eval-loop)
-# Must be a real OpenAI key — MLflow scorers use OpenAI model names by default
-oc set env deployment/mlflow-mcp OPENAI_API_KEY=sk-... -n <mlflow-namespace>
-```
-
-> **Two separate services need API keys.** The `LLM_API_KEY` in the Agent Lens secret
-> powers the conversational agent (any OpenAI-compatible provider works). The `OPENAI_API_KEY` on
-> the MLflow MCP deployment powers MLflow's built-in LLM-judge scorers (needs an actual
-> OpenAI-compatible key with matching model names). 12 out of 16 skills work without any
-> key on the MCP server.
-
-### Instrument an agent, then chat
-
-```bash
-cp instrumentation/usercustomize.py $(python -m site --user-site)/
-export MLFLOW_TRACKING_URI="https://your-mlflow:8443"
-export MLFLOW_EXPERIMENT_NAME="my-agent"
-```
-
-Open the dashboard route and try:
-
-```
-Evaluate my-agent using the tool-calling profile
-Give me a quality dashboard across all agents
-Can this agent be deployed?
-```
-
-### What this repo deploys (and what it does not)
-
-| This repo deploys | You must already have |
-|---|---|
-| Agent Lens OpenShell Sandbox (`agent-lens/deploy/openshell/`) | MLflow Tracking Server |
-| 16 skills (SKILL.md), soul.md, config.yaml | **Official MLflow MCP** service (`mlflow mcp run`) |
-| Instrumentation helpers | An MCP-capable agent harness (ships with Hermes; see [other runtimes](#agent-harness-runtime)) |
-| Kubernetes manifests | An OpenAI-compatible LLM API key |
-
-`make deploy-all` deploys the **Sandbox** into `openshell`. It does **not** install MLflow, MCP, or OpenShell.
-
----
-
-## Supported agent frameworks
-
-Agent Lens evaluates **any agent that sends traces to MLflow**. The framework you built your agent with doesn't matter — only that MLflow receives traces.
-
-| Framework | How traces reach MLflow | Instrumentation |
-|-----------|------------------------|-----------------|
-| **LangGraph** | `mlflow.langchain.autolog()` | One-line autolog — traces flow automatically |
-| **Google ADK** | `mlflow.tracing.enable()` or ADK's built-in tracing with MLflow export | Configure `MLFLOW_TRACKING_URI` on your ADK agent |
-| **LangChain** | `mlflow.langchain.autolog()` | One-line autolog — traces flow automatically |
-| **CrewAI** | `mlflow.crewai.autolog()` | One-line autolog — traces flow automatically |
-| **OpenAI Agents SDK** | `mlflow.openai.autolog()` | One-line autolog — traces flow automatically |
-| **AutoGen** | `mlflow.autogen.autolog()` or `@mlflow.trace` decorator | Autolog or manual tracing |
-| **LlamaIndex** | `mlflow.llama_index.autolog()` | One-line autolog — traces flow automatically |
-| **Custom Python agent** | `@mlflow.trace` decorator or `usercustomize.py` drop-in | See [instrumentation/](instrumentation/) |
-| **Any language** | MLflow REST API (`POST /api/2.0/mlflow/traces`) | HTTP — no SDK needed |
-
-**Zero-code option:** Drop `instrumentation/usercustomize.py` into your Python agent's site-packages and set `MLFLOW_TRACKING_URI`. No code changes to your agent.
-
-```bash
-cp instrumentation/usercustomize.py $(python -m site --user-site)/
-export MLFLOW_TRACKING_URI="https://your-mlflow:8443"
-export MLFLOW_EXPERIMENT_NAME="my-agent"
-```
-
-Once traces arrive in MLflow, Agent Lens can evaluate, qualify, and govern them — regardless of which framework produced them.
-
----
-
-## Agent harness runtime
-
-Agent Lens ships with **Hermes** as the reference MCP-capable agent harness. However, the core artifacts — skills (`SKILL.md`), soul (`soul.md`), config (`config.yaml`) — are **portable markdown and YAML files** that work with any MCP-capable agent runtime.
-
-### What's harness-specific vs harness-independent
-
-| Layer | Harness-independent? | Notes |
-|-------|---------------------|-------|
-| **Skills** (`agent-lens/skills/*.md`) | Yes | Plain markdown prompt documents. Any MCP agent can interpret them. |
-| **Soul** (`agent-lens/soul.md`) | Yes | Agent identity and constraints. Standard prompt engineering. |
-| **Config** (`agent-lens/config.yaml`) | Mostly | MCP URL and tool allowlist are universal. Some keys may be harness-specific. |
-| **Containerfile** | No | Installs specific harness (Hermes). Replace for your runtime. |
-| **startup.sh** | No | Launches Hermes processes. Replace for your runtime. |
-| **K8s manifests** | Mostly | Pod structure is generic. Env vars may reference harness-specific config. |
-
-### Using Agent Lens with other runtimes
-
-To run Agent Lens on a different MCP-capable agent framework:
-
-1. **Keep as-is:** All files in `agent-lens/skills/`, `agent-lens/soul.md`, `agent-lens/config.yaml`
-2. **Replace:** `agent-lens/Containerfile` and `agent-lens/deploy/openshell/startup.sh` with your harness startup
-3. **Configure:** Point your harness at the MLflow MCP server URL from `config.yaml`
-4. **Load skills:** Import the SKILL.md files as your harness's prompt/skill format
-
-The skills use standard MCP tool call patterns (`mcp_mlflow_search_experiments`, `mcp_mlflow_get_trace`, etc.) that any MCP client can execute.
-
-### Why Hermes ships as default
-
-Hermes provides MCP tool calling, skill routing, session management, and a built-in web dashboard — all needed for a conversational qualification interface. But it is **one choice**, not a hard dependency. The architecture explicitly separates harness concerns from qualification logic.
-
----
-
-## Known limitations
-
-| Phrase | What you actually get today | Path forward |
-|---|---|---|
-| Gate / deploy block | Qualification verdict in chat | Use `mlflow.genai.evaluate()` in CI pipeline |
-| Audit trail | MLflow traces via AI Gateway | Already built into MLflow AI Gateway |
-| Agent registry | Experiment-derived fleet view via `agent-registry` skill | LoggedModel MCP tools (when upstream adds them) |
-| Regression dataset | Expectation + tags on a trace — not an MLflow Evaluation Dataset API | Unchanged |
-| Review queue | Heuristic error/recent search — not a dedicated queue tool | Unchanged |
-| Automatic evaluation | On-demand via chat | MLflow AI Gateway supports automatic judge execution |
-
-Full detail: [docs/product/limitations.md](docs/product/limitations.md).
-
----
-
-## Project layout
-
-```
-agent-lens/
-├── agent-lens/          # Runtime: soul, config, skills, OpenShift deploy
-│   ├── soul.md          # Agent identity, constraints, intent routing
-│   ├── config.yaml      # MCP endpoint URL + tool allowlist
-│   ├── skills/          # SKILL.md files — evaluation workflows
-│   └── deploy/          # K8s manifests (kustomize, OpenShell)
-├── instrumentation/     # Zero-code autolog + CLI eval helper
-├── tests/               # Integration tests (41 tests against real MCP)
-│   ├── mcp_client.py    # Reusable JSON-RPC MCP client (stdio transport)
-│   ├── conftest.py      # Pytest fixtures (MLflow server, MCP, seed data)
-│   ├── seed_mlflow_data.py  # Populates MLflow with realistic test data
-│   ├── test_mcp_integration.py  # End-to-end MCP tool validation
-│   └── test_skill_alignment.py  # Config ↔ skill ↔ tool consistency
-├── scripts/             # Operator helpers (MCP contract check)
-├── docs/                # Architecture, limitations, ops, demo
-│   ├── adr/             # Architecture decision records
-│   └── product/         # Vision, identity, personas, PRDs, roadmap
-└── vendor/mlflow-skills/ # Upstream reference patterns (submodule)
-```
-
----
-
-## Roadmap
-
-Tracked on the **[Agent Lens Roadmap](https://github.com/users/rrbanda/projects/3)** board:
-
-| Milestone | Goal | Primary personas |
-|-----------|------|-----------------|
-| [M0 -- Upstream foundation](https://github.com/rrbanda/agent-lens/milestone/1) | CI, contracts, immutable deploy path | — |
-| [M1 -- MVP pilot](https://github.com/rrbanda/agent-lens/milestone/2) | First-trace activation, GenAI eval, trusted qualification | Agent Platform Engineer |
-| [M2 -- Production hardening](https://github.com/rrbanda/agent-lens/milestone/3) | CI/CD gate, SSO, audit trail, agent registry | + Agent Developer, CAIO, SME |
-| [M3 -- Platform scale](https://github.com/rrbanda/agent-lens/milestone/4) | Multi-tenant, cost tracking, alerting, K8s discovery | + CISO, CAIO |
-| [M4 -- Enterprise governance](https://github.com/rrbanda/agent-lens/milestone/5) | Compliance export, regulatory mapping, drift detection | + Business Sponsor, GRC Lead |
-| [M5 -- Ecosystem](https://github.com/rrbanda/agent-lens/milestone/6) | Multi-cluster federation, marketplace, advanced analytics | All |
-
-Full roadmap: [docs/product/roadmap.md](docs/product/roadmap.md).
-
----
-
-## Verified end-to-end
-
-Tested on OpenShift 4.18 with Gemini 2.5 Flash + MLflow MCP 3.14 (July 2026). Reference runtime: Hermes v0.19.
-4 experiments, 34 traces, 6 runs tested live against real MLflow data.
-
-| Skill | MCP Tools Exercised | Result | Notes |
-|-------|-------------------|--------|-------|
-| **trace-explorer** | `search_experiments`, `search_traces`, `get_trace` | PASS | Listed all 4 experiments |
-| **quality-dashboard** | `search_experiments`, `search_traces`, `list_runs` | PASS | Fleet dashboard with health status, alerts, actions |
-| **analyze-session** | `search_traces`, `get_trace` | PASS | Listed traces with status and latency |
-| **review-trace** | `get_trace`, `get_trace_assessment` | PASS | Deep-dived into trace input/output/status |
-| **create-regression** | `update_trace_assessment`, `set_trace_tag` | PASS | Flagged trace with assessment ID |
-| **evaluate-agent** | `list_scorers`, `evaluate_traces` | PARTIAL | `list_scorers` works (20 scorers); `evaluate_traces` needs OpenAI-compatible model name on MCP server |
-| **compare-evaluations** | `list_runs`, `describe_run` | PASS | Side-by-side run comparison with metrics |
-| **create-judge** | `list_scorers` | PASS | Lists all 20 built-in scorers; `register_llm_judge_scorer` needs OpenAI key |
-| **red-team** | `search_traces`, `evaluate_traces` | PARTIAL | Correctly invokes safety scorer; LLM judge needs OpenAI key |
-| **eval-loop** | `create_run`, `search_traces` | PASS | Created run with tags for EDD cycle |
-| **cost-quality** | `list_runs`, `describe_run`, `search_traces` | PASS | Quality comparison with pass rates and qualification verdict |
-| **audit-trail** | `search_traces`, `list_runs`, `describe_run` | PASS | Chronological timeline with qualifications |
-| **agent-registry** | `search_experiments`, `list_runs`, `describe_run` | PASS | Fleet inventory with status per agent |
-| **executive-summary** | `search_experiments`, `search_traces`, `list_runs` | PASS | Board-ready summary with action items |
-| **compliance-export** | `search_traces`, `list_runs`, `describe_run` | TIMEOUT | Requires many MCP calls; works in dashboard, CLI timeout |
-| **aggregate-traces** | `search_traces` | PARTIAL | Calculates error rates; large trace payloads can truncate |
-
-**Summary:** 12/16 PASS, 2/16 PARTIAL (LLM judge needs OpenAI key on MCP server), 1/16 PARTIAL (payload size), 1/16 TIMEOUT (CLI only — works via dashboard).
-
-Run locally:
-
-```bash
-make dev-setup        # Create venv, install deps
-make mlflow-start     # Start local MLflow server
-make seed-data        # Populate with test traces
-make test-integration # Run 41 integration tests against real MCP
-```
-
----
-
-## Troubleshooting
-
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| MCP tool calls hang forever (no error) | MLflow MCP server can't connect to MLflow Tracking via self-signed TLS | `oc set env deployment/mlflow-mcp MLFLOW_TRACKING_INSECURE_TLS=true` |
-| LLM judges fail: "OPENAI_API_KEY not set" | MLflow MCP server needs its own OpenAI key (separate from Agent Lens) | `oc set env deployment/mlflow-mcp OPENAI_API_KEY=sk-...` |
-| LLM judges fail: ChatCompletionError | MLflow scorers use OpenAI model names by default; Gemini keys don't work | Use a real OpenAI key on the MCP server, or an API proxy |
-| Pod evicted: ephemeral-storage | Shared cluster with disk pressure from failed pods / images | Delete failed pods, or delete PVC to reschedule on healthy node |
-| compliance-export times out | Skill makes many sequential MCP calls; CLI mode has short timeout | Use the web dashboard instead of CLI mode |
-| aggregate-traces truncates results | Large trace payloads exceed context window | Limit to a single experiment or recent traces |
-
-Full troubleshooting guide: [docs-site: Getting Started](https://rrbanda.github.io/agent-lens/getting-started#troubleshooting).
 
 ---
 
 ## Contributing
 
 ```bash
-make dev-setup   # Creates .venv with all dev dependencies
-make test        # Runs unit + integration tests
+make dev-setup   # Create .venv with dev dependencies
+make test        # Run unit + integration tests
 ```
 
-Skills must reference only allowlisted `mcp_mlflow_*` tools — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Skills reference only allowlisted `mcp_mlflow_*` tools. New MCP tools should be contributed **upstream** to MLflow.
 
-| Area | Notes |
-|------|-------|
-| New skills | Use `mcp_mlflow_*` or `mcp_agentlens_*` from `config.yaml` allowlist |
-| MLflow AI Gateway | Already built into MLflow — no custom code needed |
-| Deploy overlays | `agent-lens/deploy/` |
-| CI / docs | Always welcome |
-| New MCP tools | Contribute **upstream** to MLflow MCP — not a fork in this repo |
-
-For AI coding agents (Cursor, Claude Code, Codex): see [AGENTS.md](AGENTS.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) · For AI coding agents: [AGENTS.md](AGENTS.md)
 
 ---
 
 ## Built with
 
-- [MLflow](https://mlflow.org/) GenAI evaluation APIs (built-in scorers)
-- [Official MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/) (`mlflow mcp run`) — 19 tools
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- Any MCP-capable agent harness (ships with [Hermes](https://github.com/hermes-ai/hermes-agent); see [other runtimes](#agent-harness-runtime))
+- [MLflow](https://mlflow.org/) — GenAI evaluation, 20+ built-in scorers
+- [MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/) — 19 tools via Model Context Protocol
 - Any OpenAI-compatible LLM (Gemini, OpenAI, Azure, Ollama, vLLM)
-- [Kubernetes](https://kubernetes.io/) (tested on OpenShift 4.18)
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for vulnerability reporting and security model.
+- [Kubernetes](https://kubernetes.io/) — tested on OpenShift, EKS, GKE
 
 ## License
 

@@ -35,7 +35,9 @@ make seed-data
 make test-integration
 ```
 
-## Deploy to OpenShift
+## Deploy to Kubernetes
+
+The examples below use OpenShift CLI (`oc`). For other Kubernetes distributions, substitute `kubectl` for `oc`.
 
 ### Step 1: Create the Agent Lens auth secret
 

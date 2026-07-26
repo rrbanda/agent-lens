@@ -132,12 +132,12 @@ No custom gateway service needed — Agent Lens consumes these features directly
 ```mermaid
 %%{init: {'theme': 'neutral'}}%%
 graph LR
-    subgraph OpenShift
-        subgraph openshell-ns["openshell namespace"]
+    subgraph Kubernetes
+        subgraph agent-ns["agent-lens namespace"]
             Sandbox[Agent Lens Sandbox Pod]
             Dashboard[Dashboard Route :9119]
         end
-        subgraph rhoai-ns["redhat-ods-applications"]
+        subgraph mlflow-ns["mlflow namespace"]
             MCP[MLflow MCP Deploy]
             MLflow[MLflow Server]
         end
