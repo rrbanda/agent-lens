@@ -32,3 +32,6 @@ Thumbs.db
 
 # Local test MLflow data
 .mlflow-test/
+docs-site/node_modules/
+docs-site/build/
+docs-site/.docusaurus/
