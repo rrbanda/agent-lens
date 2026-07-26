@@ -38,7 +38,7 @@ conversational scorers. These were designed specifically for multi-turn evaluati
 (see [MLflow Cookbook: Evaluating a Multi-Turn Conversational Agent](https://mlflow.org/cookbook/multi-turn-agent/)).
 
 6. **Run conversational scorers:** Call `mcp_mlflow_evaluate_traces` with the session's trace IDs
-   and these built-in conversational scorers (verify availability via `mcp_mlflow_list_scorers` first):
+   and these built-in conversational scorers (verify via `mcp_mlflow_list_scorers` with `builtin: "true"` first):
 
    | Scorer | What It Checks | Returns |
    |--------|---------------|---------|

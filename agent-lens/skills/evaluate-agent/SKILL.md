@@ -32,7 +32,8 @@ do not invent custom score names.
 
 ### Step 3: Select Scorer Profile
 
-Confirm availability with `mcp_mlflow_list_scorers` if needed.
+Confirm availability with `mcp_mlflow_list_scorers` (pass `builtin: "true"` for built-in scorers,
+or `experiment_id` for custom registered scorers). **Both parameters are optional but at least one is required.**
 
 The following scorers are confirmed available from the MLflow cookbooks. Use `mcp_mlflow_list_scorers`
 to verify exact names on the target server.
@@ -67,28 +68,36 @@ to verify exact names on the target server.
 
 **Registering custom scorers:** Use `mcp_mlflow_register_llm_judge_scorer` to register a custom LLM judge scorer with specific instructions for domain-specific evaluation. Verify availability with `mcp_mlflow_list_scorers` before using in evaluation.
 
-**`mcp_mlflow_register_llm_judge_scorer` parameters:**
+**`mcp_mlflow_register_llm_judge_scorer` parameters (from live MCP schema):**
 - `name` (string, required) — unique scorer name
 - `instructions` (string, required) — judging instructions; must contain template variables like `{{ inputs }}`, `{{ outputs }}`
 - `experiment_id` (string, required) — experiment to register the scorer under
+- `model` (string, optional) — LLM model URI (e.g. `openai:/gpt-4o-mini`). Defaults to OpenAI.
+- `base_url` (string, optional) — custom LLM endpoint URL (for non-OpenAI models)
+- `extra_headers` (string, optional) — additional HTTP headers for the LLM endpoint
+- `description` (string, optional) — human-readable description of the scorer
+
+**Important:** If no `OPENAI_API_KEY` is set in the MLflow MCP environment, you must specify `model` and `base_url` pointing to an available LLM endpoint, otherwise judge registration succeeds but evaluation will fail.
 
 ### Step 4: Dry run (required before full cert)
 
-Call `mcp_mlflow_evaluate_traces` with a **small** sample first (`max_traces`: 3–5).
+First `mcp_mlflow_search_traces` to get trace IDs, then evaluate a **small** sample first (3–5 trace IDs).
 If scorers error, tools are broken, or all traces empty — stop and report; do not run 50–200.
 
 ### Step 5: Full evaluation
 
-Call `mcp_mlflow_evaluate_traces` with chosen scorers:
+1. `mcp_mlflow_search_traces` to collect trace IDs:
+   - Quick check: 50 traces
+   - Qualification: 200 traces
+2. `mcp_mlflow_evaluate_traces` with the collected trace IDs and chosen scorers.
 
-- Quick check: `max_traces` 50
-- Qualification: `max_traces` 200
-
-**`mcp_mlflow_evaluate_traces` parameters:**
+**`mcp_mlflow_evaluate_traces` parameters (from live MCP schema):**
 - `experiment_id` (string, required) — target experiment
-- `trace_ids` (string, required) — comma-separated trace IDs to evaluate
+- `trace_ids` (string, required) — comma-separated trace IDs (e.g. `tr-abc123,tr-def456`)
 - `scorers` (string, required) — comma-separated scorer names (e.g. `RelevanceToQuery,ToolCallCorrectness`)
-- `output_format` (optional) — `"table"` or `"json"`
+- `output_format` (string, optional) — `"table"` (default) or `"json"`
+
+**There is no `max_traces` parameter.** You control sample size by how many trace IDs you pass.
 
 **Regression-focused cert:** If the user asks to include regression follow-ups, first
 `mcp_mlflow_search_traces` with tags/filter for `regression=true` (or dataset tag), evaluate
@@ -106,7 +115,7 @@ Record the qualification result as a run with structured tags:
 
 1. `mcp_mlflow_create_run` — create a qualification run in the experiment with:
    - `run_name`: `qualification-<date>`
-   - `tags`: `profile=<scorer_profile>`, `verdict=QUALIFIED|NOT_QUALIFIED|NEEDS_REVIEW`
+   - `tags`: `["profile=<scorer_profile>", "verdict=QUALIFIED|NOT_QUALIFIED|NEEDS_REVIEW"]` (array of `key=value` strings)
    - `status`: `FINISHED`
 
 > **Note:** Writing qualification to LoggedModel tags (`search_logged_models`, `set_logged_model_tags`)

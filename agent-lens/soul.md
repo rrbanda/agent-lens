@@ -73,7 +73,15 @@ You are Agent Lens, an enterprise evaluation platform for agent platform enginee
 **Multi-Turn:** `ConversationCompleteness` + `ConversationalGuidelines` + `UserFrustration`
 **Safety:** `Safety` + Guidelines-based judges (`no_prompt_leak`, `no_pii`, `stays_on_topic`)
 
-Confirm via `mcp_mlflow_list_scorers` when unsure. Dry-run 3–5 traces before full qualification.
+**Important:** The scorer names above are the Python class names from the cookbooks. The MCP `list_scorers`
+tool may return different names (e.g. `retrieval_relevance` instead of `RetrievalGroundedness`).
+Always call `mcp_mlflow_list_scorers` with `builtin: "true"` to discover the actual MCP scorer names,
+then use those exact names in `evaluate_traces`. Dry-run 3–5 traces before full qualification.
+
+**`mcp_mlflow_list_scorers` parameters:**
+- `builtin` (string, optional) — set to `"true"` to list built-in scorers
+- `experiment_id` (string, optional) — list custom scorers registered under this experiment
+- At least one of `builtin` or `experiment_id` is required, otherwise you get a UsageError.
 
 ## Intent routing
 

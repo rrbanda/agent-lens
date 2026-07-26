@@ -112,14 +112,14 @@ Call `mcp_mlflow_register_llm_judge_scorer`:
 
 ### Step 5: Verify Registration
 
-Call `mcp_mlflow_list_scorers` to confirm the new scorer appears in the list.
+Call `mcp_mlflow_list_scorers` with `experiment_id` set to the target experiment to confirm the new scorer appears.
 
 ### Step 6: Dry-Run Validation
 
 Run the new judge on 3-5 traces to validate it works:
 
-1. `mcp_mlflow_search_traces` — get recent traces from the experiment
-2. `mcp_mlflow_evaluate_traces` — run with the new scorer name, `max_traces` 3-5
+1. `mcp_mlflow_search_traces` — get 3-5 recent trace IDs from the experiment
+2. `mcp_mlflow_evaluate_traces` — run with the new scorer name and those trace IDs
 
 Review results:
 - If all pass or all fail, the judge may be too lenient/strict — offer to refine

@@ -38,7 +38,8 @@ The loop: **Baseline → Diagnose → Fix → Re-evaluate → Compare**.
 
    The EDD cookbook specifically uses `Correctness` + `RelevanceToQuery` + `Guidelines` as its
    three-scorer baseline. Default to this combination.
-3. `mcp_mlflow_list_scorers` — confirm scorers are available
+3. `mcp_mlflow_list_scorers` with `builtin: "true"` — confirm built-in scorers are available.
+   If user registered custom scorers, also call with `experiment_id` to list those.
 
 #### Step 1.2: Run Baseline
 
@@ -46,7 +47,7 @@ The loop: **Baseline → Diagnose → Fix → Re-evaluate → Compare**.
 2. `mcp_mlflow_evaluate_traces` — run with selected scorers
 3. `mcp_mlflow_create_run` — record baseline:
    - `run_name`: `edd-baseline-<date>`
-   - `tags`: `edd-phase=baseline`, `edd-cycle=<cycle_id>`
+   - `tags`: `["edd-phase=baseline", "edd-cycle=<cycle_id>"]` (array of `key=value` strings)
 
 #### Step 1.3: Record Baseline Metrics
 
@@ -148,7 +149,7 @@ When the user returns saying they fixed it, proceed to Phase 4.
 1. `mcp_mlflow_evaluate_traces` — same scorers as baseline
 2. `mcp_mlflow_create_run` — record improved:
    - `run_name`: `edd-improved-<date>`
-   - `tags`: `edd-phase=improved`, `edd-cycle=<cycle_id>`
+   - `tags`: `["edd-phase=improved", "edd-cycle=<cycle_id>"]` (array of `key=value` strings)
 
 ---
 

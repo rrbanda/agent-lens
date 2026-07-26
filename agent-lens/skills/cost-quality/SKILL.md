@@ -128,13 +128,18 @@ recommended unless the use case requires >90% accuracy."
 - [ ] [If quality insufficient at any cost] Review agent architecture
 ```
 
-## When Cost Data is Unavailable
+## When Cost Data is Unavailable (common case)
 
-If traces lack `mlflow.llm.cost` or `mlflow.chat.tokenUsage`:
-1. State clearly: "Cost data not found in traces"
-2. Recommend enabling cost tracking via MLflow autolog
-3. Fall back to **latency-quality tradeoff** (latency correlates with token usage)
+**Live testing revealed that `token_usage` is often `null`** in traces unless the agent was instrumented with
+`mlflow.openai.autolog()` (or equivalent provider autolog) against a real LLM. Manually-created traces
+and many framework integrations do not populate token counts.
+
+If traces lack token usage data:
+1. State clearly: "Token usage data not found in traces — likely because the agent does not use MLflow autolog with a supported LLM provider"
+2. Recommend the user enable autolog: `mlflow.openai.autolog()` or `mlflow.langchain.autolog()`
+3. Fall back to **latency-quality tradeoff** using `execution_time_ms` from trace info (latency correlates with token usage)
 4. Still produce the quality comparison portion of the report
+5. **Do not fabricate token counts or cost estimates when data is missing**
 
 ## Anti-patterns
 
