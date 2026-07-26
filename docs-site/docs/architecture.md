@@ -53,10 +53,45 @@ graph TB
 2. **Skills as prompts** — Each skill is a SKILL.md file, not code. The LLM interprets it and calls MCP tools.
 3. **Upstream-first** — Never fork MLflow MCP. Missing features go upstream.
 4. **Conversational-first** — The UI is chat. Structured output (tables, reports) rendered in conversation.
+5. **Sandbox-first** — The qualification agent itself runs inside an [OpenShell](https://github.com/NVIDIA/OpenShell) sandbox. Security is not a bolt-on.
+
+## Security Model: OpenShell Sandbox
+
+Agent Lens runs inside an [OpenShell](https://github.com/NVIDIA/OpenShell) sandbox — the same defense-in-depth isolation used for production agent workloads. The qualification agent is sandboxed, not just the agents it evaluates.
+
+```
+Infrastructure → Sandbox → Harness → Skills → Model
+     K8s          OpenShell   Agent     Agent Lens   LLM
+                              Runtime
+```
+
+### Defense-in-depth layers
+
+| Layer | Mechanism | What it does |
+|-------|-----------|-------------|
+| **Namespaces** | PID, mount, network, user | Restricts the agent's view of the system |
+| **Landlock LSM** | Kernel-enforced filesystem ACLs | Even root inside the namespace can't escape allowed paths |
+| **Seccomp-BPF** | System call filtering | Blocks `ptrace`, `mount`, `memfd_create`, raw sockets |
+| **Capability dropping** | Empty bounding set | "Root" in the namespace has no real capabilities |
+| **L7 network proxy** | Binary identity binding | `git` can reach github.com; `curl` from the same sandbox cannot |
+| **Resource controls** | cgroups v2 | CPU, memory, and I/O limits prevent runaway processes |
+
+### Sandbox vs. harness — separate concerns
+
+The sandbox is **subtractive** — it constrains what the agent can do and limits blast radius. The skills are **additive** — they layer on knowledge and MCP tool access to increase competence. These have [different failure modes](https://medium.com/@ralphbean/what-even-is-the-harness-2e7ac2fba905):
+
+- **Sandbox failure** = the agent did something it shouldn't have been able to do
+- **Skill failure** = the agent did something poorly that it should have done well
+
+The sandbox also serves as a **recorder** — a neutral observer that can attest to what the agent did, providing provenance information independent of the agent runtime's self-reporting.
+
+### Kubernetes integration
+
+On Kubernetes, Agent Lens deploys via the [agent-sandbox-operator](https://github.com/kubernetes-sigs/agent-sandbox) which manages the sandbox pod lifecycle (warm pools, PVCs, rescheduling). The OpenShell supervisor inside the pod enforces the actual security boundary — filesystem policy, egress enforcement, credential isolation, and OCSF audit events.
 
 ## Component Details
 
-### Agent Harness (runtime)
+### Agent Harness (runtime) — pick yours
 
 Agent Lens requires an MCP-capable agent harness — any runtime that can:
 - Call MCP tools (streamable HTTP or stdio transport)
@@ -64,7 +99,14 @@ Agent Lens requires an MCP-capable agent harness — any runtime that can:
 - Maintain session context across multi-step workflows
 - Provide a chat interface (web dashboard or CLI)
 
-The reference implementation ships with **Hermes v0.19**, which provides all of the above plus a built-in web dashboard with auth. However, the skills, soul, and config are portable — see [Agent harness runtime](https://github.com/rrbanda/agentlens#agent-harness-runtime) for how to use a different harness.
+The reference implementation ships with **Hermes**, but the skills, soul, and config are **portable artifacts** — plain markdown and YAML, not code.
+
+| | Harness-independent (keep) | Harness-specific (swap) |
+|---|---|---|
+| **Files** | `skills/*.md`, `soul.md`, `config.yaml` | `Containerfile`, `startup.sh` |
+| **Why** | Standard MCP tool patterns any client can execute | Runtime-specific packaging and lifecycle |
+
+Compatible runtimes include [Hermes](https://github.com/hermes-ai/hermes-agent), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenClaw](https://github.com/openclaw), [Goose](https://github.com/block/goose), or any custom MCP-capable agent. Choose a commodity runtime — the qualification logic lives in the skills, not the harness.
 
 ### Agents being evaluated (target agents)
 

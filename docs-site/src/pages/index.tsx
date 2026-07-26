@@ -62,7 +62,7 @@ function Terminal() {
             </div>
             <br />
             <div className="terminal-line">
-              <span className="terminal-comment"># Deploy to OpenShift</span>
+              <span className="terminal-comment"># Deploy to Kubernetes</span>
             </div>
             <div className="terminal-line">
               <span className="terminal-prompt">$ </span>
@@ -90,6 +90,16 @@ const features = [
     description: 'Built entirely on the official MLflow MCP server. 19 tools from mlflow[mcp] 3.14, zero custom forks. Your data stays in MLflow.',
   },
   {
+    icon: '🔒',
+    title: 'Sandboxed and Secure',
+    description: 'Runs inside an OpenShell sandbox with defense-in-depth isolation — Linux namespaces, Landlock, seccomp, L7 network proxy. The qualification agent itself is constrained, not just the agents it evaluates.',
+  },
+  {
+    icon: '🔌',
+    title: 'Pick Your Harness',
+    description: 'Skills are portable markdown — not code. Ships with Hermes, works with Claude Code, OpenClaw, Goose, or any MCP-capable agent runtime. Choose a commodity runtime.',
+  },
+  {
     icon: '🛡️',
     title: 'Red-Team Safety',
     description: 'Test for prompt injection, data exfiltration, jailbreaks, and PII leakage with attack-specific judges.',
@@ -115,7 +125,7 @@ const features = [
     description: '>=80% scorer pass rate + <5% error rate = QUALIFIED. Evidence-based decisions, not gut feelings.',
   },
   {
-    icon: '🔌',
+    icon: '🌐',
     title: 'Framework Agnostic',
     description: 'Evaluates any agent that sends traces to MLflow — LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, AutoGen, or custom.',
   },

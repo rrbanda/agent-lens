@@ -26,8 +26,8 @@
 |---|---|---|
 | Official MLflow MCP integration | Done | No custom FastMCP; `mlflow-mcp` prerequisite |
 | MCP contract CI check | Done | `check_mcp_contract.sh` + `test_skill_alignment.py` |
-| Immutable Hermes image | Done | Python 3.13, Landlock blocks runtime pip |
-| OpenShell Sandbox deployment | Done | Sandbox CR, NetworkPolicy, mTLS |
+| Immutable container image | Done | Python 3.13, Landlock blocks runtime pip |
+| OpenShell Sandbox deployment | Done | Sandbox CR, NetworkPolicy, defense-in-depth isolation |
 | Basic auth | Done | Scrypt-hashed password in K8s Secret |
 
 ---
@@ -66,8 +66,8 @@ Full PRD: [prd-m2-enterprise.md](prd-m2-enterprise.md)
 
 | ID | Feature | New Components | Personas |
 |---|---|---|---|
-| F1 | **CI/CD Quality Gate API** | Agent Lens Gateway (FastAPI Deployment) | AD, APE |
-| F2 | **SSO / OIDC Authentication** | OpenShift OAuth Proxy sidecar | All |
+| F1 | **CI/CD Quality Gate** | `mlflow.genai.evaluate()` in pipeline scripts (no custom gateway) | AD, APE |
+| F2 | **SSO / OIDC Authentication** | OAuth Proxy sidecar (any OIDC provider) | All |
 | F3 | **Audit Trail** | Append-only log with checksums | APE, CISO |
 | F4 | **Agent Registry** | Fleet inventory (MLflow + manual) | APE, CISO |
 
@@ -90,23 +90,21 @@ Full PRD: [prd-m2-enterprise.md](prd-m2-enterprise.md)
 
 ```mermaid
 flowchart TB
-    subgraph ns [openshell namespace]
-        subgraph sandbox [Agent Lens Sandbox — existing]
+    subgraph ns [agent-lens namespace]
+        subgraph sandbox [Agent Lens OpenShell Sandbox — existing]
             OAuth[OAuth Proxy sidecar — new]
-        end
-        subgraph gateway [Agent Lens Gateway — new Deployment]
-            FastAPI[FastAPI service + MCP client]
         end
         PVC[Audit Log PVC\nnew or shared with existing PVC]
     end
 ```
 
+No custom gateway component — the CI/CD quality gate uses `mlflow.genai.evaluate()` directly in pipeline scripts. MLflow AI Gateway provides governed LLM access, automatic tracing, cost tracking, and automatic evaluation.
+
 ### MCP Dependencies (M2)
 
 | MCP | Tools Used | Status |
 |---|---|---|
-| MLflow MCP | 11 existing + 5 new LoggedModel tools (16 total) | Set `MLFLOW_MCP_TOOLS=all` to expose LoggedModel tools |
-| Agent Lens Gateway MCP | 4 new tools: `log_audit_event`, `query_audit_trail`, `get_registry`, `register_agent` | Net-new Gateway MCP server for Hermes |
+| MLflow MCP | 19 existing tools + LoggedModel tools as they land upstream | Set `MLFLOW_MCP_TOOLS=all` to expose LoggedModel tools when available |
 
 Per [MLflow Capability Audit](mlflow-capability-audit.md): Agent registry uses LoggedModel as storage (not a custom store). Tag filtering on `search_logged_models` is confirmed working. See [Identity](identity.md) for the definitive build vs. consume boundary.
 
@@ -120,40 +118,38 @@ Per [MLflow Capability Audit](mlflow-capability-audit.md): Agent registry uses L
 
 | ID | Feature | Description | New MCP | Personas |
 |---|---|---|---|---|
-| F10 | **Multi-Tenant Isolation** | Namespace-scoped access; shared Hermes or per-team instances | -- | All |
+| F10 | **Multi-Tenant Isolation** | Namespace-scoped access; shared or per-team agent instances | -- | All |
 | F11 | **Prometheus/Grafana Integration** | Infrastructure metrics, token cost, latency SLOs in Agent Lens | Prometheus MCP | APE, CAIO |
 | F12 | **Cost-Per-Agent Tracking** | Token usage + compute cost attribution per experiment | Prometheus MCP | APE, CAIO |
-| F13 | **Kubernetes Agent Discovery** | Auto-discover agents from K8s deployments + labels | K8s/OpenShift MCP | APE, CISO |
+| F13 | **Kubernetes Agent Discovery** | Auto-discover agents from K8s deployments + labels | K8s MCP | APE, CISO |
 | F14 | **Alerting and Notification** | Configurable alerts on quality regression, SLO breach | Prometheus MCP | APE, CISO |
 | F15 | **Trend Analysis Skill** | Quality, cost, and latency trends over time | -- | APE, CAIO |
 | F16 | **Fleet Pagination** | Remove 20-experiment cap; paginated fleet scan | -- | APE |
 | F17 | **Executive Dashboard** | Periodic summary reports for leadership | -- | CAIO |
 | F18 | **External Audit Store** | Migrate audit trail from PVC to PostgreSQL or S3 | -- | CISO, Compliance |
-| F19 | **HA Gateway** | Multi-replica Gateway with shared state | -- | APE |
 
 ### New Infrastructure Components
 
 ```mermaid
 flowchart LR
-    subgraph ns [openshell namespace]
-        Sandbox[Agent Lens Sandbox\nmulti-replica or per-tenant]
-        Gateway[Agent Lens Gateway\nmulti-replica]
+    subgraph ns [agent-lens namespace]
+        Sandbox[Agent Lens OpenShell Sandbox\nmulti-replica or per-tenant]
         Audit[Audit Store\nPostgreSQL or S3]
     end
 
-    Gateway -->|metrics, cost| Prom[Prometheus/Thanos MCP]
+    Sandbox -->|metrics, cost| Prom[Prometheus/Thanos MCP]
     Prom --> PromSrv[Prometheus]
-    Gateway -->|deployment discovery| K8s[Kubernetes MCP]
-    K8s --> API[OpenShift / K8s API]
+    Sandbox -->|deployment discovery| K8s[Kubernetes MCP]
+    K8s --> API[Kubernetes API]
 ```
 
 ### MCP Dependencies (M3)
 
 | MCP | Tools Needed | Source |
 |---|---|---|
-| MLflow MCP | 16 tools (expanded in M2) | Upstream MLflow |
+| MLflow MCP | 19+ tools (expanded as upstream adds more) | Upstream MLflow |
 | Prometheus/Thanos MCP | `query`, `query_range`, `series` | Community or custom |
-| Kubernetes/OpenShift MCP | `list_deployments`, `list_pods`, `get_labels` | Community or custom |
+| Kubernetes MCP | `list_deployments`, `list_pods`, `get_labels` | Community or custom |
 
 ### Key Architecture Decisions (M3)
 
@@ -161,11 +157,10 @@ flowchart LR
 
 | Option | Mechanism | Trade-off |
 |---|---|---|
-| A: Namespace-scoped Hermes | One Hermes instance per tenant namespace | Full isolation; higher resource cost |
-| B: Shared Hermes with RBAC | Single instance; experiment access filtered by user group | Lower cost; requires Hermes RBAC support |
-| C: Gateway-only multi-tenant | Hermes for chat; Gateway handles tenant routing | Simplest; chat is single-tenant, API is multi-tenant |
+| A: Per-workspace sandbox | One OpenShell sandbox per tenant workspace | Full isolation; higher resource cost |
+| B: Shared sandbox with RBAC | Single instance; experiment access filtered by user group | Lower cost; requires harness RBAC support |
 
-Decision deferred to M3 design phase. Option C is the likely path for M3 with Option A/B for M4.
+OpenShell's workspace model maps naturally to Option A — each workspace gets its own namespace, and the cluster's existing isolation mechanisms (NetworkPolicy, UID ranges, SELinux MCS labels) apply automatically. Decision deferred to M3 design phase.
 
 ---
 
@@ -201,7 +196,7 @@ No new MCP servers beyond M3. Features build on MLflow MCP + Prometheus MCP + K8
 
 | ID | Feature | Description | Personas |
 |---|---|---|---|
-| F29 | **Multi-Cluster Federation** | Aggregate fleet health across multiple OpenShift clusters | CAIO, APE |
+| F29 | **Multi-Cluster Federation** | Aggregate fleet health across multiple Kubernetes clusters | CAIO, APE |
 | F30 | **Evaluation Marketplace** | Share and discover custom scorer profiles across teams | AD |
 | F31 | **Advanced Analytics** | ML-powered anomaly detection on quality trends | APE |
 | F32 | **Data Residency Verification** | Verify agent trace data stays within declared jurisdictions | Compliance |
@@ -287,7 +282,7 @@ Agent Lens skills are the primary interface. This table maps planned features to
 | `alert-config` | M3 | "Alert me if quality drops" | Configurable notifications |
 | `trend-analysis` | M3 | "Show quality trend" | Temporal quality analysis |
 | `drift-detection` | M4 | "Check for config drift" | Approved vs. running comparison |
-| `optimize-prompt` | M2 | "Optimize the system prompt" | GEPA prompt optimization via Gateway |
+| `optimize-prompt` | M2 | "Optimize the system prompt" | GEPA prompt optimization via MLflow AI Gateway |
 
 ---
 

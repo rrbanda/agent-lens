@@ -126,25 +126,37 @@ If MLflow AI Gateway already does it, consume it — do not rebuild.
 
 ---
 
-## 6. Kubernetes-Native Security
+## 6. Sandboxed and Secure (OpenShell)
 
-Agent Lens is designed for secure enterprise deployment on Kubernetes from day one.
-Security is not a layer added later.
+Agent Lens runs inside an [OpenShell](https://github.com/NVIDIA/OpenShell) sandbox —
+the same defense-in-depth isolation stack used for production agent workloads.
+The qualification agent itself is sandboxed, not just the agents it evaluates.
 
 **What this means:**
-- **Landlock** filesystem sandboxing — the agent process cannot access arbitrary paths
+- **[OpenShell Sandbox](https://github.com/NVIDIA/OpenShell)** provides the isolation
+  stack: Linux namespaces, Landlock filesystem ACLs, seccomp syscall filtering,
+  L7 network proxy with binary identity binding, and OCSF audit events
 - **NetworkPolicy** isolation — egress restricted to MLflow MCP endpoint only
-- **Security Context Constraints** — non-root UID, read-only root filesystem,
-  dropped capabilities
+- **Credential isolation** — inference API keys never enter the sandbox; the
+  proxy injects credentials after policy evaluation
 - **Immutable container image** — no `pip install` at runtime, no package
   manager in the final image
-- **OAuth Proxy** for SSO/OIDC — authentication handled at the infrastructure
-  level, not in application code
 - **API key auth** for the dashboard — scrypt-hashed, never stored in plaintext
 
+The sandbox is **subtractive** (constrains what the agent can do). The skills are
+**additive** (layer on knowledge and MCP tool access). These are
+[separate concerns](https://medium.com/@ralphbean/what-even-is-the-harness-2e7ac2fba905)
+with different failure modes and different design philosophies.
+
+On Kubernetes, the [agent-sandbox-operator](https://github.com/kubernetes-sigs/agent-sandbox)
+manages sandbox pod lifecycle (warm pools, PVCs, rescheduling). The OpenShell
+supervisor inside the pod enforces the security boundary.
+
 **Why:**
-- Enterprise customers require these controls before production approval
+- Enterprise customers require defense-in-depth controls before production approval
 - The sandbox model means a compromised skill cannot escalate to cluster access
+- The sandbox doubles as a **recorder** — providing provenance attestation
+  independent of the agent runtime's self-reporting
 - "Secure by default" reduces the audit burden for adopters
 
 See [SECURITY.md](SECURITY.md) for the full security model and vulnerability
