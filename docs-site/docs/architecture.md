@@ -19,7 +19,7 @@ graph TB
     subgraph AgentLens["Agent Lens (OpenShell Sandbox)"]
         Hermes[Hermes v0.19]
         Soul[soul.md]
-        Skills[7 Skills]
+        Skills[16 Skills]
         Config[config.yaml]
     end
     
@@ -68,22 +68,38 @@ The Hermes conversational AI framework provides:
 
 ### MLflow MCP Server
 
-Official `mlflow mcp run` providing 11 tools:
+Official `mlflow mcp run` providing 19 tools:
 
 ```yaml
 tools:
   include:
+    # Observability
     - search_experiments
     - get_experiment
     - search_traces
     - get_trace
+    - list_runs
+    - describe_run
+    # Evaluation
+    - evaluate_traces
+    - list_scorers
+    # Annotation
     - log_trace_feedback
     - log_trace_expectation
     - set_trace_tag
-    - evaluate_traces
-    - list_runs
-    - describe_run
-    - list_scorers
+    - delete_trace_tag
+    # Assessment
+    - get_trace_assessment
+    - update_trace_assessment
+    - delete_trace_assessment
+    # Scorer management
+    - register_llm_judge_scorer
+    # Run-trace association
+    - link_traces_to_run
+    # Lifecycle
+    - delete_traces
+    - create_run
+    - create_experiment
 ```
 
 ### Gateway MCP (M2)

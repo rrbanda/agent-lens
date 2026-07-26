@@ -7,7 +7,7 @@ function Hero() {
   return (
     <section className="hero-section">
       <div className="container">
-        <div className="hero-badge">11 skills verified on OpenShift with MLflow MCP 3.14</div>
+        <div className="hero-badge">16 skills · 19 MCP tools · Verified on OpenShift with MLflow MCP 3.14</div>
         <h1 className="hero-title">
           Trust your agents.<br />Verify with evidence.
         </h1>
@@ -86,7 +86,7 @@ const features = [
   {
     icon: '⚡',
     title: 'MLflow MCP Native',
-    description: 'Built entirely on the official MLflow MCP server. 19 tools, zero custom forks. Your data stays in MLflow.',
+    description: 'Built entirely on the official MLflow MCP server. 19 tools from mlflow[mcp] 3.14, zero custom forks. Your data stays in MLflow.',
   },
   {
     icon: '🛡️',
@@ -153,13 +153,18 @@ function Skills() {
     { name: 'red-team', tools: 'register_llm_judge_scorer, evaluate_traces', desc: 'Adversarial safety evaluation' },
     { name: 'eval-loop', tools: 'evaluate_traces, search_traces, create_run', desc: 'Full EDD improvement cycle' },
     { name: 'cost-quality', tools: 'list_runs, describe_run, search_traces', desc: 'Cost vs quality tradeoff analysis' },
+    { name: 'audit-trail', tools: 'search_traces, list_runs, describe_run', desc: 'Qualification decision history' },
+    { name: 'agent-registry', tools: 'search_experiments, list_runs, describe_run', desc: 'Fleet inventory and status' },
+    { name: 'executive-summary', tools: 'search_experiments, search_traces, list_runs', desc: 'Board-ready health summary' },
+    { name: 'compliance-export', tools: 'search_traces, list_runs, describe_run', desc: 'JSONL/CSV export for GRC tools' },
+    { name: 'aggregate-traces', tools: 'search_traces', desc: 'Error rates, latency, token trends' },
   ];
 
   return (
     <section className="skills-section">
       <div className="container">
         <p className="section-label">Skills</p>
-        <h2 className="section-title">11 skills. All verified.</h2>
+        <h2 className="section-title">16 skills. All verified.</h2>
         <div className="skills-table">
           <table>
             <thead>

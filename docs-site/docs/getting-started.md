@@ -79,4 +79,13 @@ All tool calls go through the official MLflow MCP server (`mlflow mcp run`):
 | `evaluate_traces` | Run LLM judges on traces |
 | `list_runs` | Find evaluation runs |
 | `describe_run` | Get run metrics and tags |
-| `list_scorers` | Available built-in judges |
+| `list_scorers` | Available built-in judges (pass `builtin: "true"`) |
+| `register_llm_judge_scorer` | Create custom LLM judge scorers |
+| `create_run` | Record evaluation runs |
+| `create_experiment` | Create new experiments |
+| `delete_trace_tag` | Remove trace tags |
+| `get_trace_assessment` | Read trace assessments |
+| `update_trace_assessment` | Update trace assessments |
+| `delete_trace_assessment` | Remove assessments |
+| `link_traces_to_run` | Associate traces with runs |
+| `delete_traces` | Remove traces |

@@ -5,7 +5,7 @@ title: Skills Reference
 
 # Skills Reference
 
-Agent Lens ships with 11 skills — 7 core skills verified end-to-end on OpenShift, plus 4 cookbook-inspired skills that leverage the same MCP tool surface. Each skill is a `SKILL.md` file that guides the LLM on which MCP tools to call and how to format results.
+Agent Lens ships with 16 skills — 7 core skills verified end-to-end on OpenShift, 4 cookbook-inspired evaluation skills, and 5 operational skills for fleet management. Each skill is a `SKILL.md` file that guides the LLM on which MCP tools to call and how to format results.
 
 ## Verified End-to-End (July 2026)
 
@@ -242,3 +242,92 @@ Agent Lens ships with 11 skills — 7 core skills verified end-to-end on OpenShi
 - Latency comparison
 
 **Output:** Tradeoff matrix with recommendation (best value, best quality, most economical).
+
+---
+
+## Operational Skills
+
+These skills compose the same MCP tools for fleet management, governance, and reporting.
+
+| Skill | MCP Tools | Purpose |
+|-------|-----------|---------|
+| [audit-trail](#audit-trail) | `search_traces`, `list_runs`, `describe_run`, `search_experiments` | Qualification decision history |
+| [agent-registry](#agent-registry) | `search_experiments`, `list_runs`, `describe_run`, `search_traces` | Fleet inventory and status |
+| [executive-summary](#executive-summary) | `search_experiments`, `search_traces`, `list_runs` | Board-ready health summary |
+| [compliance-export](#compliance-export) | `search_traces`, `list_runs`, `describe_run`, `search_experiments` | JSONL/CSV export for GRC tools |
+| [aggregate-traces](#aggregate-traces) | `search_traces` | Error rates, latency, token usage trends |
+
+---
+
+## audit-trail
+
+**Purpose:** Query and display structured audit records of qualification decisions, annotations, and lifecycle events.
+
+**Example prompts:**
+```
+"Show me the audit trail for agent X"
+"Who qualified this agent and when?"
+"What changed since last qualification?"
+```
+
+**Output:** Chronological timeline of qualification verdicts, annotations, and tag changes.
+
+---
+
+## agent-registry
+
+**Purpose:** Fleet inventory of all agents with qualification status and lifecycle metadata.
+
+**Example prompts:**
+```
+"Show me all registered agents"
+"What agents are qualified for production?"
+"Which agents need re-qualification?"
+```
+
+**Output:** Fleet table with per-agent status (QUALIFIED / NOT QUALIFIED / PENDING / NEEDS REVIEW).
+
+---
+
+## executive-summary
+
+**Purpose:** Generate a non-technical, one-paragraph fleet health summary for leadership.
+
+**Example prompts:**
+```
+"Give me a quick summary for leadership"
+"How's our agent fleet doing?"
+"Board-ready summary of agent quality"
+```
+
+**Output:** Single paragraph + at-a-glance table + action items. No jargon.
+
+---
+
+## compliance-export
+
+**Purpose:** Export qualification history and audit records as structured JSONL or CSV for GRC tools.
+
+**Example prompts:**
+```
+"Export qualification history for auditors"
+"Generate a compliance report for agent X"
+"I need CSV data for our GRC tool"
+```
+
+**Output:** JSONL/CSV file with timestamped qualification and annotation records.
+
+---
+
+## aggregate-traces
+
+**Purpose:** Compute aggregate metrics from traces — error rates, latency percentiles, token usage, and quality trends.
+
+**Example prompts:**
+```
+"What's the error rate for agent X this week?"
+"Show me latency percentiles for the last 30 days"
+"Compare this week vs last week"
+```
+
+**Output:** Health metrics table with error rate, latency p50/p95/p99, token usage, and trend indicators.
