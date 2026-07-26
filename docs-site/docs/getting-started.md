@@ -9,7 +9,7 @@ title: Getting Started
 
 - Python 3.11+
 - MLflow Tracking Server (local or remote)
-- For production: Kubernetes cluster with OpenShell + LlamaStack
+- For production: Kubernetes cluster with OpenShell
 
 ## Local Development
 
@@ -30,8 +30,8 @@ make test-integration
 ## Deploy to OpenShift
 
 ```bash
-# Create auth secret
-DASH_PW=YourPassword API_KEY=YourKey make secret-openshell
+# Create auth secret (dashboard password + LLM API key)
+DASH_PW=YourPassword API_KEY=YourKey LLM_API_KEY=YourGeminiOrOpenAIKey make secret-openshell
 
 # Build and deploy
 make deploy-all

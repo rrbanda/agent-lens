@@ -8,7 +8,7 @@ if ! command -v hermes >/dev/null 2>&1; then
   exit 1
 fi
 
-SKILLS="evaluate-agent review-trace create-regression trace-explorer quality-dashboard analyze-session"
+SKILLS="evaluate-agent review-trace create-regression trace-explorer quality-dashboard analyze-session audit-trail agent-registry aggregate-traces compare-evaluations executive-summary compliance-export create-judge red-team eval-loop cost-quality"
 
 mkdir -p /persistent/memory /persistent/sessions /persistent/profiles /persistent/auto-skills /persistent/db
 mkdir -p /tmp/work/.local /tmp/work/data /tmp/work/output /tmp/work/.hermes
@@ -25,14 +25,8 @@ done
 
 for s in $SKILLS; do
   mkdir -p "/tmp/work/.hermes/skills/$s"
+  [ -f "/mnt/skill-$s/SKILL.md" ] && cp "/mnt/skill-$s/SKILL.md" "/tmp/work/.hermes/skills/$s/SKILL.md"
 done
-
-cp /mnt/skill-evaluate-agent/SKILL.md /tmp/work/.hermes/skills/evaluate-agent/SKILL.md
-cp /mnt/skill-review-trace/SKILL.md /tmp/work/.hermes/skills/review-trace/SKILL.md
-cp /mnt/skill-create-regression/SKILL.md /tmp/work/.hermes/skills/create-regression/SKILL.md
-cp /mnt/skill-trace-explorer/SKILL.md /tmp/work/.hermes/skills/trace-explorer/SKILL.md
-cp /mnt/skill-quality-dashboard/SKILL.md /tmp/work/.hermes/skills/quality-dashboard/SKILL.md
-cp /mnt/skill-analyze-session/SKILL.md /tmp/work/.hermes/skills/analyze-session/SKILL.md
 
 cp /mnt/soul/SOUL.md /tmp/work/.hermes/SOUL.md
 cp /mnt/config/config.yaml /tmp/work/.hermes/config.yaml

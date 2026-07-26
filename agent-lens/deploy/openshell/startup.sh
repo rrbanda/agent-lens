@@ -14,7 +14,7 @@ fi
 
 echo "Hermes $(hermes --version 2>&1 || true)"
 
-SKILLS="evaluate-agent review-trace create-regression trace-explorer quality-dashboard analyze-session audit-trail agent-registry aggregate-traces compare-evaluations executive-summary compliance-export"
+SKILLS="evaluate-agent review-trace create-regression trace-explorer quality-dashboard analyze-session audit-trail agent-registry aggregate-traces compare-evaluations executive-summary compliance-export create-judge red-team eval-loop cost-quality"
 
 mkdir -p \
   /sandbox/.hermes/skills \
@@ -42,10 +42,10 @@ with open("/sandbox/.hermes/config.yaml") as f:
 cfg.setdefault("skills", {})["directory"] = "/sandbox/.hermes/skills"
 
 cfg.setdefault("model", {})
-cfg["model"]["default"] = os.environ.get("LLAMASTACK_MODEL", "gemini/models/gemini-2.5-flash")
-cfg["model"]["base_url"] = os.environ.get("OPENAI_BASE_URL", "http://llamastack-service.llamastack.svc:8321/v1")
+cfg["model"]["default"] = os.environ.get("LLM_MODEL", "gemini-2.5-flash")
+cfg["model"]["base_url"] = os.environ.get("OPENAI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
 cfg["model"]["provider"] = "custom"
-cfg["model"]["api_key"] = os.environ.get("OPENAI_API_KEY", "not-needed")
+cfg["model"]["api_key"] = os.environ.get("OPENAI_API_KEY", "")
 
 mcp_url = os.environ.get("MLFLOW_MCP_URL")
 if mcp_url:
@@ -53,7 +53,7 @@ if mcp_url:
 
 with open("/sandbox/.hermes/config.yaml", "w") as f:
     yaml.dump(cfg, f, default_flow_style=False)
-print("Config updated: model, MCP URL")
+print(f"Config updated: model={cfg['model']['default']}, base_url={cfg['model']['base_url']}, MCP={cfg.get('mcp_servers',{}).get('mlflow',{}).get('url','unset')}")
 print("Skills:", ", ".join(sorted(os.listdir("/sandbox/.hermes/skills"))))
 PY
 

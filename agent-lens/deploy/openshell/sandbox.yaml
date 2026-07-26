@@ -88,11 +88,15 @@ spec:
             - name: HERMES_HOME
               value: /sandbox/.hermes
             - name: OPENAI_API_KEY
-              value: not-needed
+              valueFrom:
+                secretKeyRef:
+                  name: agent-lens-auth
+                  key: llm-api-key
+                  optional: true
             - name: OPENAI_BASE_URL
-              value: "http://llamastack-service.llamastack.svc:8321/v1"
-            - name: LLAMASTACK_MODEL
-              value: "gemini/models/gemini-2.5-flash"
+              value: "https://generativelanguage.googleapis.com/v1beta/openai/"
+            - name: LLM_MODEL
+              value: "gemini-2.5-flash"
             - name: MLFLOW_MCP_URL
               value: "http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp"
             - name: HERMES_DASHBOARD_BASIC_AUTH_USERNAME
@@ -151,6 +155,26 @@ spec:
               mountPath: /mnt/skill-quality-dashboard
             - name: skill-analyze-session
               mountPath: /mnt/skill-analyze-session
+            - name: skill-audit-trail
+              mountPath: /mnt/skill-audit-trail
+            - name: skill-agent-registry
+              mountPath: /mnt/skill-agent-registry
+            - name: skill-aggregate-traces
+              mountPath: /mnt/skill-aggregate-traces
+            - name: skill-compare-evaluations
+              mountPath: /mnt/skill-compare-evaluations
+            - name: skill-executive-summary
+              mountPath: /mnt/skill-executive-summary
+            - name: skill-compliance-export
+              mountPath: /mnt/skill-compliance-export
+            - name: skill-create-judge
+              mountPath: /mnt/skill-create-judge
+            - name: skill-red-team
+              mountPath: /mnt/skill-red-team
+            - name: skill-eval-loop
+              mountPath: /mnt/skill-eval-loop
+            - name: skill-cost-quality
+              mountPath: /mnt/skill-cost-quality
           ports:
             - containerPort: 9119
               name: dashboard
@@ -196,6 +220,36 @@ spec:
         - name: skill-analyze-session
           configMap:
             name: skill-analyze-session
+        - name: skill-audit-trail
+          configMap:
+            name: skill-audit-trail
+        - name: skill-agent-registry
+          configMap:
+            name: skill-agent-registry
+        - name: skill-aggregate-traces
+          configMap:
+            name: skill-aggregate-traces
+        - name: skill-compare-evaluations
+          configMap:
+            name: skill-compare-evaluations
+        - name: skill-executive-summary
+          configMap:
+            name: skill-executive-summary
+        - name: skill-compliance-export
+          configMap:
+            name: skill-compliance-export
+        - name: skill-create-judge
+          configMap:
+            name: skill-create-judge
+        - name: skill-red-team
+          configMap:
+            name: skill-red-team
+        - name: skill-eval-loop
+          configMap:
+            name: skill-eval-loop
+        - name: skill-cost-quality
+          configMap:
+            name: skill-cost-quality
   volumeClaimTemplates:
     - metadata:
         name: workspace

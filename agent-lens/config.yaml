@@ -1,8 +1,8 @@
 model:
-  default: "gemini/models/gemini-2.5-flash"
-  base_url: "http://llamastack-service.llamastack.svc:8321/v1"
+  default: "gemini-2.5-flash"
+  base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
   provider: custom
-  api_key: "not-needed"
+  api_key: "${OPENAI_API_KEY}"
 mcp_servers:
   mlflow:
     url: "http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp"

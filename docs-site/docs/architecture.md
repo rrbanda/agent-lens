@@ -65,6 +65,7 @@ The Hermes conversational AI framework provides:
 - Skill discovery and routing
 - Session management and memory
 - Dashboard with auth
+- Works with any OpenAI-compatible LLM (Gemini, OpenAI, Azure, Ollama, vLLM)
 
 ### MLflow MCP Server
 

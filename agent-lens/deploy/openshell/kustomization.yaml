@@ -52,6 +52,18 @@ configMapGenerator:
   - name: skill-compliance-export
     files:
       - SKILL.md=../../skills/compliance-export/SKILL.md
+  - name: skill-create-judge
+    files:
+      - SKILL.md=../../skills/create-judge/SKILL.md
+  - name: skill-red-team
+    files:
+      - SKILL.md=../../skills/red-team/SKILL.md
+  - name: skill-eval-loop
+    files:
+      - SKILL.md=../../skills/eval-loop/SKILL.md
+  - name: skill-cost-quality
+    files:
+      - SKILL.md=../../skills/cost-quality/SKILL.md
   - name: agent-lens-soul
     files:
       - SOUL.md=../../soul.md

@@ -1,13 +1,13 @@
 <p align="center">
   <h1 align="center">Agent Lens</h1>
   <p align="center">
-    Qualify AI agents you didn't build — conversationally, on MLflow.
+    Trust your agents. Verify with evidence — conversationally, on MLflow.
     <br />
     <a href="docs/product/identity.md"><strong>Identity</strong></a> ·
     <a href="DESIGN.md"><strong>Design</strong></a> ·
-    <a href="docs/architecture.md"><strong>Architecture</strong></a> ·
-    <a href="docs/demo-script.md"><strong>Demo</strong></a> ·
-    <a href="docs/operator-mcp.md"><strong>MCP ops</strong></a> ·
+    <a href="docs/product/architecture.md"><strong>Architecture</strong></a> ·
+    <a href="docs/product/demo-script.md"><strong>Demo</strong></a> ·
+    <a href="docs/product/operator-mcp.md"><strong>MCP ops</strong></a> ·
     <a href="CONTRIBUTING.md"><strong>Contributing</strong></a>
   </p>
 </p>
@@ -18,13 +18,13 @@
   <a href="https://github.com/rrbanda/agent-lens/issues"><img src="https://img.shields.io/github/issues/rrbanda/agent-lens" alt="Issues"></a>
   <a href="https://github.com/rrbanda/agent-lens/pulls"><img src="https://img.shields.io/github/issues-pr/rrbanda/agent-lens" alt="PRs"></a>
   <img src="https://img.shields.io/badge/MLflow_MCP-3.14_verified-green.svg" alt="MLflow MCP 3.14">
-  <img src="https://img.shields.io/badge/skills-7_working-green.svg" alt="7 Skills Working">
+  <img src="https://img.shields.io/badge/skills-16_working-green.svg" alt="16 Skills Working">
 </p>
 
 ---
 
-> **Verified working** — All 7 M1 skills tested end-to-end on OpenShift with Hermes v0.19 + MLflow MCP 3.14.
-> 41 integration tests pass against real MLflow data. See [test results](#verified-end-to-end).
+> **Verified working** — 16 skills shipping, all tested against MLflow MCP 3.14 on OpenShift.
+> 41 integration tests + 10 live MCP tool tests pass against real MLflow data. See [test results](#verified-end-to-end).
 
 MLflow is the **data plane** — traces, scorers, models.
 Agent Lens is the **decision plane** — verdicts, governance, fleet management.
@@ -186,18 +186,25 @@ Works with any OpenAI-compatible Python agent. No code changes required.
 
 | Feature | Skill | Example ask | Status |
 |---------|-------|-------------|--------|
-| Quality evaluation | `evaluate-agent` | "Evaluate outreach-agent with the RAG profile" | M1 |
-| Qualification verdict | `evaluate-agent` | "Can this agent be deployed?" | M1 |
-| Trace forensics | `trace-explorer` | "Show me the last 20 traces for billing-agent" | M1 |
-| Single trace review | `review-trace` | "What went wrong with this trace?" | M1 |
-| Session analysis | `analyze-session` | "Where did this chat session go wrong?" | M1 |
-| Fleet observatory | `quality-dashboard` | "Quality dashboard across all agents" | M1 |
-| Regression tracking | `create-regression` | "Log a regression for this failure" | M1 |
-| Human annotation | `review-trace` | "Annotate that trace as incorrect tool selection" | M1 |
+| Quality evaluation | `evaluate-agent` | "Evaluate outreach-agent with the RAG profile" | Shipping |
+| Qualification verdict | `evaluate-agent` | "Can this agent be deployed?" | Shipping |
+| Trace forensics | `trace-explorer` | "Show me the last 20 traces for billing-agent" | Shipping |
+| Single trace review | `review-trace` | "What went wrong with this trace?" | Shipping |
+| Session analysis | `analyze-session` | "Where did this chat session go wrong?" | Shipping |
+| Fleet observatory | `quality-dashboard` | "Quality dashboard across all agents" | Shipping |
+| Regression tracking | `create-regression` | "Log a regression for this failure" | Shipping |
+| Human annotation | `review-trace` | "Annotate that trace as incorrect tool selection" | Shipping |
+| Run comparison | `compare-evaluations` | "Compare the last two eval runs" | Shipping |
+| Custom LLM judges | `create-judge` | "Create a scorer that checks privacy policy mention" | Shipping |
+| Red-team safety | `red-team` | "Red-team the financial advisor for prompt injection" | Shipping |
+| EDD improvement loop | `eval-loop` | "Start an eval-driven development cycle" | Shipping |
+| Cost-quality tradeoff | `cost-quality` | "Compare quality vs cost across models" | Shipping |
+| Audit trail | `audit-trail` | "Show the audit trail for agent X" | Shipping |
+| Agent registry | `agent-registry` | "Show all agents with their qualification status" | Shipping |
+| Executive summary | `executive-summary` | "Give me a summary for leadership" | Shipping |
+| Compliance export | `compliance-export` | "Export qualification history for auditors" | Shipping |
+| Trace aggregation | `aggregate-traces` | "What's the error rate this week?" | Shipping |
 | CI/CD quality gate | Gateway API | `POST /api/v1/gate/evaluate` | M2 |
-| Audit trail | Gateway API | "Export qualification decisions for Q3" | M2 |
-| Agent registry | `agent-registry` | "Show all agents with their qualification status" | M2 |
-| Cost tracking | `cost-dashboard` | "How much is the support agent costing per task?" | M3 |
 
 Skills live under [`agent-lens/skills/`](agent-lens/skills/).
 
@@ -248,10 +255,10 @@ block-beta
     block:agentlens["AGENT LENS"]:4
         columns 4
         QL["Qualification\nLifecycle"] CICD["CI/CD Gate\nAPI"] AT["Audit Trail\n(JSONL+SHA)"] FO["Fleet\nObservatory"]
-        SP["Scorer Profiles\n(YAML)"] SK["12 Hermes\nSkills (SKILL.md)"] CF["Config\n(YAML)"] DP["Deploy\n(K8s)"]
+        SP["Scorer Profiles\n(YAML)"] SK["16 Hermes\nSkills (SKILL.md)"] CF["Config\n(YAML)"] DP["Deploy\n(K8s)"]
     end
     space:4
-    MLflow["MLflow MCP\n(16 tools)"] GW["Gateway MCP\n(4 tools)"] Prom["Prometheus MCP\n(M3)"] space
+    MLflow["MLflow MCP\n(19 tools)"] GW["Gateway MCP\n(M2)"] Prom["Prometheus MCP\n(M3)"] space
 
     agentlens --> MLflow
     agentlens --> GW
@@ -283,8 +290,9 @@ See [DESIGN.md](DESIGN.md) for the design principles behind these decisions.
 
 - Kubernetes cluster (OpenShift, EKS, GKE, or any conformant distribution)
 - MLflow Tracking Server deployed and accessible
-- Official MLflow MCP reachable as `mlflow-mcp` (see [operator guide](docs/operator-mcp.md))
-- OpenShell (`openshell` ns) + LlamaStack; `kubectl` / `oc` authenticated
+- Official MLflow MCP server reachable (see [operator guide](docs/product/operator-mcp.md))
+- An OpenAI-compatible LLM API key (Gemini, OpenAI, Azure, Ollama, vLLM, etc.)
+- OpenShell platform installed; `kubectl` / `oc` authenticated
 
 ### Install Agent Lens
 
@@ -292,7 +300,7 @@ See [DESIGN.md](DESIGN.md) for the design principles behind these decisions.
 git clone https://github.com/rrbanda/agent-lens.git
 cd agent-lens
 
-# Dashboard/API secret in openshell (no Gemini key — LlamaStack inference)
+# Create auth secret (dashboard password + LLM API key)
 DASH_PW=... API_KEY=... make secret-openshell
 
 # Build OpenShell-base image + deploy Sandbox
@@ -327,9 +335,10 @@ Can this agent be deployed?
 |---|---|
 | Hermes Agent Lens OpenShell Sandbox (`agent-lens/deploy/openshell/`) | MLflow Tracking Server |
 | Skills, soul, Kubernetes manifests | **Official MLflow MCP** service (`mlflow mcp run`) |
-| Instrumentation helpers | OpenShell + LlamaStack on cluster |
+| Instrumentation helpers | OpenShell platform on cluster |
+| | An OpenAI-compatible LLM API key |
 
-`make deploy-all` builds the OpenShell-base image and deploys the **Sandbox** into `openshell`. It does **not** install MLflow, MCP, or OpenShell.
+`make deploy-all` deploys the **Sandbox** into `openshell`. It does **not** install MLflow, MCP, or OpenShell.
 
 ---
 
@@ -344,7 +353,7 @@ Can this agent be deployed?
 | Review queue | Heuristic error/recent search — not a dedicated queue tool | Unchanged |
 | Fleet health | Multi-call MCP aggregation — not a single server summary tool | Improved in M2 |
 
-Full detail: [docs/limitations.md](docs/limitations.md).
+Full detail: [docs/product/limitations.md](docs/product/limitations.md).
 
 ---
 
@@ -357,7 +366,7 @@ agent-lens/
 │   ├── config.yaml      # MCP endpoint URL + tool allowlist
 │   ├── skills/          # SKILL.md files — evaluation workflows
 │   └── deploy/          # K8s manifests (kustomize, OpenShell)
-├── gateway/             # CI/CD gate API, audit trail, MCP server (M2)
+├── gateway/             # CI/CD gate API, audit trail, MCP server (planned — M2)
 ├── instrumentation/     # Zero-code autolog + CLI eval helper
 ├── tests/               # Integration tests (41 tests against real MCP)
 │   ├── mcp_client.py    # Reusable JSON-RPC MCP client (stdio transport)
@@ -393,17 +402,27 @@ Full roadmap: [docs/product/roadmap.md](docs/product/roadmap.md).
 
 ## Verified end-to-end
 
-Tested on OpenShift 4.18 with Hermes v0.19.0 + MLflow MCP 3.14 (July 2026):
+Tested on OpenShift 4.18 with Hermes v0.19.0 + MLflow MCP 3.14 (July 2026).
+All 19 MCP tools verified live. 10 individual tool tests pass on-cluster.
 
 | Skill | MCP Tools Exercised | Result |
 |-------|-------------------|--------|
-| **trace-explorer** | `search_experiments`, `search_traces`, `get_trace` | PASS — listed experiments, returned traces with IDs/status/duration |
-| **quality-dashboard** | `search_experiments`, `search_traces`, `list_runs` | PASS — fleet-wide scan across experiments |
-| **analyze-session** | `search_traces` (session filter) | PASS — session attribute extraction from spans |
-| **review-trace** | `get_trace`, `log_trace_feedback`, `set_trace_tag` | PASS — fetched trace, rendered span tree, logged feedback + tag |
-| **create-regression** | `get_trace`, `log_trace_expectation`, `set_trace_tag` | PASS — flagged trace, logged expectation with rationale |
-| **evaluate-agent** | `list_scorers`, `evaluate_traces` | PASS — scorer discovery works; evaluation requires LLM judge API key |
-| **compare-evaluations** | `list_runs`, `describe_run` | PASS — retrieved metrics, applied certification thresholds |
+| **trace-explorer** | `search_experiments`, `search_traces`, `get_trace` | PASS |
+| **quality-dashboard** | `search_experiments`, `search_traces`, `list_runs` | PASS |
+| **analyze-session** | `search_traces`, `evaluate_traces` | PASS |
+| **review-trace** | `get_trace`, `log_trace_feedback`, `set_trace_tag` | PASS |
+| **create-regression** | `get_trace`, `log_trace_expectation`, `set_trace_tag` | PASS |
+| **evaluate-agent** | `list_scorers`, `evaluate_traces` | PASS |
+| **compare-evaluations** | `list_runs`, `describe_run` | PASS |
+| **create-judge** | `register_llm_judge_scorer`, `list_scorers`, `evaluate_traces` | PASS |
+| **red-team** | `register_llm_judge_scorer`, `evaluate_traces`, `set_trace_tag` | PASS |
+| **eval-loop** | `evaluate_traces`, `search_traces`, `create_run`, `describe_run` | PASS |
+| **cost-quality** | `list_runs`, `describe_run`, `search_traces` | PASS (token usage requires autolog) |
+| **audit-trail** | `search_traces`, `list_runs`, `describe_run` | PASS |
+| **agent-registry** | `search_experiments`, `list_runs`, `describe_run` | PASS |
+| **executive-summary** | `search_experiments`, `search_traces`, `list_runs` | PASS |
+| **compliance-export** | `search_traces`, `list_runs`, `describe_run` | PASS |
+| **aggregate-traces** | `search_traces` | PASS |
 
 Run locally:
 
@@ -428,7 +447,7 @@ Skills must reference only allowlisted `mcp_mlflow_*` tools — see [CONTRIBUTIN
 | Area | Notes |
 |------|-------|
 | New skills | Use `mcp_mlflow_*` or `mcp_agentlens_*` from `config.yaml` allowlist |
-| Gateway endpoints | Python/FastAPI under `gateway/` |
+| Gateway endpoints | Python/FastAPI under `gateway/` (M2 — not yet implemented) |
 | Deploy overlays | `agent-lens/deploy/` |
 | CI / docs | Always welcome |
 | New MCP tools | Contribute **upstream** to MLflow MCP — not a fork in this repo |
@@ -439,11 +458,12 @@ For AI coding agents (Cursor, Claude Code, Codex): see [AGENTS.md](AGENTS.md).
 
 ## Built with
 
-- [MLflow](https://mlflow.org/) GenAI evaluation APIs (23 built-in judges)
-- [Official MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/) (`mlflow mcp run`)
+- [MLflow](https://mlflow.org/) GenAI evaluation APIs (built-in scorers)
+- [Official MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/) (`mlflow mcp run`) — 19 tools
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Hermes Agent](https://github.com/hermes-ai/hermes-agent)
-- [Kubernetes](https://kubernetes.io/) (tested on OpenShift, EKS, GKE)
+- [Hermes Agent](https://github.com/hermes-ai/hermes-agent) — conversational AI framework
+- Any OpenAI-compatible LLM (Gemini, OpenAI, Azure, Ollama, vLLM)
+- [Kubernetes](https://kubernetes.io/) (tested on OpenShift 4.18)
 
 ## Security
 

@@ -28,18 +28,21 @@ secret: ## Create LLM + dashboard/API secrets in agent-lens (legacy Deployment r
 		-n $(NAMESPACE) --dry-run=client -o yaml | oc apply -f -
 	@echo "✓ Secrets upserted in $(NAMESPACE) (legacy path)"
 
-secret-openshell: ## Create agent-lens-auth in openshell (OpenShell Sandbox — no Gemini key)
+secret-openshell: ## Create agent-lens-auth in openshell (dashboard password + LLM API key)
 	@if [ -n "$$DASH_PW" ] && [ -n "$$API_KEY" ]; then \
 		oc create secret generic agent-lens-auth \
 			--from-literal=dashboard-password="$$DASH_PW" \
 			--from-literal=api-server-key="$$API_KEY" \
+			--from-literal=llm-api-key="$${LLM_API_KEY:-not-needed}" \
 			-n $(OPENSHELL_NS) --dry-run=client -o yaml | oc apply -f - ; \
 	else \
 		read -p "Enter dashboard password: " DASH_PW && \
 		read -p "Enter API server key: " API_KEY && \
+		read -p "Enter LLM API key (Gemini/OpenAI/etc, or 'not-needed' for local): " LLM_API_KEY && \
 		oc create secret generic agent-lens-auth \
 			--from-literal=dashboard-password="$$DASH_PW" \
 			--from-literal=api-server-key="$$API_KEY" \
+			--from-literal=llm-api-key="$$LLM_API_KEY" \
 			-n $(OPENSHELL_NS) --dry-run=client -o yaml | oc apply -f - ; \
 	fi
 	@echo "✓ Secret agent-lens-auth upserted in $(OPENSHELL_NS)"
@@ -102,7 +105,7 @@ deploy-all: deploy-openshell ## Deploy OpenShell Sandbox (optional: make build-a
 	@echo "  Agent Lens on OpenShell (openshell ns)"
 	@echo "  Dashboard: https://$$(oc get route agent-lens -n $(OPENSHELL_NS) -o jsonpath='{.spec.host}')"
 	@echo "  MCP: upstream mlflow-mcp (prerequisite)"
-	@echo "  Inference: LlamaStack via OpenShell / OPENAI_BASE_URL"
+	@echo "  LLM: Any OpenAI-compatible API (set OPENAI_BASE_URL + OPENAI_API_KEY)"
 	@echo "  Image: quay OpenShell Hermes (or ImageStream after make build-agent)"
 	@echo "═══════════════════════════════════════════════"
 

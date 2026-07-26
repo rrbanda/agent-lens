@@ -26,7 +26,6 @@ RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-l
 ENV HERMES_HOME=/sandbox/.hermes \
     HOME=/sandbox \
     PATH="/sandbox/.venv/bin:/usr/local/bin:$PATH" \
-    OPENAI_API_KEY=not-needed \
     BOOTSTRAP_DEPS=0
 
 EXPOSE 9119
