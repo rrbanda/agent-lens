@@ -5,7 +5,7 @@ title: Skills Reference
 
 # Skills Reference
 
-Agent Lens ships with 16 skills — 7 core skills verified end-to-end on OpenShift, 4 cookbook-inspired evaluation skills, and 5 operational skills for fleet management. Each skill is a `SKILL.md` file that guides the LLM on which MCP tools to call and how to format results.
+Agent Lens ships with 16 skills — 7 core evaluation skills, 4 advanced evaluation skills, and 5 operational skills for fleet management. Each skill is a `SKILL.md` file that guides the LLM on which MCP tools to call and how to format results.
 
 ## Verified End-to-End (July 2026)
 
@@ -19,7 +19,7 @@ Agent Lens ships with 16 skills — 7 core skills verified end-to-end on OpenShi
 | [evaluate-agent](#evaluate-agent) | `list_scorers`, `evaluate_traces` | Verified |
 | [compare-evaluations](#compare-evaluations) | `list_runs`, `describe_run` | Verified |
 
-## Cookbook-Inspired Skills (July 2026)
+## Advanced Evaluation Skills
 
 | Skill | MCP Tools | Cookbook Source |
 |-------|-----------|----------------|
