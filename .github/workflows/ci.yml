@@ -27,7 +27,7 @@ jobs:
       - name: Reject invented 1–5 score rubrics in skills/soul
         run: |
           set -e
-          if rg -n 'X\.X/5|/5\.0|>= 3\.5|quality > 4\.0' agent-lens/skills agent-lens/soul.md; then
+          if grep -rn 'X\.X/5\|/5\.0\|>= 3\.5\|quality > 4\.0' agent-lens/skills agent-lens/soul.md; then
             echo "Found legacy /5 Likert scoring language — use pass rates instead" >&2
             exit 1
           fi
@@ -48,5 +48,5 @@ jobs:
       - name: Build manifests
         run: |
           kustomize build --load-restrictor LoadRestrictionsNone agent-lens/deploy >/tmp/out.yaml
-          rg -n 'analyze-session|agent-lens-entrypoint|BOOTSTRAP_DEPS' /tmp/out.yaml
+          grep -n 'analyze-session\|agent-lens-entrypoint\|BOOTSTRAP_DEPS' /tmp/out.yaml
           head -40 /tmp/out.yaml
