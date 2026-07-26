@@ -4,7 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Agent Lens',
-  tagline: 'Qualify AI agents you didn\'t build — conversationally, on MLflow.',
+  tagline: 'Trust your agents. Verify with evidence.',
   favicon: 'img/favicon.ico',
 
   future: {

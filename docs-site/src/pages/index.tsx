@@ -9,11 +9,11 @@ function Hero() {
       <div className="container">
         <div className="hero-badge">Verified on OpenShift with MLflow MCP 3.14</div>
         <h1 className="hero-title">
-          Qualify AI agents<br />you didn't build.
+          Trust your agents.<br />Verify with evidence.
         </h1>
         <p className="hero-subtitle">
-          Agent Lens is the conversational qualification layer for MLflow.
-          Evaluate, certify, and govern your agent fleet — in plain English.
+          Agent Lens is the conversational quality gate for MLflow.
+          Evaluate, qualify, and govern your agent fleet — in plain English.
         </p>
         <div className="hero-buttons">
           <Link className="btn-primary" to="/docs/">
@@ -194,7 +194,7 @@ function CTA() {
 
 export default function Home(): React.JSX.Element {
   return (
-    <Layout title="Home" description="Qualify AI agents you didn't build — conversationally, on MLflow.">
+    <Layout title="Home" description="Trust your agents. Verify with evidence — conversationally, on MLflow.">
       <Hero />
       <Terminal />
       <Features />
