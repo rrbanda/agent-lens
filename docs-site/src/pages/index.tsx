@@ -19,7 +19,7 @@ function Hero() {
           <Link className="btn-primary" to="/docs/">
             Get Started
           </Link>
-          <Link className="btn-secondary" href="https://github.com/rrbanda/agentlens">
+          <Link className="btn-secondary" href="https://github.com/rrbanda/agent-lens">
             GitHub
           </Link>
         </div>
@@ -46,7 +46,7 @@ function Terminal() {
             </div>
             <div className="terminal-line">
               <span className="terminal-prompt">$ </span>
-              <span className="terminal-command">git clone https://github.com/rrbanda/agentlens && cd agentlens</span>
+              <span className="terminal-command">git clone https://github.com/rrbanda/agent-lens && cd agent-lens</span>
             </div>
             <div className="terminal-line">
               <span className="terminal-prompt">$ </span>
@@ -57,7 +57,7 @@ function Terminal() {
               <span className="terminal-command">make seed-data && make test-integration</span>
             </div>
             <div className="terminal-line">
-              <span className="terminal-output">41 passed, 1 skipped in 12.4s</span>
+              <span className="terminal-output">41 passed in 12.4s</span>
             </div>
             <br />
             <div className="terminal-line">
@@ -116,7 +116,7 @@ const features = [
   {
     icon: '✅',
     title: 'Production Verified',
-    description: 'Tested end-to-end on OpenShift 4.18 with Hermes v0.19. 41 integration tests against real MLflow data.',
+    description: '14 of 16 skills verified end-to-end on OpenShift 4.18 with Hermes v0.19 + MLflow MCP 3.14 against live data.',
   },
 ];
 
@@ -142,29 +142,29 @@ function Features() {
 
 function Skills() {
   const skills = [
-    { name: 'trace-explorer', tools: 'search_experiments, search_traces, get_trace', desc: 'Search and drill into any trace' },
-    { name: 'quality-dashboard', tools: 'search_experiments, search_traces, list_runs', desc: 'Fleet-wide health + cost + latency' },
-    { name: 'analyze-session', tools: 'search_traces, evaluate_traces', desc: 'Multi-turn session forensics + quality' },
-    { name: 'review-trace', tools: 'get_trace, log_trace_feedback, set_trace_tag', desc: 'Deep-dive + human annotation' },
-    { name: 'create-regression', tools: 'get_trace, log_trace_expectation, set_trace_tag', desc: 'Flag failures for follow-up' },
-    { name: 'evaluate-agent', tools: 'list_scorers, evaluate_traces', desc: 'Run LLM judges on traces' },
-    { name: 'compare-evaluations', tools: 'list_runs, describe_run', desc: 'Track quality over time' },
-    { name: 'create-judge', tools: 'register_llm_judge_scorer, list_scorers', desc: 'Build custom scorers from English' },
-    { name: 'red-team', tools: 'register_llm_judge_scorer, evaluate_traces', desc: 'Adversarial safety evaluation' },
-    { name: 'eval-loop', tools: 'evaluate_traces, search_traces, create_run', desc: 'Full EDD improvement cycle' },
-    { name: 'cost-quality', tools: 'list_runs, describe_run, search_traces', desc: 'Cost vs quality tradeoff analysis' },
-    { name: 'audit-trail', tools: 'search_traces, list_runs, describe_run', desc: 'Qualification decision history' },
-    { name: 'agent-registry', tools: 'search_experiments, list_runs, describe_run', desc: 'Fleet inventory and status' },
-    { name: 'executive-summary', tools: 'search_experiments, search_traces, list_runs', desc: 'Board-ready health summary' },
-    { name: 'compliance-export', tools: 'search_traces, list_runs, describe_run', desc: 'JSONL/CSV export for GRC tools' },
-    { name: 'aggregate-traces', tools: 'search_traces', desc: 'Error rates, latency, token trends' },
+    { name: 'trace-explorer', tools: 'search_experiments, search_traces, get_trace', desc: 'Search and drill into any trace', status: 'PASS' },
+    { name: 'quality-dashboard', tools: 'search_experiments, search_traces, list_runs', desc: 'Fleet-wide health + cost + latency', status: 'PASS' },
+    { name: 'analyze-session', tools: 'search_traces, get_trace', desc: 'Trace analysis with status and latency', status: 'PASS' },
+    { name: 'review-trace', tools: 'get_trace, get_trace_assessment', desc: 'Deep-dive + assessments', status: 'PASS' },
+    { name: 'create-regression', tools: 'update_trace_assessment, set_trace_tag', desc: 'Flag failures for follow-up', status: 'PASS' },
+    { name: 'evaluate-agent', tools: 'list_scorers, evaluate_traces', desc: 'Run LLM judges on traces', status: 'PARTIAL' },
+    { name: 'compare-evaluations', tools: 'list_runs, describe_run', desc: 'Track quality over time', status: 'PASS' },
+    { name: 'create-judge', tools: 'list_scorers, register_llm_judge_scorer', desc: 'Build custom scorers from English', status: 'PASS' },
+    { name: 'red-team', tools: 'search_traces, evaluate_traces', desc: 'Adversarial safety evaluation', status: 'PARTIAL' },
+    { name: 'eval-loop', tools: 'create_run, search_traces', desc: 'Full EDD improvement cycle', status: 'PASS' },
+    { name: 'cost-quality', tools: 'list_runs, describe_run, search_traces', desc: 'Cost vs quality tradeoff analysis', status: 'PASS' },
+    { name: 'audit-trail', tools: 'search_traces, list_runs, describe_run', desc: 'Qualification decision history', status: 'PASS' },
+    { name: 'agent-registry', tools: 'search_experiments, list_runs, describe_run', desc: 'Fleet inventory and status', status: 'PASS' },
+    { name: 'executive-summary', tools: 'search_experiments, search_traces, list_runs', desc: 'Board-ready health summary', status: 'PASS' },
+    { name: 'compliance-export', tools: 'search_traces, list_runs, describe_run', desc: 'JSONL/CSV export for GRC tools', status: 'PASS*' },
+    { name: 'aggregate-traces', tools: 'search_traces', desc: 'Error rates, latency, token trends', status: 'PARTIAL' },
   ];
 
   return (
     <section className="skills-section">
       <div className="container">
         <p className="section-label">Skills</p>
-        <h2 className="section-title">16 skills. All verified.</h2>
+        <h2 className="section-title">16 skills. 12 fully verified.</h2>
         <div className="skills-table">
           <table>
             <thead>
@@ -179,7 +179,7 @@ function Skills() {
                 <tr key={i}>
                   <td><strong>{s.name}</strong><br /><span style={{color: '#64748b', fontSize: '0.85rem'}}>{s.desc}</span></td>
                   <td><code style={{fontSize: '0.8rem'}}>{s.tools}</code></td>
-                  <td className="status-pass">PASS</td>
+                  <td className={s.status === 'PASS' ? 'status-pass' : s.status === 'PARTIAL' ? 'status-partial' : 'status-pass'}>{s.status}</td>
                 </tr>
               ))}
             </tbody>
@@ -199,7 +199,7 @@ function CTA() {
           Open source. Self-hosted. Runs on any Kubernetes cluster with MLflow.
         </p>
         <div className="hero-buttons">
-          <Link className="btn-primary" href="https://github.com/rrbanda/agentlens">
+          <Link className="btn-primary" href="https://github.com/rrbanda/agent-lens">
             Star on GitHub
           </Link>
           <Link className="btn-secondary" to="/docs/">

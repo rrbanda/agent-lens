@@ -148,7 +148,7 @@ make check-mcp
 | Mistake | Why it fails | What to do instead |
 |---------|-------------|-------------------|
 | `import mlflow` in a skill | MLflow SDK is not in the sandbox | Use `mcp_mlflow_*` tools |
-| Custom scoring function | Duplicates MLflow's 23 judges | Use existing scorers via `evaluate_traces` |
+| Custom scoring function | Duplicates MLflow's 20+ built-in judges | Use existing scorers via `evaluate_traces` |
 | Hardcoded scorer list | List changes with MLflow versions | Use `list_scorers` to discover at runtime |
 | Custom model registry DB | Duplicates LoggedModel | Use `search_logged_models` + tags |
 | Direct MLflow REST call | Bypasses MCP trust boundary | Route through MLflow MCP |

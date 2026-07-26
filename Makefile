@@ -29,16 +29,20 @@ secret: ## Create LLM + dashboard/API secrets in agent-lens (legacy Deployment r
 	@echo "✓ Secrets upserted in $(NAMESPACE) (legacy path)"
 
 secret-openshell: ## Create agent-lens-auth in openshell (dashboard password + LLM API key)
-	@if [ -n "$$DASH_PW" ] && [ -n "$$API_KEY" ]; then \
+	@if [ -n "$$DASH_PW" ] && [ -n "$$API_KEY" ] && [ -n "$$LLM_API_KEY" ]; then \
 		oc create secret generic agent-lens-auth \
 			--from-literal=dashboard-password="$$DASH_PW" \
 			--from-literal=api-server-key="$$API_KEY" \
-			--from-literal=llm-api-key="$${LLM_API_KEY:-not-needed}" \
+			--from-literal=llm-api-key="$$LLM_API_KEY" \
 			-n $(OPENSHELL_NS) --dry-run=client -o yaml | oc apply -f - ; \
+	elif [ -n "$$DASH_PW" ] && [ -n "$$API_KEY" ]; then \
+		echo "WARNING: LLM_API_KEY not set. Hermes will not be able to chat. Set it:"; \
+		echo "  LLM_API_KEY=<your-gemini-or-openai-key> DASH_PW=... API_KEY=... make secret-openshell"; \
+		exit 1; \
 	else \
 		read -p "Enter dashboard password: " DASH_PW && \
 		read -p "Enter API server key: " API_KEY && \
-		read -p "Enter LLM API key (Gemini/OpenAI/etc, or 'not-needed' for local): " LLM_API_KEY && \
+		read -p "Enter LLM API key (Gemini/OpenAI — required for chat): " LLM_API_KEY && \
 		oc create secret generic agent-lens-auth \
 			--from-literal=dashboard-password="$$DASH_PW" \
 			--from-literal=api-server-key="$$API_KEY" \
@@ -46,6 +50,8 @@ secret-openshell: ## Create agent-lens-auth in openshell (dashboard password + L
 			-n $(OPENSHELL_NS) --dry-run=client -o yaml | oc apply -f - ; \
 	fi
 	@echo "✓ Secret agent-lens-auth upserted in $(OPENSHELL_NS)"
+	@echo "  Note: This key powers the Hermes agent (any OpenAI-compatible provider)."
+	@echo "  For LLM judges, also set OPENAI_API_KEY on the MLflow MCP deployment."
 
 build-agent: ## Build OpenShell-base Hermes image in-cluster (no local podman/docker required)
 	@echo "Ensuring ImageStream + BuildConfig in $(NAMESPACE)..."

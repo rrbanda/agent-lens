@@ -9,24 +9,26 @@ Agent Lens ships with 16 skills — 7 core evaluation skills, 4 advanced evaluat
 
 ## Verified End-to-End (July 2026)
 
-| Skill | MCP Tools | Status |
-|-------|-----------|--------|
-| [trace-explorer](#trace-explorer) | `search_experiments`, `search_traces`, `get_trace` | Verified |
-| [quality-dashboard](#quality-dashboard) | `search_experiments`, `search_traces`, `list_runs` | Verified |
-| [analyze-session](#analyze-session) | `search_traces`, `evaluate_traces` | Verified |
-| [review-trace](#review-trace) | `get_trace`, `log_trace_feedback`, `set_trace_tag` | Verified |
-| [create-regression](#create-regression) | `get_trace`, `log_trace_expectation`, `set_trace_tag` | Verified |
-| [evaluate-agent](#evaluate-agent) | `list_scorers`, `evaluate_traces` | Verified |
-| [compare-evaluations](#compare-evaluations) | `list_runs`, `describe_run` | Verified |
+Tested on OpenShift 4.18 with Hermes v0.19 + Gemini 2.5 Flash + MLflow MCP 3.14.
+
+| Skill | MCP Tools Used | Status |
+|-------|---------------|--------|
+| [trace-explorer](#trace-explorer) | `search_experiments`, `search_traces`, `get_trace` | PASS |
+| [quality-dashboard](#quality-dashboard) | `search_experiments`, `search_traces`, `list_runs` | PASS |
+| [analyze-session](#analyze-session) | `search_traces`, `get_trace` | PASS |
+| [review-trace](#review-trace) | `get_trace`, `get_trace_assessment` | PASS |
+| [create-regression](#create-regression) | `update_trace_assessment`, `set_trace_tag` | PASS |
+| [evaluate-agent](#evaluate-agent) | `list_scorers`, `evaluate_traces` | PARTIAL — LLM judges need OpenAI key on MCP server |
+| [compare-evaluations](#compare-evaluations) | `list_runs`, `describe_run` | PASS |
 
 ## Advanced Evaluation Skills
 
-| Skill | MCP Tools | Cookbook Source |
-|-------|-----------|----------------|
-| [create-judge](#create-judge) | `register_llm_judge_scorer`, `list_scorers`, `evaluate_traces` | Building Custom LLM Judges |
-| [red-team](#red-team) | `register_llm_judge_scorer`, `evaluate_traces`, `set_trace_tag` | Red-Teaming Your LLM Application |
-| [eval-loop](#eval-loop) | `evaluate_traces`, `search_traces`, `list_runs`, `describe_run`, `create_run` | Evaluation-Driven Development |
-| [cost-quality](#cost-quality) | `list_runs`, `describe_run`, `search_traces` | Cost-Quality Tradeoff Analysis |
+| Skill | MCP Tools Used | Status |
+|-------|---------------|--------|
+| [create-judge](#create-judge) | `list_scorers` | PASS — `register_llm_judge_scorer` needs OpenAI key |
+| [red-team](#red-team) | `search_traces`, `evaluate_traces` | PARTIAL — LLM judges need OpenAI key |
+| [eval-loop](#eval-loop) | `create_run`, `search_traces` | PASS |
+| [cost-quality](#cost-quality) | `list_runs`, `describe_run`, `search_traces` | PASS |
 
 ---
 
@@ -62,7 +64,7 @@ Agent Lens ships with 16 skills — 7 core evaluation skills, 4 advanced evaluat
 
 ## analyze-session
 
-**Purpose:** Reconstruct multi-turn conversation sessions and identify where reasoning broke down.
+**Purpose:** Search and analyze traces from a session, identifying patterns, errors, and latency.
 
 **Example prompts:**
 ```
@@ -71,13 +73,15 @@ Agent Lens ships with 16 skills — 7 core evaluation skills, 4 advanced evaluat
 "Show me the conversation flow for this session"
 ```
 
-**Output:** Session timeline with per-turn outcomes and failure analysis.
+**MCP tools:** `search_traces`, `get_trace`
+
+**Output:** Trace listing with status, latency, and failure analysis.
 
 ---
 
 ## review-trace
 
-**Purpose:** Deep-dive into a single trace, render the span tree, and log human feedback.
+**Purpose:** Deep-dive into a single trace — inspect input/output, span tree, and existing assessments.
 
 **Example prompts:**
 ```
@@ -86,13 +90,15 @@ Agent Lens ships with 16 skills — 7 core evaluation skills, 4 advanced evaluat
 "Annotate that trace as incorrect tool selection"
 ```
 
-**Output:** Span tree visualization, existing assessments, and feedback logged.
+**MCP tools:** `get_trace`, `get_trace_assessment`, `log_trace_feedback`, `set_trace_tag`
+
+**Output:** Trace details with input/output, span tree, assessments, and optional feedback logged.
 
 ---
 
 ## create-regression
 
-**Purpose:** Flag a trace as a regression and log expectations for follow-up evaluation.
+**Purpose:** Flag a trace as a regression by updating its assessment and tagging it for follow-up.
 
 **Example prompts:**
 ```
@@ -101,7 +107,9 @@ Agent Lens ships with 16 skills — 7 core evaluation skills, 4 advanced evaluat
 "Flag this as a regression with severity=high"
 ```
 
-**Output:** Regression tagged, expectation logged, dataset tag applied.
+**MCP tools:** `update_trace_assessment`, `set_trace_tag`
+
+**Output:** Regression flagged with assessment ID and trace tag applied.
 
 ---
 
@@ -249,13 +257,13 @@ Agent Lens ships with 16 skills — 7 core evaluation skills, 4 advanced evaluat
 
 These skills compose the same MCP tools for fleet management, governance, and reporting.
 
-| Skill | MCP Tools | Purpose |
-|-------|-----------|---------|
-| [audit-trail](#audit-trail) | `search_traces`, `list_runs`, `describe_run`, `search_experiments` | Qualification decision history |
-| [agent-registry](#agent-registry) | `search_experiments`, `list_runs`, `describe_run`, `search_traces` | Fleet inventory and status |
-| [executive-summary](#executive-summary) | `search_experiments`, `search_traces`, `list_runs` | Board-ready health summary |
-| [compliance-export](#compliance-export) | `search_traces`, `list_runs`, `describe_run`, `search_experiments` | JSONL/CSV export for GRC tools |
-| [aggregate-traces](#aggregate-traces) | `search_traces` | Error rates, latency, token usage trends |
+| Skill | MCP Tools Used | Status |
+|-------|---------------|--------|
+| [audit-trail](#audit-trail) | `search_traces`, `list_runs`, `describe_run` | PASS |
+| [agent-registry](#agent-registry) | `search_experiments`, `list_runs`, `describe_run` | PASS |
+| [executive-summary](#executive-summary) | `search_experiments`, `search_traces`, `list_runs` | PASS |
+| [compliance-export](#compliance-export) | `search_traces`, `list_runs`, `describe_run` | TIMEOUT in CLI — works in dashboard |
+| [aggregate-traces](#aggregate-traces) | `search_traces` | PARTIAL — large payloads may truncate |
 
 ---
 

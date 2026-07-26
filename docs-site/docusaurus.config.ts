@@ -12,10 +12,10 @@ const config: Config = {
   },
 
   url: 'https://rrbanda.github.io',
-  baseUrl: '/agentlens/',
+  baseUrl: '/agent-lens/',
 
   organizationName: 'rrbanda',
-  projectName: 'agentlens',
+  projectName: 'agent-lens',
 
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
@@ -43,7 +43,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/rrbanda/agentlens/tree/main/docs-site/',
+          editUrl: 'https://github.com/rrbanda/agent-lens/tree/main/docs-site/',
         },
         blog: false,
         theme: {
@@ -79,7 +79,7 @@ const config: Config = {
           position: 'left',
         },
         {
-          href: 'https://github.com/rrbanda/agentlens',
+          href: 'https://github.com/rrbanda/agent-lens',
           label: 'GitHub',
           position: 'right',
         },
@@ -99,8 +99,8 @@ const config: Config = {
         {
           title: 'Project',
           items: [
-            {label: 'GitHub', href: 'https://github.com/rrbanda/agentlens'},
-            {label: 'Issues', href: 'https://github.com/rrbanda/agentlens/issues'},
+            {label: 'GitHub', href: 'https://github.com/rrbanda/agent-lens'},
+            {label: 'Issues', href: 'https://github.com/rrbanda/agent-lens/issues'},
             {label: 'Roadmap', to: '/docs/roadmap'},
           ],
         },

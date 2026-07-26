@@ -51,7 +51,7 @@ graph TB
 
 1. **MCP-native** — All data access through official MLflow MCP tools. No direct SDK calls at runtime.
 2. **Skills as prompts** — Each skill is a SKILL.md file, not code. The LLM interprets it and calls MCP tools.
-3. **Upstream-first** — Never fork MLflow MCP. Missing features go upstream or into the Gateway.
+3. **Upstream-first** — Never fork MLflow MCP. Missing features go upstream.
 4. **Conversational-first** — The UI is chat. Structured output (tables, reports) rendered in conversation.
 
 ## Component Details
@@ -134,4 +134,4 @@ graph LR
 
 ## ADRs
 
-- [ADR-001: LoggedModel MCP Gap](/docs/adr/loggedmodel-gap) — Why LoggedModel operations need the Gateway
+- [ADR-001: LoggedModel MCP Gap](/docs/adr/loggedmodel-gap) — Why LoggedModel operations are not yet available via MCP

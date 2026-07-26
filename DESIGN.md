@@ -16,7 +16,7 @@ MLflow owns data. Agent Lens owns decisions.
 | MLflow (Consume — Never Rebuild) | Agent Lens (Build on Top) |
 |---|---|
 | Trace storage | Qualification lifecycle |
-| 23 built-in GenAI judges | Scorer profile selection  |
+| 20+ built-in GenAI judges | Scorer profile selection  |
 | LoggedModel registry | Qualification state + TTL |
 | Token/cost accounting | Fleet-wide cost aggregation |
 | Webhooks (15 event types) | CI/CD quality gate (synchronous) |

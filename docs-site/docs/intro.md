@@ -54,7 +54,7 @@ git clone https://github.com/rrbanda/agent-lens.git && cd agent-lens
 make dev-setup        # Create venv, install deps
 make mlflow-start     # Start local MLflow server
 make seed-data        # Populate with test traces
-make test-integration # Run 41 tests against real MCP
+make test-integration # Run integration tests against real MCP
 
 # Deploy to OpenShift
 make deploy-all       # Build image + deploy Sandbox

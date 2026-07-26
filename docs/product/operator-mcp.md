@@ -12,7 +12,7 @@ This repository does **not** deploy that MCP server.
 | MLflow tracking | `redhat-ods-applications`, port 8443 |
 | Official MCP | `redhat-ods-applications`, Service `mlflow-mcp`, port **8080**, path `/mcp` |
 | Agent Lens (production) | OpenShell **Sandbox** in namespace `openshell`, Route `agent-lens`, port 9119 |
-| Inference | LlamaStack (`llamastack` ns, port 8321) via `OPENAI_BASE_URL` env var |
+| Inference | Any OpenAI-compatible LLM (Gemini, OpenAI, Azure, Ollama, vLLM) via `OPENAI_BASE_URL` env var |
 | Image build | ImageStream/BuildConfig in namespace `agent-lens` (`python:3.13-slim` base) |
 | OpenShell Gateway | `openshell` ns, StatefulSet, port 8080, mTLS enabled |
 
@@ -71,13 +71,18 @@ MCP_URL=http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp \
 
 ## Recommended MCP env (platform-owned)
 
-| Variable | Guidance |
-|----------|----------|
-| `MLFLOW_TRACKING_URI` | In-cluster MLflow HTTPS URL |
-| `MLFLOW_TRACKING_TOKEN` | Usually projected SA token |
-| `MLFLOW_MCP_TOOLS` | Prefer GenAI tools; `all` is fine for pilots |
-| `MLFLOW_WORKSPACE` | Match your MLflow workspace (often `default`) |
-| TLS bundles | `REQUESTS_CA_BUNDLE` / `SSL_CERT_FILE` for cluster CA |
+| Variable | Guidance | Required? |
+|----------|----------|-----------|
+| `MLFLOW_TRACKING_URI` | In-cluster MLflow HTTPS URL | Yes |
+| `MLFLOW_TRACKING_TOKEN` | Usually projected SA token | Yes |
+| `MLFLOW_TRACKING_INSECURE_TLS` | Set to `true` if MLflow uses self-signed TLS (all OpenShift). **Without this, all MCP tool calls hang silently.** | Yes on OpenShift |
+| `OPENAI_API_KEY` | Required for LLM-judge scorers (`evaluate_traces`, `register_llm_judge_scorer`). Must be OpenAI-compatible — MLflow scorers default to OpenAI model names. | For LLM judges |
+| `OPENAI_BASE_URL` | OpenAI API endpoint. Default: `https://api.openai.com/v1` | For LLM judges |
+| `MLFLOW_MCP_TOOLS` | Prefer GenAI tools; `all` is fine for pilots | Optional |
+| `MLFLOW_WORKSPACE` | Match your MLflow workspace (often `default`) | Optional |
+| TLS bundles | `REQUESTS_CA_BUNDLE` / `SSL_CERT_FILE` for cluster CA | Optional |
+
+> **Critical:** The #1 deployment issue is missing `MLFLOW_TRACKING_INSECURE_TLS=true`. Without it, the MCP server's Python `requests` library rejects the self-signed TLS cert and the connection hangs — no error, no timeout message.
 
 Exact manifests are owned by the MLflow operator or your deployment stack — not this repo.
 
@@ -87,20 +92,24 @@ Sandbox pods in `openshell` must:
 
 1. Resolve cluster DNS (NetworkPolicy must allow **UDP/TCP 5353** to `openshift-dns` — OpenShift CoreDNS pod port)
 2. Reach `mlflow-mcp:8080` in `redhat-ods-applications`
-3. Reach LlamaStack `:8321` and OpenShell gateway `:8080`
+3. Reach the configured LLM endpoint and OpenShell gateway `:8080`
 
 Manifest: [`agent-lens/deploy/openshell/network-policies.yaml`](../agent-lens/deploy/openshell/network-policies.yaml).
 
 ## Common failures
 
-| Symptom | Check |
-|---------|-------|
-| Connection refused / timeout | MCP pod, Service, NetworkPolicy, wrong URL in ConfigMap |
-| Temporary failure in name resolution | NetPol DNS — allow **5353** to `openshift-dns`, not only port 53 |
-| Tools missing in Hermes | `tools.include` in `config.yaml` vs upstream names (`./scripts/check_mcp_contract.sh`) |
-| Annotate/eval fails | Judge/LLM config on MLflow side; MCP logs |
-| Dashboard INACTIVE for all agents | No traces yet — see [first-trace.md](first-trace.md) |
-| Sandbox CrashLoop / Missing SA | `openshell-sandbox` SA + SCC binding + `openshell-client-tls` in `openshell` |
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| MCP tool calls hang forever | `MLFLOW_TRACKING_INSECURE_TLS` not set on MCP server | `oc set env deployment/mlflow-mcp MLFLOW_TRACKING_INSECURE_TLS=true` |
+| Connection refused / timeout | MCP pod, Service, NetworkPolicy, wrong URL in ConfigMap | Check pod status, Service endpoints, and NetworkPolicy |
+| Temporary failure in name resolution | NetPol DNS — allow **5353** to `openshift-dns`, not only port 53 | Update NetworkPolicy |
+| LLM judges fail: OPENAI_API_KEY not set | MCP server needs its own OpenAI key | `oc set env deployment/mlflow-mcp OPENAI_API_KEY=sk-...` |
+| LLM judges fail: ChatCompletionError | MLflow scorers use OpenAI model names; Gemini keys don't work | Use a real OpenAI key on the MCP server |
+| Tools missing in Hermes | `tools.include` in `config.yaml` vs upstream names | Run `./scripts/check_mcp_contract.sh` |
+| Dashboard INACTIVE for all agents | No traces yet — see [first-trace.md](first-trace.md) | Instrument an agent and send traces |
+| Sandbox CrashLoop / Missing SA | `openshell-sandbox` SA + SCC binding + `openshell-client-tls` in `openshell` | Create SA + SCC binding |
+| Pod evicted: ephemeral-storage | Shared cluster has disk pressure from failed pods | Delete failed pods: `oc delete pods --field-selector=status.phase=Failed` |
+| Pod keeps scheduling on bad node | PVC binds pod to a specific node | Delete PVC: `oc delete pvc workspace-agent-lens -n openshell` |
 
 ## Related
 

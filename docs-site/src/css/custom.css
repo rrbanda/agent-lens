@@ -329,6 +329,11 @@
   font-weight: 600;
 }
 
+.status-partial {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
 /* CTA */
 .cta-section {
   padding: 8rem 2rem;
