@@ -12,10 +12,10 @@ const config: Config = {
   },
 
   url: 'https://rrbanda.github.io',
-  baseUrl: '/agent-lens/',
+  baseUrl: '/agentlens/',
 
   organizationName: 'rrbanda',
-  projectName: 'agent-lens',
+  projectName: 'agentlens',
 
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
