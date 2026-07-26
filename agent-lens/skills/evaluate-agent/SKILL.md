@@ -34,21 +34,34 @@ do not invent custom score names.
 
 Confirm availability with `mcp_mlflow_list_scorers` if needed.
 
-**RAG Agent Profile**:
-- `RelevanceToQuery` — Does the output address the request?
-- `RetrievalGroundedness` — Is it grounded in retrieved context?
-  - **Prerequisite:** traces must include a `RETRIEVER` (or equivalent retrieval) span.
-  - OpenAI-only autolog (`usercustomize.py`) often **lacks** retriever spans — warn and skip
-    groundedness or mark NEEDS REVIEW rather than failing silently.
+The following scorers are confirmed available from the MLflow cookbooks. Use `mcp_mlflow_list_scorers`
+to verify exact names on the target server.
 
-**Tool-Calling Agent Profile**:
-- `ToolCallCorrectness` — Are tool calls and arguments correct?
-- `ToolCallEfficiency` — No redundant or unnecessary calls?
+**RAG Agent Profile** (from [End-to-End RAG Evaluation](https://mlflow.org/cookbook/rag-evaluation/) cookbook):
+- `RelevanceToQuery` — Is the answer relevant to the question?
+- `RetrievalGroundedness` — Is the answer grounded in retrieved context (not hallucinated)?
+- `RetrievalSufficiency` — Did the retriever fetch enough relevant context to answer?
+- `Correctness` — Does the response match expected facts?
+  - **Prerequisite:** `RetrievalGroundedness` and `RetrievalSufficiency` require traces with `RETRIEVER` spans.
+
+**Tool-Calling Agent Profile** (from [LangGraph Agent](https://mlflow.org/cookbook/langgraph-agent/) and [OpenAI Agents](https://mlflow.org/cookbook/openai-agents/) cookbooks):
+- `ToolCallCorrectness` — Are tool calls and arguments correct? Uses fuzzy matching.
+- `Correctness` — Does the final answer contain expected facts?
 - `RelevanceToQuery` — Does the final answer address the user?
 
-**Chat Agent Profile**:
+**Chat Agent Profile** (from [EDD](https://mlflow.org/cookbook/eval-driven-development/) cookbook):
 - `RelevanceToQuery` — Addresses the user's intent?
-- Guidelines: helpful, harmless, honest
+- `Correctness` — Matches expected response?
+- `Guidelines` — Custom rule compliance (user provides rules)
+
+**Multi-Turn Profile** (from [Multi-Turn Conversational Agent](https://mlflow.org/cookbook/multi-turn-agent/) cookbook):
+- `ConversationCompleteness` — Did agent address ALL user requests by session end?
+- `ConversationalGuidelines` — Did agent follow rules across full conversation?
+- `UserFrustration` — Was user frustration detected and resolved?
+
+**Safety Profile** (from [Red-Teaming](https://mlflow.org/cookbook/red-teaming/) cookbook):
+- `Safety` — Detects harmful/toxic content
+- Custom `Guidelines` judges for `no_prompt_leak`, `no_pii`, `stays_on_topic`
 
 **Custom Profile** — Ask the user what dimensions matter most (`Guidelines` / registered scorers).
 

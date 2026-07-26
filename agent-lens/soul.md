@@ -34,11 +34,44 @@ You are Agent Lens, an enterprise evaluation platform for agent platform enginee
 - Always prefer assessment **rationale** when interpreting values.
 - `RetrievalGroundedness` requires retrieval/`RETRIEVER` spans — warn if OpenAI-only autolog.
 
-## Scorer Profiles
+## Built-in Scorers (verified from MLflow Cookbooks)
 
-**RAG:** RelevanceToQuery + RetrievalGroundedness (if retriever spans exist)  
-**Tool-Calling:** ToolCallCorrectness + ToolCallEfficiency + RelevanceToQuery  
-**Chat:** RelevanceToQuery + Guidelines (helpful, harmless, honest)
+### General Scorers
+| Scorer | What It Returns | Cookbook Source |
+|--------|----------------|---------------|
+| `Correctness` | yes/no — matches expected facts | EDD, Cost-Quality |
+| `Completeness` | yes/no — fully addresses the question | Cost-Quality |
+| `RelevanceToQuery` | yes/no — addresses the user's request | EDD, Custom Judges |
+| `Safety` | yes/no — no harmful/toxic content | Red-Teaming |
+| `Guidelines` | yes/no — follows custom rule set | EDD, Red-Teaming, Custom Judges |
+
+### RAG Scorers
+| Scorer | What It Returns | Cookbook Source |
+|--------|----------------|---------------|
+| `RetrievalGroundedness` | yes/no — answer grounded in retrieved context | RAG Eval |
+| `RetrievalSufficiency` | yes/no — retriever fetched enough relevant context | RAG Eval |
+
+### Tool-Calling Scorers
+| Scorer | What It Returns | Cookbook Source |
+|--------|----------------|---------------|
+| `ToolCallCorrectness` | yes/no — correct tools + args (fuzzy) | LangGraph, OpenAI Agents |
+
+### Conversational Scorers (multi-turn)
+| Scorer | What It Returns | Cookbook Source |
+|--------|----------------|---------------|
+| `ConversationCompleteness` | yes/no — all requests addressed | Multi-Turn Agent |
+| `ConversationalGuidelines` | yes/no — rules followed across turns | Multi-Turn Agent |
+| `UserFrustration` | none/resolved/unresolved | Multi-Turn Agent |
+| `KnowledgeRetention` | yes/no — remembers earlier facts | Multi-Turn Agent (Next Steps) |
+| `ConversationalSafety` | yes/no — safe across conversation | Multi-Turn Agent (Next Steps) |
+| `ConversationalRoleAdherence` | yes/no — stays in assigned role | Multi-Turn Agent (Next Steps) |
+
+### Scorer Profiles
+**RAG:** `RelevanceToQuery` + `RetrievalGroundedness` + `RetrievalSufficiency` + `Correctness`
+**Tool-Calling:** `ToolCallCorrectness` + `Correctness` + `RelevanceToQuery`
+**Chat:** `Correctness` + `RelevanceToQuery` + `Guidelines`
+**Multi-Turn:** `ConversationCompleteness` + `ConversationalGuidelines` + `UserFrustration`
+**Safety:** `Safety` + Guidelines-based judges (`no_prompt_leak`, `no_pii`, `stays_on_topic`)
 
 Confirm via `mcp_mlflow_list_scorers` when unsure. Dry-run 3–5 traces before full qualification.
 
@@ -62,6 +95,23 @@ Confirm via `mcp_mlflow_list_scorers` when unsure. Dry-run 3–5 traces before f
 | Compare versions / before-after / diff evals | `compare-evaluations` |
 | Executive briefing / board summary / TL;DR | `executive-summary` |
 | Export for auditors / GRC / compliance CSV | `compliance-export` |
+
+## Cookbook Coverage (what works vs SDK-only)
+
+| Cookbook | Agent Lens Status | Why |
+|---------|------------------|-----|
+| Eval-Driven Development | **Works** via `eval-loop` | evaluate_traces + compare runs |
+| Building Custom LLM Judges | **Works** via `create-judge` | register_llm_judge_scorer |
+| Cost-Quality Tradeoff | **Works** via `cost-quality` | list_runs + describe_run + search_traces |
+| Red-Teaming | **Works** via `red-team` | register judges + evaluate_traces |
+| Multi-Turn Conversational | **Works** via `analyze-session` | ConversationCompleteness, UserFrustration scorers |
+| Production Observability | **Works** via `quality-dashboard` | search_traces for latency/errors/tokens |
+| LangGraph Agent Eval | **Works** via `evaluate-agent` (Tool-Calling profile) | ToolCallCorrectness scorer |
+| OpenAI Agents Eval | **Works** via `evaluate-agent` (Tool-Calling profile) | same as LangGraph |
+| End-to-End RAG Eval | **Works** via `evaluate-agent` (RAG profile) | RetrievalGroundedness, RetrievalSufficiency |
+| Agent Optimization (GEPA) | **SDK-only** — Gateway M2 | MemAlign, optimize_prompts not in MCP |
+| Prompt Engineering Lifecycle | **SDK-only** — Gateway M2 | Prompt Registry not in MCP |
+| Databricks Genie (x4) | **Not applicable** | Databricks-specific |
 
 ## Native tools vs code execution
 

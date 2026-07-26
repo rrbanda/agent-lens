@@ -26,10 +26,18 @@ The loop: **Baseline → Diagnose → Fix → Re-evaluate → Compare**.
 #### Step 1.1: Identify Agent and Scorers
 
 1. `mcp_mlflow_search_experiments` — find the target experiment
-2. Ask user what dimensions matter, or suggest based on agent type:
-   - RAG: `RelevanceToQuery`, `RetrievalGroundedness`
-   - Tool-calling: `ToolCallCorrectness`, `ToolCallEfficiency`, `RelevanceToQuery`
-   - Chat: `RelevanceToQuery`, Guidelines
+2. Ask user what dimensions matter, or suggest based on agent type using the
+   **exact scorer names from the MLflow cookbook**:
+
+   | Agent Type | Recommended Scorers (from cookbook) |
+   |-----------|-----------------------------------|
+   | Customer support | `Correctness`, `RelevanceToQuery`, `Guidelines` (with domain rules) |
+   | RAG | `Correctness`, `RelevanceToQuery`, `RetrievalGroundedness` |
+   | Tool-calling | `ToolCallCorrectness`, `Correctness` |
+   | General | `Correctness`, `Completeness`, `RelevanceToQuery` |
+
+   The EDD cookbook specifically uses `Correctness` + `RelevanceToQuery` + `Guidelines` as its
+   three-scorer baseline. Default to this combination.
 3. `mcp_mlflow_list_scorers` — confirm scorers are available
 
 #### Step 1.2: Run Baseline
@@ -63,9 +71,15 @@ From the evaluation results, find traces that scored FAIL on any dimension.
 
 #### Step 2.2: Drill Into Failures
 
+The EDD cookbook reads `correctness/rationale` and `support_policies/rationale` columns
+to find patterns like:
+- "The response does not mention the 24-hour expiration for password reset links."
+- "No specific timeframe was provided for refund processing."
+- "The response fabricates a generic process rather than stating the company's actual policy."
+
 For top 3-5 failures:
 1. `mcp_mlflow_get_trace` — fetch full trace with spans
-2. Extract the scorer rationale explaining why it failed
+2. Extract the scorer rationale explaining why it failed (key: `<scorer_name>/rationale`)
 3. Group failures by pattern (common root cause)
 
 #### Step 2.3: Present Failure Analysis
@@ -98,6 +112,17 @@ For key failure traces, log what the correct output should be:
 ---
 
 ### Phase 3: Wait for Fix
+
+Tell the user what to fix. The EDD cookbook's fix was injecting a company knowledge base
+into the system prompt (SYSTEM_PROMPT_V2). Common fix patterns:
+
+| Failure Pattern | Cookbook Fix |
+|----------------|-------------|
+| Agent lacks domain knowledge | Add knowledge base / context to system prompt |
+| Agent gives vague answers | Add "always include specific steps/actions" guideline |
+| Agent fabricates information | Add "only state facts from provided knowledge base" |
+| Agent misses timeframes | Add specific SLAs/deadlines to system prompt |
+| Agent doesn't identify itself | Add branding instruction to system prompt |
 
 Tell the user:
 - What to fix (based on failure analysis)
@@ -175,6 +200,16 @@ Rules:
 - [ ] [If REGRESSED] Revert and investigate what went wrong
 - [ ] Run another EDD cycle for remaining issues
 ```
+
+## Adding Custom Scorers Mid-Cycle
+
+The EDD cookbook shows adding a custom scorer (`mentions_acme`) after the first improvement
+to check domain-specific quality. In Agent Lens, use `create-judge` to register a new scorer
+mid-cycle, then include it in the re-evaluation. This keeps the EDD loop iterative:
+
+1. Fix the obvious failures (EDD cycle 1)
+2. Add a domain-specific judge (EDD cycle 2) — catches issues built-in scorers miss
+3. Iterate until all scorers pass
 
 ## Multi-Cycle Support
 

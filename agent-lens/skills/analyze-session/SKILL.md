@@ -31,24 +31,43 @@ Sessions are traces sharing metadata key `mlflow.trace.session` (dots in the key
    - Exclude assessments with `feedback.error` (scorer failure ≠ agent failure)
    - Always surface **rationale**
 
-### Optional: Conversational Quality Evaluation
+### Conversational Quality Evaluation
 
-When the user asks to *evaluate* session quality (not just debug), add these steps:
+When the user asks to *evaluate* session quality (not just debug), use MLflow's built-in
+conversational scorers. These were designed specifically for multi-turn evaluation
+(see [MLflow Cookbook: Evaluating a Multi-Turn Conversational Agent](https://mlflow.org/cookbook/multi-turn-agent/)).
 
-6. **Turn-by-turn evaluation:** Run `mcp_mlflow_evaluate_traces` on the session's traces with `RelevanceToQuery` to get per-turn quality scores.
+6. **Run conversational scorers:** Call `mcp_mlflow_evaluate_traces` with the session's trace IDs
+   and these built-in conversational scorers (verify availability via `mcp_mlflow_list_scorers` first):
 
-7. **Quality degradation check:** Compare pass rates across early turns (1-3) vs late turns (N-2 to N). If late turns score lower, flag as "quality degradation" — a common issue in long conversations where context windows fill up.
+   | Scorer | What It Checks | Returns |
+   |--------|---------------|---------|
+   | `ConversationCompleteness` | Did the agent address ALL user requests by the end? | `"yes"` / `"no"` |
+   | `ConversationalGuidelines` | Did the agent follow specified rules across the full conversation? | `"yes"` / `"no"` |
+   | `UserFrustration` | Did the user show frustration, and was it resolved? | `"none"` / `"resolved"` / `"unresolved"` |
+   | `KnowledgeRetention` | Did the agent remember facts from earlier turns? | `"yes"` / `"no"` |
+   | `ConversationalSafety` | Did the agent maintain safety across the conversation? | `"yes"` / `"no"` |
+   | `ConversationalRoleAdherence` | Did the agent stay in its assigned role? | `"yes"` / `"no"` |
 
-8. **Conversational coherence:** If no custom conversational judge exists, suggest creating one via `create-judge`:
-   - "Does the agent maintain context from previous turns?"
-   - "Does the agent avoid repeating information already provided?"
-   - "Does the agent correctly reference entities introduced in earlier turns?"
+   **Default scorer set for session eval:** `ConversationCompleteness`, `UserFrustration`, `ConversationalGuidelines`.
+   Only add `ConversationalGuidelines` when the user provides specific rules to check against.
 
-9. **Session-level verdict:** Aggregate per-turn scores into a session quality summary:
-   - ALL TURNS PASS: Session quality GOOD
-   - Late turns degrade: CONTEXT DEGRADATION
-   - Scattered failures: INCONSISTENT
-   - Multiple consecutive failures: BREAKDOWN at turn N
+7. **Interpret results using the cookbook interpretation pattern:**
+
+   | Completeness | Guidelines | Frustration | Meaning |
+   |-------------|-----------|-------------|---------|
+   | yes | yes | none | Clean conversation — all questions answered |
+   | yes | no | unresolved | Agent violated rules; user frustrated and unresolved |
+   | no | yes | none | Agent missed some requests but followed rules |
+   | no | no | unresolved | Broken conversation — needs immediate attention |
+
+8. **Quality degradation check:** Compare per-turn `RelevanceToQuery` scores across early turns
+   (1-3) vs late turns (N-2 to N). If late turns score lower, flag as "quality degradation."
+
+9. **Session-level verdict:**
+   - GOOD: Completeness=yes AND Frustration=none
+   - NEEDS ATTENTION: Completeness=no OR Frustration=resolved
+   - CRITICAL: Frustration=unresolved OR multiple guideline violations
 
 Never `import mlflow` in the sandbox.
 
@@ -96,5 +115,7 @@ Never `import mlflow` in the sandbox.
 
 - If session metadata is missing, say so and fall back to single-trace `review-trace`.
 - Do not fetch full JSON for every turn when a search listing is enough.
-- Conversational evaluation is **optional** — only run when user asks to evaluate quality, not for basic debugging.
-- If no conversational scorer exists, suggest `create-judge` with coherence criteria.
+- Conversational evaluation uses MLflow's built-in conversational scorers — do NOT create custom judges for
+  completeness, frustration, or role adherence. These are built in.
+- Only run conversational scorers when user asks to evaluate quality, not for basic debugging.
+- `ConversationalGuidelines` requires explicit guideline strings — ask the user or derive from agent's system prompt.

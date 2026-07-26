@@ -32,44 +32,75 @@ If the user is vague, propose concrete criteria and ask for confirmation.
 
 ### Step 2: Select Judge Type
 
-| Type | When to Use | Template Variables |
-|------|-------------|-------------------|
-| Input/Output judge | Evaluate final answers | `{{ inputs }}`, `{{ outputs }}` |
-| Expectation judge | Compare against ground truth | `{{ inputs }}`, `{{ outputs }}`, `{{ expectations }}` |
-| Trace-based judge | Evaluate reasoning/tool use | `{{ inputs }}`, `{{ outputs }}`, `{{ trace }}` |
+The [MLflow Custom Judges Cookbook](https://mlflow.org/cookbook/custom-llm-judges/) shows three
+types of custom judges. Agent Lens maps them to MCP tools:
 
-Default to **Input/Output** unless the user's criteria require trace inspection or expected outputs.
+| Cookbook Pattern | MLflow SDK | Agent Lens MCP Tool | When to Use |
+|----------------|-----------|---------------------|-------------|
+| `Guidelines(name=..., guidelines=[...])` | Built-in | `mcp_mlflow_register_llm_judge_scorer` | Rule-based checks (policy, format, tone) |
+| `@scorer` with code logic | Built-in | Not available via MCP | Deterministic checks (use Guidelines approximation) |
+| Custom LLM judge calling OpenAI | Custom | `mcp_mlflow_register_llm_judge_scorer` | Complex domain-specific evaluation |
+
+**Default to Guidelines-style** — it covers most use cases and maps directly to `register_llm_judge_scorer`.
 
 ### Step 3: Generate Instructions
 
-Compose the `instructions` parameter following MLflow best practices:
+Compose instructions following the exact patterns from the MLflow cookbook:
 
-1. Be specific about what to evaluate
-2. Describe what constitutes a pass vs fail
-3. Reference the template variables
-4. Keep instructions under 500 words
+**Pattern 1: Guidelines-style (most common)**
 
-**Example (policy compliance):**
+From the cookbook, `Guidelines` checks are lists of rules. Via MCP, compose them as instructions:
+
 ```
-Evaluate whether the agent's response ({{ outputs }}) correctly references
-the company's privacy policy when the user's question ({{ inputs }}) involves
-personal data handling, data deletion, or data sharing.
-
-PASS: The response explicitly mentions relevant privacy policy sections or
-directs the user to the privacy policy page.
-FAIL: The response discusses personal data without referencing the privacy
-policy, or gives advice that contradicts the policy.
+name: conciseness
+instructions: |
+  Check whether {{ outputs }} follows these guidelines when responding to {{ inputs }}:
+  - Response must be under 500 words
+  - Response must avoid unnecessary filler phrases
+  Return "yes" if all guidelines are met, "no" if any are violated.
+  Include a rationale explaining which guideline was violated.
 ```
 
-**Example (tool call validation):**
-```
-Analyze the agent's execution trace ({{ trace }}) to determine if tool calls
-follow rate-limiting rules.
+**Pattern 2: Section/structure validation**
 
-PASS: No more than 3 API calls per tool within a single trace, and retry
-logic uses exponential backoff.
-FAIL: More than 3 calls to the same tool without backoff, or any tool
-called more than 5 times total.
+From the cookbook `has_required_sections` pattern:
+
+```
+name: has_required_sections
+instructions: |
+  Check whether {{ outputs }} contains all required sections: Overview, Details, Disclaimer.
+  Return "yes" if all sections are present, "no" if any are missing.
+  In the rationale, list which sections are missing.
+```
+
+**Pattern 3: Domain-specific judgment**
+
+From the cookbook `medical_tone_judge` pattern:
+
+```
+name: medical_tone
+instructions: |
+  Rate the medical information in {{ outputs }} responding to {{ inputs }}.
+  Check:
+  1. Uses appropriate medical terminology
+  2. Avoids definitive diagnostic language
+  3. Includes a disclaimer about consulting professionals
+  4. Maintains a neutral, informative tone
+  Return "yes" if all criteria are met, "no" if any fail.
+```
+
+**Pattern 4: Source citation check**
+
+From the cookbook `source_citation` pattern:
+
+```
+name: source_citation
+instructions: |
+  Check whether {{ outputs }} properly cites sources when making factual claims.
+  Guidelines:
+  - Response must cite sources when making factual claims
+  - Response must not present opinions as facts
+  Return "yes" if citation practices are adequate, "no" otherwise.
 ```
 
 ### Step 4: Register the Scorer

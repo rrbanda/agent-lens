@@ -6,7 +6,7 @@ description: "Analyze cost vs quality tradeoffs across evaluation runs. Use when
 # Cost-Quality Tradeoff Analysis
 
 Compare quality and cost across evaluation runs to find the optimal tradeoff via **upstream official MLflow MCP**.
-Inspired by [MLflow Cookbook: Cost-Quality Tradeoff Analysis Across LLM Providers](https://mlflow.org/cookbook/cost-quality-tradeoff-analysis).
+Based on [MLflow Cookbook: Cost-Quality Tradeoff Analysis Across LLM Providers](https://mlflow.org/cookbook/cost-quality-tradeoff/).
 
 Helps platform engineers answer: "Which configuration gives the best quality for the budget?"
 
@@ -29,25 +29,40 @@ Helps platform engineers answer: "Which configuration gives the best quality for
 ### Step 2: Gather Evaluation Runs
 
 Call `mcp_mlflow_list_runs` for the experiment:
-- Filter for evaluation runs (look for runs with scorer metrics)
+- Filter for evaluation runs (look for runs with scorer metrics like `correctness/mean`, `completeness/mean`)
 - Retrieve at least 2 runs for comparison (ideally 3-5)
 
 For each run, call `mcp_mlflow_describe_run` to extract:
-- **Quality metrics**: pass rates per scorer, overall pass rate
+- **Quality metrics**: The cookbook uses `Correctness` and `Completeness` as primary scorers.
+  Look for `correctness/mean` and `completeness/mean` in run metrics.
 - **Run metadata**: model used, timestamp, parameters, tags
-- **Run name**: often encodes the configuration being tested
+- **Run name**: often encodes the model/configuration being tested (e.g., "gpt-4o-mini", "gpt-4o")
 
 ### Step 3: Gather Cost Data from Traces
 
-For each run's associated traces (via `mcp_mlflow_search_traces`):
-- Extract `mlflow.chat.tokenUsage` from span attributes (input_tokens, output_tokens, total_tokens)
-- Extract `mlflow.llm.cost` if available (direct cost in USD)
-- Compute `duration_ms` from trace timing
+The [MLflow Cost-Quality Cookbook](https://mlflow.org/cookbook/cost-quality-tradeoff/) shows that
+token usage is automatically captured when `mlflow.openai.autolog()` is enabled and stored
+in `trace.info.token_usage`.
 
-If cost data is not directly available, estimate from token counts:
-- GPT-4o: ~$2.50/1M input, ~$10/1M output
-- GPT-4o-mini: ~$0.15/1M input, ~$0.60/1M output
-- Claude Sonnet: ~$3/1M input, ~$15/1M output
+For each run, call `mcp_mlflow_search_traces` (filter by `run_id` if possible):
+
+**Token usage extraction** (from the cookbook's `sum_token_usage` pattern):
+- Look for `token_usage` in trace info: `trace.info.token_usage.input_tokens`, `.output_tokens`
+- If not in `token_usage`, check `trace.info.request_metadata["mlflow.trace.tokenUsage"]`
+  (JSON string with `input_tokens` and `output_tokens`)
+- Sum across all traces for per-run totals
+
+**Cost estimation** (from the cookbook's `estimate_cost` pattern):
+Apply per-token pricing to recorded usage:
+
+| Model | Input (per 1M tokens) | Output (per 1M tokens) |
+|-------|----------------------|----------------------|
+| gpt-4o-mini | $0.15 | $0.60 |
+| gpt-4o | $2.50 | $10.00 |
+| gpt-5.4-mini | ~$0.15 | ~$0.60 |
+| Claude Sonnet | ~$3.00 | ~$15.00 |
+
+**Key metric from cookbook:** `cost_per_correct_pct` = total_cost / correctness_mean
 
 State clearly when using estimates vs actual costs.
 

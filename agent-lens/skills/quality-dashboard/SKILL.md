@@ -6,7 +6,7 @@ description: "Generate a full observability summary across all tracked agents: t
 # Quality Dashboard
 
 Fleet-wide observability summary for agent platform engineers across all tracked agents via **upstream official MLflow MCP**.
-Inspired by [MLflow Cookbook: Production Observability with MLflow Tracing](https://mlflow.org/cookbook/production-observability).
+Based on [MLflow Cookbook: Production Observability with MLflow Tracing](https://mlflow.org/cookbook/production-observability/).
 
 Quality from GenAI scorers is a **pass rate** (yes/no), not a 1–5 Likert. Prefer error rate +
 latency for health when evaluation metrics are absent.
@@ -18,11 +18,12 @@ latency for health when evaluation metrics are absent.
 3. For each selected experiment:
    - `mcp_mlflow_search_traces` with that experiment id (`max_results` 50)
    - Optionally `mcp_mlflow_list_runs` for recent evaluation metrics / pass rates
-4. Extract operational metrics from trace data:
-   - **Error rate**: count of `state: ERROR` / total traces
-   - **Latency**: compute p50 and p95 from trace `duration_ms` values
-   - **Token cost**: extract `mlflow.chat.tokenUsage` and `mlflow.llm.cost` from span attributes when available
-   - **Throughput**: traces per hour (from trace timestamps)
+4. Extract operational metrics from trace data following the cookbook's exact patterns:
+   - **Error rate**: `sum(1 for t in traces if t.info.status == "ERROR") / len(traces) * 100`
+   - **Latency**: sort `execution_time_ms` values, compute `p50 = latencies[len//2]`, `p95 = latencies[int(len*0.95)]`
+   - **Token usage**: from `trace.info.token_usage` (dict with `input_tokens`, `output_tokens`)
+     or `trace.info.request_metadata["mlflow.trace.tokenUsage"]` (JSON string)
+   - **Throughput**: traces per hour from trace timestamps
 5. Compute status with the criteria table (code execution may aggregate MCP JSON only).
 6. Format the Observatory output below.
 
@@ -105,12 +106,23 @@ Scan cap: N experiments (truncated: yes/no)
 
 ## Token Cost Extraction
 
-When traces contain cost/token data in span attributes:
-- `mlflow.chat.tokenUsage.input_tokens` — prompt tokens
-- `mlflow.chat.tokenUsage.output_tokens` — completion tokens
-- `mlflow.llm.cost` — direct cost in USD (if provider reports it)
+From the [Production Observability Cookbook](https://mlflow.org/cookbook/production-observability/),
+token usage is in two possible locations:
 
-If cost data is unavailable for an agent, show "n/a" and recommend enabling MLflow cost tracking.
+**Primary (MLflow 3.x):** `trace.info.token_usage`
+```json
+{"input_tokens": 420, "output_tokens": 690, "total_tokens": 1110}
+```
+
+**Fallback (earlier versions):** `trace.info.request_metadata["mlflow.trace.tokenUsage"]`
+(JSON string, parse it first)
+
+To sum across traces (from the cookbook's pattern):
+- total_input = sum of `usage.input_tokens` across all traces
+- total_output = sum of `usage.output_tokens` across all traces
+
+If cost data is unavailable for an agent, show "n/a" and recommend enabling MLflow autolog
+(`mlflow.openai.autolog()` or equivalent).
 Never fabricate cost numbers.
 
 ## Throughput Calculation
