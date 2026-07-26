@@ -30,13 +30,20 @@ const config: Config = {
   },
   themes: ['@docusaurus/theme-mermaid'],
 
+  stylesheets: [
+    {
+      href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap',
+      type: 'text/css',
+    },
+  ],
+
   presets: [
     [
       'classic',
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/rrbanda/agent-lens/tree/main/docs-site/',
+          editUrl: 'https://github.com/rrbanda/agentlens/tree/main/docs-site/',
         },
         blog: false,
         theme: {
@@ -49,7 +56,8 @@ const config: Config = {
   themeConfig: {
     image: 'img/agent-lens-social.png',
     colorMode: {
-      respectPrefersColorScheme: true,
+      defaultMode: 'dark',
+      respectPrefersColorScheme: false,
     },
     navbar: {
       title: 'Agent Lens',
@@ -71,7 +79,7 @@ const config: Config = {
           position: 'left',
         },
         {
-          href: 'https://github.com/rrbanda/agent-lens',
+          href: 'https://github.com/rrbanda/agentlens',
           label: 'GitHub',
           position: 'right',
         },
@@ -91,8 +99,8 @@ const config: Config = {
         {
           title: 'Project',
           items: [
-            {label: 'GitHub', href: 'https://github.com/rrbanda/agent-lens'},
-            {label: 'Issues', href: 'https://github.com/rrbanda/agent-lens/issues'},
+            {label: 'GitHub', href: 'https://github.com/rrbanda/agentlens'},
+            {label: 'Issues', href: 'https://github.com/rrbanda/agentlens/issues'},
             {label: 'Roadmap', to: '/docs/roadmap'},
           ],
         },
