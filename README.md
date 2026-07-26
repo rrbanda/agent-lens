@@ -23,7 +23,7 @@
 
 ---
 
-> **Verified working** — 16 skills shipping, 14 verified end-to-end on OpenShift 4.18 with Hermes v0.19 + MLflow MCP 3.14 (July 2026).
+> **Verified working** — 16 skills shipping, 14 verified end-to-end on OpenShift 4.18 + MLflow MCP 3.14 (July 2026).
 > 4 experiments, 34 traces, 6 runs tested live. LLM-judge skills require an OpenAI-compatible API key on the MLflow MCP server. See [test results](#verified-end-to-end).
 
 MLflow is the **data plane** — traces, scorers, models.
@@ -32,6 +32,8 @@ Agent Lens is the **decision plane** — verdicts, governance, fleet management.
 Agent Lens is **not** another MLflow UI. It is a conversational qualification layer that drives
 **upstream official [MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/)** so agent platform engineers
 can evaluate, qualify, and govern AI agents in natural language.
+
+**Framework-agnostic by design.** Agent Lens evaluates any agent that sends traces to MLflow — regardless of framework. LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, AutoGen, LlamaIndex, or your own custom agent. If MLflow can trace it, Agent Lens can qualify it.
 
 ---
 
@@ -60,7 +62,7 @@ Full persona detail: [docs/product/personas.md](docs/product/personas.md).
 - You need CI/CD quality gates that block bad agents, not just dashboards you forget to check
 - Compliance requires an audit trail of who qualified what, when, and with what evidence
 - You want to evaluate agents via chat, not by writing Python evaluation scripts
-- You manage a heterogeneous fleet (LangChain, CrewAI, custom) and need one surface for all of them
+- You manage a heterogeneous fleet (LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, custom) and need one surface for all of them
 
 ---
 
@@ -257,7 +259,7 @@ block-beta
     columns 4
     block:agentlens["AGENT LENS"]:4
         columns 4
-        QL["Qualification\nLifecycle"] SK["16 Hermes\nSkills (SKILL.md)"] CF["Config\n(YAML)"] DP["Deploy\n(K8s)"]
+        QL["Qualification\nLifecycle"] SK["16 Skills\n(SKILL.md)"] CF["Config\n(YAML)"] DP["Deploy\n(K8s)"]
         SP["Scorer\nProfiles"] FO["Fleet\nObservatory"] EDD["EDD\nLoop"] RT["Red Team\n+ Judges"]
     end
     space:4
@@ -282,7 +284,7 @@ See [DESIGN.md](DESIGN.md) for the design principles behind these decisions.
 | **Not a trace store.** | All trace data lives in MLflow. Agent Lens reads it via MCP. |
 | **Not a model registry.** | LoggedModel in MLflow is the source of truth. Agent Lens adds lifecycle tags. |
 | **Not an observability platform.** | Observability is traces in MLflow. Agent Lens adds judgment on top. |
-| **Not a dashboard.** | It is conversational-first. The UI is the Hermes chat. |
+| **Not a dashboard.** | It is conversational-first. The UI is the agent chat interface. |
 
 ---
 
@@ -330,7 +332,7 @@ oc set env deployment/mlflow-mcp OPENAI_API_KEY=sk-... -n <mlflow-namespace>
 ```
 
 > **Two separate services need API keys.** The `LLM_API_KEY` in the Agent Lens secret
-> powers the Hermes agent (any OpenAI-compatible provider works). The `OPENAI_API_KEY` on
+> powers the conversational agent (any OpenAI-compatible provider works). The `OPENAI_API_KEY` on
 > the MLflow MCP deployment powers MLflow's built-in LLM-judge scorers (needs an actual
 > OpenAI-compatible key with matching model names). 12 out of 16 skills work without any
 > key on the MCP server.
@@ -355,12 +357,72 @@ Can this agent be deployed?
 
 | This repo deploys | You must already have |
 |---|---|
-| Hermes Agent Lens OpenShell Sandbox (`agent-lens/deploy/openshell/`) | MLflow Tracking Server |
-| Skills, soul, Kubernetes manifests | **Official MLflow MCP** service (`mlflow mcp run`) |
-| Instrumentation helpers | OpenShell platform on cluster |
-| | An OpenAI-compatible LLM API key |
+| Agent Lens OpenShell Sandbox (`agent-lens/deploy/openshell/`) | MLflow Tracking Server |
+| 16 skills (SKILL.md), soul.md, config.yaml | **Official MLflow MCP** service (`mlflow mcp run`) |
+| Instrumentation helpers | An MCP-capable agent harness (ships with Hermes; see [other runtimes](#agent-harness-runtime)) |
+| Kubernetes manifests | An OpenAI-compatible LLM API key |
 
 `make deploy-all` deploys the **Sandbox** into `openshell`. It does **not** install MLflow, MCP, or OpenShell.
+
+---
+
+## Supported agent frameworks
+
+Agent Lens evaluates **any agent that sends traces to MLflow**. The framework you built your agent with doesn't matter — only that MLflow receives traces.
+
+| Framework | How traces reach MLflow | Instrumentation |
+|-----------|------------------------|-----------------|
+| **LangGraph** | `mlflow.langchain.autolog()` | One-line autolog — traces flow automatically |
+| **Google ADK** | `mlflow.tracing.enable()` or ADK's built-in tracing with MLflow export | Configure `MLFLOW_TRACKING_URI` on your ADK agent |
+| **LangChain** | `mlflow.langchain.autolog()` | One-line autolog — traces flow automatically |
+| **CrewAI** | `mlflow.crewai.autolog()` | One-line autolog — traces flow automatically |
+| **OpenAI Agents SDK** | `mlflow.openai.autolog()` | One-line autolog — traces flow automatically |
+| **AutoGen** | `mlflow.autogen.autolog()` or `@mlflow.trace` decorator | Autolog or manual tracing |
+| **LlamaIndex** | `mlflow.llama_index.autolog()` | One-line autolog — traces flow automatically |
+| **Custom Python agent** | `@mlflow.trace` decorator or `usercustomize.py` drop-in | See [instrumentation/](instrumentation/) |
+| **Any language** | MLflow REST API (`POST /api/2.0/mlflow/traces`) | HTTP — no SDK needed |
+
+**Zero-code option:** Drop `instrumentation/usercustomize.py` into your Python agent's site-packages and set `MLFLOW_TRACKING_URI`. No code changes to your agent.
+
+```bash
+cp instrumentation/usercustomize.py $(python -m site --user-site)/
+export MLFLOW_TRACKING_URI="https://your-mlflow:8443"
+export MLFLOW_EXPERIMENT_NAME="my-agent"
+```
+
+Once traces arrive in MLflow, Agent Lens can evaluate, qualify, and govern them — regardless of which framework produced them.
+
+---
+
+## Agent harness runtime
+
+Agent Lens ships with **Hermes** as the reference MCP-capable agent harness. However, the core artifacts — skills (`SKILL.md`), soul (`soul.md`), config (`config.yaml`) — are **portable markdown and YAML files** that work with any MCP-capable agent runtime.
+
+### What's harness-specific vs harness-independent
+
+| Layer | Harness-independent? | Notes |
+|-------|---------------------|-------|
+| **Skills** (`agent-lens/skills/*.md`) | Yes | Plain markdown prompt documents. Any MCP agent can interpret them. |
+| **Soul** (`agent-lens/soul.md`) | Yes | Agent identity and constraints. Standard prompt engineering. |
+| **Config** (`agent-lens/config.yaml`) | Mostly | MCP URL and tool allowlist are universal. Some keys may be harness-specific. |
+| **Containerfile** | No | Installs specific harness (Hermes). Replace for your runtime. |
+| **startup.sh** | No | Launches Hermes processes. Replace for your runtime. |
+| **K8s manifests** | Mostly | Pod structure is generic. Env vars may reference harness-specific config. |
+
+### Using Agent Lens with other runtimes
+
+To run Agent Lens on a different MCP-capable agent framework:
+
+1. **Keep as-is:** All files in `agent-lens/skills/`, `agent-lens/soul.md`, `agent-lens/config.yaml`
+2. **Replace:** `agent-lens/Containerfile` and `agent-lens/deploy/openshell/startup.sh` with your harness startup
+3. **Configure:** Point your harness at the MLflow MCP server URL from `config.yaml`
+4. **Load skills:** Import the SKILL.md files as your harness's prompt/skill format
+
+The skills use standard MCP tool call patterns (`mcp_mlflow_search_experiments`, `mcp_mlflow_get_trace`, etc.) that any MCP client can execute.
+
+### Why Hermes ships as default
+
+Hermes provides MCP tool calling, skill routing, session management, and a built-in web dashboard — all needed for a conversational qualification interface. But it is **one choice**, not a hard dependency. The architecture explicitly separates harness concerns from qualification logic.
 
 ---
 
@@ -383,7 +445,7 @@ Full detail: [docs/product/limitations.md](docs/product/limitations.md).
 
 ```
 agent-lens/
-├── agent-lens/          # Hermes: soul, config, skills, OpenShift deploy
+├── agent-lens/          # Runtime: soul, config, skills, OpenShift deploy
 │   ├── soul.md          # Agent identity, constraints, intent routing
 │   ├── config.yaml      # MCP endpoint URL + tool allowlist
 │   ├── skills/          # SKILL.md files — evaluation workflows
@@ -423,7 +485,7 @@ Full roadmap: [docs/product/roadmap.md](docs/product/roadmap.md).
 
 ## Verified end-to-end
 
-Tested on OpenShift 4.18 with Hermes v0.19.0 + Gemini 2.5 Flash + MLflow MCP 3.14 (July 2026).
+Tested on OpenShift 4.18 with Gemini 2.5 Flash + MLflow MCP 3.14 (July 2026). Reference runtime: Hermes v0.19.
 4 experiments, 34 traces, 6 runs tested live against real MLflow data.
 
 | Skill | MCP Tools Exercised | Result | Notes |
@@ -466,7 +528,7 @@ make test-integration # Run 41 integration tests against real MCP
 | LLM judges fail: "OPENAI_API_KEY not set" | MLflow MCP server needs its own OpenAI key (separate from Agent Lens) | `oc set env deployment/mlflow-mcp OPENAI_API_KEY=sk-...` |
 | LLM judges fail: ChatCompletionError | MLflow scorers use OpenAI model names by default; Gemini keys don't work | Use a real OpenAI key on the MCP server, or an API proxy |
 | Pod evicted: ephemeral-storage | Shared cluster with disk pressure from failed pods / images | Delete failed pods, or delete PVC to reschedule on healthy node |
-| compliance-export times out | Skill makes many sequential MCP calls; CLI mode has short timeout | Use the Hermes dashboard instead of `hermes -z` CLI |
+| compliance-export times out | Skill makes many sequential MCP calls; CLI mode has short timeout | Use the web dashboard instead of CLI mode |
 | aggregate-traces truncates results | Large trace payloads exceed context window | Limit to a single experiment or recent traces |
 
 Full troubleshooting guide: [docs-site: Getting Started](https://rrbanda.github.io/agent-lens/getting-started#troubleshooting).
@@ -499,7 +561,7 @@ For AI coding agents (Cursor, Claude Code, Codex): see [AGENTS.md](AGENTS.md).
 - [MLflow](https://mlflow.org/) GenAI evaluation APIs (built-in scorers)
 - [Official MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/) (`mlflow mcp run`) — 19 tools
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Hermes Agent](https://github.com/hermes-ai/hermes-agent) — conversational AI framework
+- Any MCP-capable agent harness (ships with [Hermes](https://github.com/hermes-ai/hermes-agent); see [other runtimes](#agent-harness-runtime))
 - Any OpenAI-compatible LLM (Gemini, OpenAI, Azure, Ollama, vLLM)
 - [Kubernetes](https://kubernetes.io/) (tested on OpenShift 4.18)
 

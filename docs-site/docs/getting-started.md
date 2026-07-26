@@ -16,7 +16,7 @@ title: Getting Started
 
 | Service | What it needs | Why |
 |---------|---------------|-----|
-| **Agent Lens (Hermes)** | Any OpenAI-compatible API key | Powers the conversational agent that talks to you |
+| **Agent Lens (agent harness)** | Any OpenAI-compatible API key | Powers the conversational agent that talks to you |
 | **MLflow MCP Server** | `OPENAI_API_KEY` + `MLFLOW_TRACKING_INSECURE_TLS` | Required for LLM-judge scorers (`evaluate_traces`, `register_llm_judge_scorer`) and TLS connectivity to MLflow |
 
 ## Local Development
@@ -43,7 +43,7 @@ make test-integration
 DASH_PW=YourPassword API_KEY=YourKey LLM_API_KEY=YourGeminiOrOpenAIKey make secret-openshell
 ```
 
-The `LLM_API_KEY` is mounted as `OPENAI_API_KEY` inside the Hermes pod. Any OpenAI-compatible key works (Gemini, OpenAI, Azure, Ollama).
+The `LLM_API_KEY` is mounted as `OPENAI_API_KEY` inside the Agent Lens pod. Any OpenAI-compatible key works (Gemini, OpenAI, Azure, Ollama).
 
 ### Step 2: Configure the MLflow MCP Server
 
@@ -211,9 +211,9 @@ oc get route agent-lens -n openshell -o jsonpath='{.spec.port.targetPort}'
 
 **Symptom:** Simple MCP queries work but complex skills (executive-summary, compliance-export) time out in CLI mode.
 
-**Cause:** Some skills require multiple sequential MCP calls. The `hermes -z` CLI mode has shorter timeouts than the dashboard.
+**Cause:** Some skills require multiple sequential MCP calls. CLI mode has shorter timeouts than the dashboard.
 
-**Fix:** Use the Hermes web dashboard instead of CLI mode for complex skills. The dashboard handles long-running MCP workflows better.
+**Fix:** Use the web dashboard instead of CLI mode for complex skills. The dashboard handles long-running MCP workflows better.
 
 ### Which skills work without an OpenAI key?
 

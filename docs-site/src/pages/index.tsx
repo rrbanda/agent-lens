@@ -14,6 +14,7 @@ function Hero() {
         <p className="hero-subtitle">
           Agent Lens is the conversational quality gate for MLflow.
           Evaluate, qualify, and govern your agent fleet — in plain English.
+          Works with any framework: LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, and more.
         </p>
         <div className="hero-buttons">
           <Link className="btn-primary" to="/docs/">
@@ -114,9 +115,9 @@ const features = [
     description: '>=80% scorer pass rate + <5% error rate = QUALIFIED. Evidence-based decisions, not gut feelings.',
   },
   {
-    icon: '✅',
-    title: 'Production Verified',
-    description: '14 of 16 skills verified end-to-end on OpenShift 4.18 with Hermes v0.19 + MLflow MCP 3.14 against live data.',
+    icon: '🔌',
+    title: 'Framework Agnostic',
+    description: 'Evaluates any agent that sends traces to MLflow — LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, AutoGen, or custom.',
   },
 ];
 
@@ -196,7 +197,7 @@ function CTA() {
       <div className="container">
         <h2 className="cta-title">Stop guessing if your agents work.</h2>
         <p className="cta-subtitle">
-          Open source. Self-hosted. Runs on any Kubernetes cluster with MLflow.
+          Open source. Self-hosted. Framework-agnostic. Runs on any Kubernetes cluster with MLflow.
         </p>
         <div className="hero-buttons">
           <Link className="btn-primary" href="https://github.com/rrbanda/agentlens">

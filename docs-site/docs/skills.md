@@ -5,7 +5,9 @@ title: Skills Reference
 
 # Skills Reference
 
-Agent Lens ships with 16 skills — 7 core evaluation skills, 4 advanced evaluation skills, and 5 operational skills for fleet management. Each skill is a `SKILL.md` file that guides the LLM on which MCP tools to call and how to format results.
+Agent Lens ships with 16 skills — 7 core evaluation skills, 4 advanced evaluation skills, and 5 operational skills for fleet management. Each skill is a `SKILL.md` file (a portable markdown prompt document) that guides the LLM on which MCP tools to call and how to format results.
+
+Skills are **framework-agnostic** — they evaluate any agent that sends traces to MLflow, regardless of whether the agent was built with LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, or custom code. Skills are also **harness-independent** — they work with any MCP-capable agent runtime, not just the reference Hermes deployment.
 
 ## Verified End-to-End (July 2026)
 

@@ -60,13 +60,13 @@ hardcoded application logic.
 - A skill is a markdown file, not Python code
 - Skills declare which MCP tools they use — the allowlist is enforced by CI
 - New evaluation workflows are added by writing a new `SKILL.md`, not by modifying
-  the Hermes agent source
+  the agent harness source
 - There are **no** custom service components — only skills, configs, and K8s manifests
 
 **Why:**
 - Skills are auditable — a security reviewer can read markdown
 - Skills are composable — the agent chains them as needed
-- Skills are portable — if we switch from Hermes to another harness, skills transfer
+- Skills are portable — they work with any MCP-capable agent harness, not just the reference runtime
 - Custom code means custom bugs; skills leverage MLflow's tested judge implementations
 - MLflow AI Gateway already provides governed LLM access, automatic tracing,
   cost tracking, and automatic evaluation — no need to rebuild any of that

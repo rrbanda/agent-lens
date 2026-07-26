@@ -79,6 +79,11 @@ const config: Config = {
           position: 'left',
         },
         {
+          to: '/docs/frameworks',
+          label: 'Frameworks',
+          position: 'left',
+        },
+        {
           href: 'https://github.com/rrbanda/agentlens',
           label: 'GitHub',
           position: 'right',

@@ -17,7 +17,7 @@ graph TB
     end
     
     subgraph AgentLens["Agent Lens (OpenShell Sandbox)"]
-        Hermes[Hermes v0.19]
+        Harness[Agent Harness]
         Soul[soul.md]
         Skills[16 Skills]
         Config[config.yaml]
@@ -33,14 +33,14 @@ graph TB
         Evals[Evaluation Runs]
     end
     
-    PE -->|chat| Hermes
-    DEV -->|chat| Hermes
+    PE -->|chat| Harness
+    DEV -->|chat| Harness
     CICD -->|mlflow.genai.evaluate| MLflow
     
-    Hermes --> Soul
-    Hermes --> Skills
-    Hermes --> Config
-    Hermes -->|MCP tools| MLflowMCP
+    Harness --> Soul
+    Harness --> Skills
+    Harness --> Config
+    Harness -->|MCP tools| MLflowMCP
     
     MLflowMCP --> MLflow
     MLflow --> Traces
@@ -56,14 +56,30 @@ graph TB
 
 ## Component Details
 
-### Hermes Agent
+### Agent Harness (runtime)
 
-The Hermes conversational AI framework provides:
-- Tool calling via MCP (streamable HTTP transport)
-- Skill discovery and routing
-- Session management and memory
-- Dashboard with auth
-- Works with any OpenAI-compatible LLM (Gemini, OpenAI, Azure, Ollama, vLLM)
+Agent Lens requires an MCP-capable agent harness — any runtime that can:
+- Call MCP tools (streamable HTTP or stdio transport)
+- Load and interpret SKILL.md prompt documents
+- Maintain session context across multi-step workflows
+- Provide a chat interface (web dashboard or CLI)
+
+The reference implementation ships with **Hermes v0.19**, which provides all of the above plus a built-in web dashboard with auth. However, the skills, soul, and config are portable — see [Agent harness runtime](https://github.com/rrbanda/agentlens#agent-harness-runtime) for how to use a different harness.
+
+### Agents being evaluated (target agents)
+
+Agent Lens evaluates **any agent that sends traces to MLflow**, regardless of framework:
+
+| Framework | MLflow integration |
+|-----------|-------------------|
+| LangGraph | `mlflow.langchain.autolog()` |
+| Google ADK | `mlflow.tracing.enable()` or ADK's built-in tracing |
+| LangChain | `mlflow.langchain.autolog()` |
+| CrewAI | `mlflow.crewai.autolog()` |
+| OpenAI Agents SDK | `mlflow.openai.autolog()` |
+| AutoGen | `mlflow.autogen.autolog()` |
+| LlamaIndex | `mlflow.llama_index.autolog()` |
+| Custom | `@mlflow.trace` decorator or REST API |
 
 ### MLflow MCP Server
 

@@ -1,6 +1,6 @@
 # Operator guide: official MLflow MCP
 
-Agent Lens Hermes talks **only** to upstream official MLflow MCP
+Agent Lens talks **only** to upstream official MLflow MCP
 (`mlflow mcp run`), typically exposed in-cluster as Service **`mlflow-mcp`**.
 
 This repository does **not** deploy that MCP server.

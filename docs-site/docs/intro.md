@@ -11,8 +11,9 @@ title: Introduction
 Agent Lens is a conversational qualification layer that drives the **upstream official [MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/)** so platform engineers can evaluate, qualify, and govern AI agents in natural language.
 
 :::tip Verified Working
-16 skills shipping — 14 verified end-to-end on OpenShift 4.18 with Hermes v0.19 + Gemini 2.5 Flash + MLflow MCP 3.14 (July 2026).
+16 skills shipping — 14 verified end-to-end on OpenShift 4.18 + MLflow MCP 3.14 (July 2026).
 4 experiments, 34 traces, 6 runs tested live. 12 skills fully pass, 2 partial (need OpenAI key for LLM judges).
+Works with any agent framework that sends traces to MLflow (LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, and more).
 :::
 
 ## The Problem
@@ -36,7 +37,7 @@ Agent Lens calls MLflow MCP tools, runs evaluations, and returns structured verd
 ```mermaid
 %%{init: {'theme': 'neutral'}}%%
 graph LR
-    User[Platform Engineer] -->|chat| AL[Agent Lens / Hermes]
+    User[Platform Engineer] -->|chat| AL[Agent Lens]
     AL -->|MCP| MCP[MLflow MCP Server]
     MCP --> MLflow[(MLflow Tracking)]
     MLflow -->|traces| Agents[Your Agents]
@@ -44,6 +45,8 @@ graph LR
 
 **MLflow** = data plane (traces, scorers, models)
 **Agent Lens** = decision plane (verdicts, governance, fleet management)
+
+Your agents can be built with any framework — LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, or custom. If they send traces to MLflow, Agent Lens can qualify them.
 
 ## Quick Start
 

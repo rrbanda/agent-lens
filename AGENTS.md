@@ -9,7 +9,7 @@ contribute to Agent Lens correctly. Read this before generating code or skills.
 
 ```
 agent-lens/
-├── agent-lens/              # Hermes runtime
+├── agent-lens/              # Agent runtime (skills, soul, config, deploy)
 │   ├── soul.md              # Agent identity and constraints — DO NOT MODIFY without understanding
 │   ├── config.yaml          # MCP URL, tool allowlist — DO NOT MODIFY without understanding
 │   ├── Containerfile        # Container image definition
@@ -43,7 +43,7 @@ not exist, it must be contributed upstream to MLflow.
 
 ### 2. Never `import mlflow` in the sandbox
 
-The Hermes sandbox does not have the MLflow SDK installed. All MLflow access goes
+The Agent Lens sandbox does not have the MLflow SDK installed. All MLflow access goes
 through MCP. Code that calls `mlflow.search_experiments()` directly will fail at
 runtime.
 
