@@ -54,20 +54,12 @@ Agent Lens runs as an **OpenShell Sandbox** on Kubernetes with multiple layers o
 
 ### Data Flow Boundaries
 
-```
-  External User
-       │
-       ▼
-  OAuth Proxy (SSO / OIDC)     ← authentication boundary
-       │
-       ▼
-  Hermes Agent (Sandbox)        ← Landlock + seccomp boundary
-       │
-       ▼ (MCP only)
-  MLflow MCP Server             ← NetworkPolicy boundary
-       │
-       ▼
-  MLflow Tracking Server        ← cluster-managed
+```mermaid
+flowchart TB
+    User[External User] -->|authentication boundary| OAuth[OAuth Proxy\nSSO / OIDC]
+    OAuth -->|Landlock + seccomp boundary| Hermes[Hermes Agent\nSandbox]
+    Hermes -->|"NetworkPolicy boundary\n(MCP only)"| MCP[MLflow MCP Server]
+    MCP -->|cluster-managed| MLflow[MLflow Tracking Server]
 ```
 
 Agent Lens **never** accesses MLflow directly — all data flows through the official

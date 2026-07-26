@@ -2,6 +2,10 @@
 # Compare agent-lens/config.yaml tools.include against a live MCP tools/list.
 # Usage:
 #   MCP_URL=http://host:8080/mcp ./scripts/check_mcp_contract.sh
+#
+# The script reads the official MCP tools from config.yaml and verifies they
+# exist on the remote server. LoggedModel tools (SDK-only, proxied via Gateway)
+# are excluded from validation -- see ADR-001.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -27,8 +31,6 @@ config_path, mcp_url = sys.argv[1], sys.argv[2]
 cfg = yaml.safe_load(Path(config_path).read_text())
 want = set(cfg["mcp_servers"]["mlflow"]["tools"]["include"])
 
-# Minimal MCP initialize + tools/list over streamable HTTP is server-specific.
-# Prefer JSON-RPC tools/list when the endpoint accepts application/json.
 payload = {
     "jsonrpc": "2.0",
     "id": 1,
@@ -54,7 +56,6 @@ except Exception as e:
         print(f"  - {t}")
     sys.exit(1)
 
-# Handle bare JSON or simple SSE data: lines
 text = body.strip()
 if text.startswith("event:") or "data:" in text:
     chunks = []

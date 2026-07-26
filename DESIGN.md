@@ -91,7 +91,7 @@ GenAI built-in scorers produce **yes/no** categorical results. Agent Lens report
 **Why:**
 - Invented scales create false precision that misleads qualification decisions
 - Pass rates are statistically meaningful — "4.2/5" is not
-- Platform engineers need honest, defensible evidence for governance
+- Agent platform engineers need honest, defensible evidence for governance
 
 **Qualification thresholds:**
 - Default pass: ≥ 80% pass rate per required scorer
@@ -153,27 +153,22 @@ reporting process.
 
 ## The Build Boundary in One Diagram
 
-```
-┌────────────────────────────────────────────────────────┐
-│                   AGENT LENS BUILDS                     │
-│                                                         │
-│  Gateway API ── only net-new service (Python/FastAPI)   │
-│  SKILL.md files ── evaluation workflows (markdown)      │
-│  YAML configs ── scorer profiles, thresholds            │
-│  K8s manifests ── deploy, NetworkPolicy, OAuth Proxy    │
-│  Audit trail ── JSONL + SHA-256 chain (in Gateway)      │
-│                                                         │
-│  EVERYTHING ELSE IS CONSUMED FROM MLFLOW VIA MCP        │
-│                                                         │
-└────────────────────────────────────────────────────────┘
-         │                              │
-    MLflow MCP (16 tools)         Gateway MCP (4 tools)
-         │                              │
-    ┌────┴────────────────┐     ┌───────┴────────────────┐
-    │ MLflow Tracking     │     │ Audit store (JSONL)     │
-    │ Traces, Scorers,    │     │ Qualification records   │
-    │ LoggedModel, Runs   │     │ Fleet aggregation cache │
-    └─────────────────────┘     └────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph builds ["AGENT LENS BUILDS"]
+        GW["Gateway API\nonly net-new service (Python/FastAPI)"]
+        Skills["SKILL.md files\nevaluation workflows (markdown)"]
+        YAML["YAML configs\nscorer profiles, thresholds"]
+        K8s["K8s manifests\ndeploy, NetworkPolicy, OAuth Proxy"]
+        Audit["Audit trail\nJSONL + SHA-256 chain (in Gateway)"]
+        Note["EVERYTHING ELSE IS CONSUMED\nFROM MLFLOW VIA MCP"]
+    end
+
+    builds -->|16 tools| MLflow["MLflow MCP"]
+    builds -->|4 tools| GatewayMCP["Gateway MCP"]
+
+    MLflow --> MLflowStore["MLflow Tracking\nTraces, Scorers,\nLoggedModel, Runs"]
+    GatewayMCP --> AuditStore["Audit store (JSONL)\nQualification records\nFleet aggregation cache"]
 ```
 
 ---

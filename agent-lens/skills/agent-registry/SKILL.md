@@ -5,46 +5,35 @@ description: "Fleet inventory of all agents with qualification status, configura
 
 # Agent Registry
 
-Centralized fleet inventory backed by MLflow LoggedModel, providing qualification status at a glance.
+Centralized fleet inventory derived from MLflow experiments and evaluation runs.
 
 ## When to Use
 
 - "Show me all registered agents"
 - "What agents are qualified for production?"
-- "Register agent X"
 - "What's the status of our agent fleet?"
 - "Which agents need re-qualification?"
 
 ## Strategy
 
-### Step 1: List registered agents
+### Step 1: List agent experiments
 
-`mcp_mlflow_search_logged_models` — returns all LoggedModels tracked in MLflow.
+`mcp_mlflow_search_experiments` — each experiment represents an agent. Read experiment names and metadata.
 
-Filter by Agent Lens tags:
-- `agentlens.managed=true` — agents under Agent Lens governance
-- `agentlens.qualification.status` — current qualification verdict
+### Step 2: Enrich with qualification data
 
-### Step 2: Enrich with details (if specific agent)
+For each experiment:
+1. `mcp_mlflow_list_runs` — find evaluation runs with qualification parameters
+2. `mcp_mlflow_describe_run` — read metrics (pass_rate, error_rate) and tags (profile, verdict)
+3. `mcp_mlflow_search_traces` — recent trace activity (success rate, volume)
 
-For a specific agent:
-1. `mcp_mlflow_get_logged_model` — full metadata, tags, parameters
-2. Read `agentlens.qualification.*` tags for qualification state
-3. `mcp_mlflow_search_traces` — recent trace activity
+Derive qualification status from evaluation run history:
+- **QUALIFIED** — latest eval run has `pass_rate >= 0.80` and `error_rate < 0.05`
+- **NOT QUALIFIED** — latest eval run failed thresholds
+- **PENDING** — no evaluation runs exist
+- **NEEDS REVIEW** — inconclusive or mixed results
 
-### Step 3: Register a new agent
-
-When asked to register a new agent:
-
-1. `mcp_mlflow_create_logged_model` or `mcp_mlflow_create_external_model` — create the LoggedModel entry
-2. `mcp_mlflow_set_logged_model_tags` — set initial tags:
-   - `agentlens.managed=true`
-   - `agentlens.qualification.status=PENDING`
-   - `agentlens.agent_type` = RAG / tool-calling / chat
-   - `agentlens.owner` = team or individual
-3. `mcp_mlflow_log_logged_model_params` — store agent configuration parameters
-
-### Step 4: Present fleet view
+### Step 3: Present fleet view
 
 ## Output Format
 
@@ -52,30 +41,31 @@ When asked to register a new agent:
 ## Agent Registry
 ### Fleet: [N] agents | Qualified: [X] | Pending: [Y] | Not Qualified: [Z]
 
-| Agent | Type | Status | Last Qualified | Pass Rate | Owner |
-|-------|------|--------|---------------|-----------|-------|
-| outreach-agent | RAG | QUALIFIED | 2026-07-15 | 92% | team-alpha |
-| support-bot | Chat | NOT QUALIFIED | 2026-07-10 | 68% | team-beta |
-| data-analyst | Tool-Calling | PENDING | — | — | team-gamma |
+| Agent | Type | Status | Last Evaluated | Pass Rate | Error Rate |
+|-------|------|--------|---------------|-----------|------------|
+| customer-support-agent | RAG | QUALIFIED | 2026-07-15 | 92% | 2% |
+| support-bot | Chat | NOT QUALIFIED | 2026-07-10 | 68% | 8% |
+| data-analyst | Tool-Calling | PENDING | — | — | — |
 
 ### Agents Needing Attention
-- **support-bot**: Failed qualification on 2026-07-10 (RelevanceToQuery 68%)
-- **data-analyst**: Never evaluated — registered but no qualification run
+- **support-bot**: Failed qualification on 2026-07-10 (pass_rate 68%)
+- **data-analyst**: Never evaluated — no evaluation runs
 ```
 
 ## Lifecycle States
 
 | State | Meaning | Next action |
 |-------|---------|-------------|
-| PENDING | Registered, never evaluated | Run `evaluate-agent` |
-| QUALIFIED | Passed qualification | Re-qualify before TTL expiry |
-| NOT_QUALIFIED | Failed qualification | Fix issues, re-evaluate |
+| PENDING | Experiment exists, never evaluated | Run `evaluate-agent` |
+| QUALIFIED | Latest eval passed thresholds | Re-qualify periodically |
+| NOT_QUALIFIED | Latest eval failed thresholds | Fix issues, re-evaluate |
 | NEEDS_REVIEW | Inconclusive evaluation | Manual review required |
-| RETIRED | Decommissioned | No action |
+
+> **Note:** Full agent registry with LoggedModel metadata requires the Gateway MCP (M2).
+> Until then, fleet status is derived from experiments, evaluation runs, and trace data.
 
 ## Constraints
 
-- All registry data lives in MLflow LoggedModel — no separate database
-- Use `agentlens.*` tag namespace to avoid conflicts with other tools
-- Cap fleet scans at 50 agents per query
+- All data sourced from MLflow MCP — no separate database
+- Cap fleet scans at 50 experiments
 - Never `import mlflow` in the sandbox

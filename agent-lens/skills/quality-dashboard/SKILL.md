@@ -5,7 +5,7 @@ description: "Generate a full observability summary across all tracked agents: t
 
 # Quality Dashboard
 
-Fleet-wide observability summary across all tracked agents via **upstream official MLflow MCP**.
+Fleet-wide observability summary for agent platform engineers across all tracked agents via **upstream official MLflow MCP**.
 
 Quality from GenAI scorers is a **pass rate** (yes/no), not a 1–5 Likert. Prefer error rate +
 latency for health when evaluation metrics are absent.

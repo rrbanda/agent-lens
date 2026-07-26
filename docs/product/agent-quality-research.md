@@ -25,7 +25,7 @@ Enterprises are deploying AI agents faster than they can evaluate them. LangChai
 
 This is not a model capability problem. It is a measurement problem. Traditional LLM metrics -- perplexity, BLEU scores, thumbs up/down feedback -- do not capture what matters for autonomous agents that plan, reason, call tools, and take actions across enterprise systems. The industry has converged on a consensus: no single KPI measures agent success. Composite measurement across multiple dimensions -- correctness, efficiency, safety, adoption, and business impact -- is the only approach that works.
 
-The problem intensifies because different stakeholders need different answers from the same agent system. A CIO asks "Is this paying off?" A CISO asks "Can this harm us?" A platform engineer asks "Is this fleet reliable?" A developer asks "Is the reasoning correct?" A business user asks "Does this actually help?" A compliance officer asks "Can I defend this to a regulator?"
+The problem intensifies because different stakeholders need different answers from the same agent system. A CIO asks "Is this paying off?" A CISO asks "Can this harm us?" An agent platform engineer asks "Is this fleet reliable?" An agent developer asks "Is the reasoning correct?" A business sponsor asks "Does this actually help?" An AI compliance lead asks "Can I defend this to a regulator?"
 
 This research maps the specific metrics, KPIs, and evaluation approaches that matter for each of these six personas. It synthesizes findings from Google Cloud, Microsoft Copilot Studio, Salesforce Agentforce, Databricks Mosaic AI, Snowflake Cortex, Fin.ai, seven academic papers, four industry surveys, and ten evaluation tool vendors to produce a framework-agnostic, persona-grounded guide to agent quality.
 
@@ -89,7 +89,7 @@ Seven distinct approaches from major platforms, each reflecting different priori
 Google structures agent KPIs around three pillars, explicitly designed for different stakeholders.
 
 **Pillar 1: Reliability and Operational Efficiency**
-For platform engineers and technical operators. Can the agent handle complex workflows consistently and cost-effectively?
+For agent platform engineers and technical operators. Can the agent handle complex workflows consistently and cost-effectively?
 
 | Metric | What It Measures |
 |---|---|
@@ -296,7 +296,7 @@ CAGE-1 introduces the concept of **Prebind Assurance**: the evaluated ability to
 
 The core deliverable. Six enterprise personas, each with distinct questions, metrics, thresholds, and measurement approaches.
 
-### 4.1 Executive / C-Suite (CIO, CTO, CEO)
+### 4.1 Executive / C-Suite (CIO, CAIO, CEO)
 
 **Primary question:** "Is this investment paying off?"
 
@@ -313,7 +313,7 @@ The core deliverable. Six enterprise personas, each with distinct questions, met
 
 **What to avoid:** Vanity metrics like "number of agents deployed" or "total prompts processed." These measure activity, not outcomes.
 
-### 4.2 CISO / Security and Risk Leader
+### 4.2 CISO / AI Security Lead
 
 **Primary question:** "Can I trust this agent not to harm the organization?"
 
@@ -331,7 +331,7 @@ The core deliverable. Six enterprise personas, each with distinct questions, met
 
 **Governance frameworks to adopt:** AEGIS (Forrester) for phased security maturity, MAESTRO (CSA) for multi-agent threat modeling, OWASP Agentic Top 10 for attack surface coverage.
 
-### 4.3 Platform Engineer / Agent Platform Operator
+### 4.3 Agent Platform Engineer
 
 **Primary question:** "Is this fleet reliable, observable, and cost-effective?"
 
@@ -351,7 +351,7 @@ The core deliverable. Six enterprise personas, each with distinct questions, met
 
 **Key insight from observability research:** Traditional MELT (Metrics, Events, Logs, Traces) needs a fourth signal for agents -- *progress signals* -- that capture whether agents are making meaningful advancement toward their goal, not just running without errors.
 
-### 4.4 ML / AI Engineer (Agent Builder)
+### 4.4 Agent Developer (Agent Builder)
 
 **Primary question:** "Is my agent's reasoning correct, efficient, and debuggable?"
 
@@ -373,13 +373,18 @@ The core deliverable. Six enterprise personas, each with distinct questions, met
 
 **Evaluation pipeline for builders** (the standard 2026 pattern):
 
-```
-instrument -> trace -> dataset -> evaluator -> score -> CI gate
+```mermaid
+flowchart LR
+    Instrument[instrument] --> Trace[trace]
+    Trace --> Dataset[dataset]
+    Dataset --> Evaluator[evaluator]
+    Evaluator --> Score[score]
+    Score --> Gate[CI gate]
 ```
 
 Recommended evaluator mix: 30% heuristic (cheap gates), 10% reference-based (where gold answers exist), 40% pairwise LLM-as-judge (the workhorse), 20% human review (long tail + judge calibration ground truth).
 
-### 4.5 Business User / Line-of-Business Owner
+### 4.5 Business Sponsor
 
 **Primary question:** "Does this agent actually make my team's work better?"
 
@@ -398,7 +403,7 @@ Recommended evaluator mix: 30% heuristic (cheap gates), 10% reference-based (whe
 
 **What matters most:** The delta, not the absolute number. A CSAT of 4.2 is meaningless without knowing the pre-agent baseline was 4.0 or 4.5. Always measure change.
 
-### 4.6 Compliance / Legal / GRC Leader
+### 4.6 AI Compliance / GRC Lead
 
 **Primary question:** "Can I defend this in front of a regulator?"
 
@@ -521,11 +526,11 @@ For CISOs and compliance teams, quality evaluation is necessary but not sufficie
 | Persona | Primary Need | Recommended Tools |
 |---|---|---|
 | Executive / C-Suite | Business dashboards, ROI tracking | Agentforce Analytics, Databricks dashboards on Unity Catalog, vendor-specific business value reports |
-| CISO / Security | Governance, audit, adversarial testing | Microsoft Red Teaming Agent (PyRIT), Zenity, ContextGate, AEGIS framework assessment |
+| CISO / AI Security Lead | Governance, audit, adversarial testing | Microsoft Red Teaming Agent (PyRIT), Zenity, ContextGate, AEGIS framework assessment |
 | Platform Operator | Fleet observability, cost control, regression detection | Arize Phoenix (self-hosted), MLflow (production monitoring), InsightFinder (multi-agent tracing) |
-| AI/ML Engineer | Quality scoring, debugging, CI/CD eval gates | MLflow + DeepEval (metric breadth), LangSmith (LangChain teams), TruLens (GPA framework) |
-| Business User | Adoption tracking, satisfaction | Agentforce Analytics, Fin.ai CX Score, Google Pillar 2 acceptance metrics |
-| Compliance / Legal | Audit trails, regulatory mapping | ContextGate, CAGE-1 assessment, Agentforce Session Tracing (STDM) |
+| Agent Developer | Quality scoring, debugging, CI/CD eval gates | MLflow + DeepEval (metric breadth), LangSmith (LangChain teams), TruLens (GPA framework) |
+| Business Sponsor | Adoption tracking, satisfaction | Agentforce Analytics, Fin.ai CX Score, Google Pillar 2 acceptance metrics |
+| AI Compliance / GRC Lead | Audit trails, regulatory mapping | ContextGate, CAGE-1 assessment, Agentforce Session Tracing (STDM) |
 
 ### 6.3 Platform-Native vs. Independent
 
@@ -632,7 +637,7 @@ Senior SWE-Bench revealed that top models fail >70% of tasks on code quality ("t
 
 2. **Pick a composite framework and commit to it.** Google's three-pillar, Fin.ai's four-tier, or build your own. The specific framework matters less than having one at all. No single KPI works.
 
-3. **Map metrics to personas on day one.** Different stakeholders need different dashboards. The CISO does not need goal fulfillment scores. The AI engineer does not need CSAT deltas. Serve each persona the metrics they can act on.
+3. **Map metrics to personas on day one.** Different stakeholders need different dashboards. The CISO does not need goal fulfillment scores. The agent developer does not need CSAT deltas. Serve each persona the metrics they can act on.
 
 4. **Build an internal eval suite of 50-100 tasks from your actual workflow.** This is the single highest-ROI evaluation investment. Your own tasks predict production behavior better than any public benchmark.
 
@@ -646,7 +651,7 @@ Senior SWE-Bench revealed that top models fail >70% of tasks on code quality ("t
 
 8. **Close the observability-evaluation gap.** 89% have tracing; only 37% have online evals. The tooling that makes it trivial to attach scorers to live traces -- not as a separate system, but as a first-class feature of the tracing pipeline -- will win the market.
 
-9. **Build cross-persona dashboards.** The executive, the CISO, the platform engineer, and the compliance officer all need views derived from the same underlying traces. Persona-aware dashboard composition is an unmet need.
+9. **Build cross-persona dashboards.** The executive, the CISO, the agent platform engineer, and the AI compliance lead all need views derived from the same underlying traces. Persona-aware dashboard composition is an unmet need.
 
 10. **Support multi-agent evaluation natively.** Session-level quality scoring across orchestrator-to-sub-agent chains, with attribution of failures to specific agents in the chain, is the next frontier.
 

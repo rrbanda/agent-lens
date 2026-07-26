@@ -5,7 +5,7 @@ description: "Run a systematic evaluation of any agent's quality using MLflow Ge
 
 # Evaluate Agent
 
-Systematic agent evaluation for platform teams via **upstream official MLflow MCP**.
+Systematic agent evaluation for agent platform engineers via **upstream official MLflow MCP**.
 Adapted from [mlflow/skills agent-evaluation](https://github.com/mlflow/skills/tree/main/agent-evaluation).
 
 MLflow GenAI built-in scorers return **categorical yes/no** (or equivalent), not a 1–5 Likert.
@@ -52,6 +52,13 @@ Confirm availability with `mcp_mlflow_list_scorers` if needed.
 
 **Custom Profile** — Ask the user what dimensions matter most (`Guidelines` / registered scorers).
 
+**Registering custom scorers:** Use `mcp_mlflow_register_llm_judge_scorer` to register a custom LLM judge scorer with specific instructions for domain-specific evaluation. Verify availability with `mcp_mlflow_list_scorers` before using in evaluation.
+
+**`mcp_mlflow_register_llm_judge_scorer` parameters:**
+- `name` (string, required) — unique scorer name
+- `instructions` (string, required) — judging instructions; must contain template variables like `{{ inputs }}`, `{{ outputs }}`
+- `experiment_id` (string, required) — experiment to register the scorer under
+
 ### Step 4: Dry run (required before full cert)
 
 Call `mcp_mlflow_evaluate_traces` with a **small** sample first (`max_traces`: 3–5).
@@ -62,26 +69,35 @@ If scorers error, tools are broken, or all traces empty — stop and report; do 
 Call `mcp_mlflow_evaluate_traces` with chosen scorers:
 
 - Quick check: `max_traces` 50
-- Qualification: `max_traces` 200 (follow tool schema)
+- Qualification: `max_traces` 200
+
+**`mcp_mlflow_evaluate_traces` parameters:**
+- `experiment_id` (string, required) — target experiment
+- `trace_ids` (string, required) — comma-separated trace IDs to evaluate
+- `scorers` (string, required) — comma-separated scorer names (e.g. `RelevanceToQuery,ToolCallCorrectness`)
+- `output_format` (optional) — `"table"` or `"json"`
 
 **Regression-focused cert:** If the user asks to include regression follow-ups, first
 `mcp_mlflow_search_traces` with tags/filter for `regression=true` (or dataset tag), evaluate
 those traces preferentially, and state the sample composition in the report.
 
-### Step 6: Record qualification on LoggedModel (M2)
+**Link traces to evaluation run:** After evaluation, use `mcp_mlflow_link_traces_to_run` to associate the evaluated trace IDs with the evaluation run for traceability.
 
-If the agent has a LoggedModel in MLflow, write the qualification verdict as tags:
+**`mcp_mlflow_link_traces_to_run` parameters:**
+- `run_id` (string, required) — the evaluation run ID
+- `trace_ids` (array of strings, required) — trace IDs to link (max 100)
 
-1. `mcp_mlflow_search_logged_models` — find the LoggedModel for this agent/experiment
-2. `mcp_mlflow_set_logged_model_tags` — write:
-   - `agentlens.qualification.status` = `QUALIFIED` / `NOT_QUALIFIED` / `NEEDS_REVIEW`
-   - `agentlens.qualification.timestamp` = ISO-8601 timestamp
-   - `agentlens.qualification.scorer_profile` = profile used (RAG, Tool-Calling, etc.)
-   - `agentlens.qualification.pass_rate` = aggregate pass rate
-   - `agentlens.qualification.ttl_days` = re-qualification window (default 30)
-3. `mcp_mlflow_finalize_logged_model` — set status to READY if QUALIFIED
+### Step 6: Record qualification verdict
 
-If no LoggedModel exists, skip this step and note it in the report.
+Record the qualification result as a run with structured tags:
+
+1. `mcp_mlflow_create_run` — create a qualification run in the experiment with:
+   - `run_name`: `qualification-<date>`
+   - `tags`: `profile=<scorer_profile>`, `verdict=QUALIFIED|NOT_QUALIFIED|NEEDS_REVIEW`
+   - `status`: `FINISHED`
+
+> **Note:** Writing qualification to LoggedModel tags (`search_logged_models`, `set_logged_model_tags`)
+> requires the Gateway MCP (M2). Until then, qualification verdicts are recorded as evaluation runs.
 
 ### Step 7: Generate Quality Qualification Report
 

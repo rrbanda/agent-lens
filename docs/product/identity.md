@@ -40,7 +40,7 @@ MLflow stores scorer results on traces. It does not:
 - Aggregate results into a PASS/FAIL verdict against configurable thresholds
 - Track qualification state (QUALIFIED / PENDING / EXPIRED) over time
 - Enforce TTL-based re-qualification requirements
-- Produce a Quality Qualification Report consumable by a platform engineer
+- Produce a Quality Qualification Report consumable by an Agent Platform Engineer
 
 **Agent Lens adds:** The `evaluate-agent` skill, scorer profiles (YAML config mapping profile names to scorer lists), verdict logic, and qualification tags on MLflow LoggedModel.
 
@@ -118,9 +118,9 @@ graph TB
   end
 
   subgraph users["Users"]
-    PlatEng["Platform Engineer"]
-    AIML["AI/ML Engineer"]
-    CISO["CISO / GRC"]
+    PlatEng["Agent Platform Engineer"]
+    AIML["Agent Developer"]
+    CISO["CISO / AI Security Lead"]
   end
 
   PlatEng -->|chat| Skills
@@ -158,7 +158,7 @@ graph TB
 
 ### Current (M1): 11 MLflow MCP tools
 
-`search_experiments`, `get_experiment`, `search_traces`, `get_trace`, `log_trace_feedback`, `log_trace_expectation`, `set_trace_tag`, `evaluate_traces`, `list_runs`, `describe_run`, `list_scorers`
+`search_experiments`, `get_experiment`, `search_traces`, `get_trace`, `log_feedback`, `log_expectation`, `set_trace_tag`, `evaluate`, `list_runs`, `describe_run`, `list_scorers`
 
 ### Expanded (M2): 16 MLflow MCP tools + 4 Gateway MCP tools
 

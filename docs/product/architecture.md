@@ -13,7 +13,7 @@ for how to swap to a different framework.
 ```mermaid
 %%{init: {'theme': 'neutral'}}%%
 graph TB
-    subgraph Platform Engineer
+    subgraph AgentPlatformEngineer [Agent Platform Engineer]
         UI[Dashboard / Chat]
     end
 
@@ -88,8 +88,8 @@ Deployed with the platform (MLflow operator or standalone install), not by this 
 | Category | Tools |
 |----------|-------|
 | Observe | `search_experiments`, `get_experiment`, `search_traces`, `get_trace`, `list_runs`, `describe_run` |
-| Evaluate | `evaluate_traces`, `list_scorers` |
-| Annotate | `log_trace_feedback`, `log_trace_expectation`, `set_trace_tag` |
+| Evaluate | `evaluate`, `list_scorers` |
+| Annotate | `log_feedback`, `log_expectation`, `set_trace_tag` |
 
 Hermes exposes these as `mcp_mlflow_<tool_name>`.
 
@@ -112,10 +112,10 @@ an evaluation and governance specialist.
 
 | Skill | Trigger | Official MCP Tools |
 |-------|---------|-------------------|
-| `evaluate-agent` | "Evaluate", "Score" | `evaluate_traces`, `list_scorers` |
-| `review-trace` | "Review", "Annotate" | `get_trace`, `search_traces`, `log_trace_feedback`, `log_trace_expectation` |
+| `evaluate-agent` | "Evaluate", "Score" | `evaluate`, `list_scorers` |
+| `review-trace` | "Review", "Annotate" | `get_trace`, `search_traces`, `log_feedback`, `log_expectation` |
 | `analyze-session` | "Chat session" | `search_traces`, `get_trace` |
-| `create-regression` | "Add to dataset" | `log_trace_expectation`, `set_trace_tag` |
+| `create-regression` | "Add to dataset" | `log_expectation`, `set_trace_tag` |
 | `trace-explorer` | "Show traces", "Errors" | `search_traces`, `get_trace` |
 | `quality-dashboard` | "Overview", "Health" | `search_experiments`, `search_traces`, `list_runs` |
 
@@ -133,17 +133,17 @@ sequenceDiagram
     participant ML as MLflow
     participant MCP as Official MLflow MCP
     participant AL as Agent Lens
-    participant U as Platform Engineer
+    participant U as Agent Platform Engineer
 
     T->>ML: autolog traces (LLM calls)
     U->>AL: "Evaluate the outreach agent"
-    AL->>MCP: evaluate_traces(...)
+    AL->>MCP: evaluate(...)
     MCP->>ML: GenAI evaluate / scorers
     ML-->>MCP: scores
     MCP-->>AL: evaluation results
     AL-->>U: Quality Qualification Report
     U->>AL: "Annotate that trace"
-    AL->>MCP: log_trace_feedback(...)
+    AL->>MCP: log_feedback(...)
     MCP->>ML: log feedback
     ML-->>MCP: ok
     MCP-->>AL: annotation confirmed
@@ -167,7 +167,7 @@ flowchart TD
 | Scenario | Path | Reason |
 |----------|------|--------|
 | "List experiments" | Native MCP | `search_experiments` |
-| "Evaluate the agent" | Native MCP | `evaluate_traces` |
+| "Evaluate the agent" | Native MCP | `evaluate` |
 | "Error rate / dashboard" | Native MCP + local format | `search_experiments` + `search_traces` |
 | "Compare runs" | Code exec on MCP JSON | After `list_runs` / `describe_run` |
 | Sandbox `import mlflow` | Forbidden | No SA token to MLflow tracking |

@@ -3,6 +3,18 @@
 Agent Lens uses upstream `mlflow mcp run` (service mlflow-mcp) exclusively.
 Skills must use mcp_mlflow_<tool> names that match the allowlist in
 agent-lens/config.yaml. There is no in-repo FastMCP server.
+
+Official MLflow MCP tool names (verified against mlflow[mcp] 3.14.0):
+  - Traces: search_traces, get_trace, delete_traces, set_trace_tag,
+    delete_trace_tag, log_trace_feedback, log_trace_expectation,
+    get_trace_assessment, update_trace_assessment, delete_trace_assessment,
+    evaluate_traces
+  - Scorers: list_scorers, register_llm_judge_scorer
+  - Experiments: search_experiments, get_experiment, create_experiment, ...
+  - Runs: list_runs, describe_run, create_run, link_traces_to_run, ...
+
+Note: LoggedModel tools (search_logged_models, etc.) are SDK-only and will
+be proxied via the Agent Lens Gateway MCP. See ADR-001.
 """
 
 import os
@@ -139,3 +151,34 @@ class TestSkillToolAlignment:
             soul = f.read()
         assert "mcp_mlflow_" in soul
         assert "upstream official MLflow MCP" in soul
+
+    def test_no_deprecated_tool_names(self, skill_files):
+        """Catch shortened tool names that don't match the real MLflow MCP."""
+        deprecated = {
+            "mcp_mlflow_evaluate ": "mcp_mlflow_evaluate_traces",
+            "mcp_mlflow_log_feedback": "mcp_mlflow_log_trace_feedback",
+            "mcp_mlflow_log_expectation": "mcp_mlflow_log_trace_expectation",
+            "mcp_mlflow_get_assessment": "mcp_mlflow_get_trace_assessment",
+            "mcp_mlflow_update_assessment": "mcp_mlflow_update_trace_assessment",
+            "mcp_mlflow_delete_assessment": "mcp_mlflow_delete_trace_assessment",
+            "mcp_mlflow_register_llm_judge ": "mcp_mlflow_register_llm_judge_scorer",
+            "mcp_mlflow_link_traces ": "mcp_mlflow_link_traces_to_run",
+            "mcp_mlflow_experiments_csv": "(removed — does not exist in MCP)",
+        }
+        errors = []
+        paths = list(skill_files) + [SOUL_PATH, CONFIG_PATH]
+        for path in paths:
+            label = os.path.basename(path)
+            if path.endswith("SKILL.md"):
+                label = os.path.basename(os.path.dirname(path))
+            with open(path) as f:
+                content = f.read()
+            for old_name, new_name in deprecated.items():
+                if old_name in content:
+                    errors.append(
+                        f"{label}: uses deprecated '{old_name}', "
+                        f"should be '{new_name}'"
+                    )
+        assert not errors, (
+            "Deprecated MLflow MCP tool names found:\n" + "\n".join(errors)
+        )

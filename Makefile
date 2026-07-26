@@ -1,11 +1,15 @@
 .PHONY: help secret secret-openshell build-agent deploy-agent \
 	deploy-openshell deploy-all undeploy undeploy-openshell scale-down-legacy \
-	eval logs-agent logs-openshell status check-mcp
+	eval logs-agent logs-openshell status check-mcp \
+	test test-unit test-integration mlflow-start mlflow-stop seed-data
 
 NAMESPACE ?= agent-lens
 OPENSHELL_NS ?= openshell
 MCP_URL ?= http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp
 AGENT_IMAGE ?= quay.io/rrbanda/agent-lens:v3
+MLFLOW_PORT ?= 5555
+MLFLOW_TRACKING_URI ?= http://127.0.0.1:$(MLFLOW_PORT)
+VENV ?= .venv
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -141,6 +145,40 @@ logs-openshell: ## Tail OpenShell Sandbox agent logs
 
 check-mcp: ## Compare config allowlist to live MCP tools/list
 	MCP_URL=$(MCP_URL) ./scripts/check_mcp_contract.sh
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+
+test: test-unit ## Run all tests (unit only; use test-integration for MCP tests)
+
+test-unit: ## Run unit tests (no MLflow server required)
+	$(VENV)/bin/python -m pytest tests/test_skill_alignment.py -v
+
+test-integration: ## Run integration tests against local MLflow + MCP
+	MLFLOW_TRACKING_URI=$(MLFLOW_TRACKING_URI) \
+		$(VENV)/bin/python -m pytest tests/test_mcp_integration.py -v -m integration
+
+mlflow-start: ## Start local MLflow server for development
+	@mkdir -p .mlflow-test
+	@echo "Starting MLflow server on port $(MLFLOW_PORT)..."
+	$(VENV)/bin/mlflow server \
+		--host 127.0.0.1 --port $(MLFLOW_PORT) \
+		--backend-store-uri sqlite:///.mlflow-test/mlflow.db \
+		--default-artifact-root .mlflow-test/artifacts &
+	@sleep 3
+	@echo "✓ MLflow running at $(MLFLOW_TRACKING_URI)"
+
+mlflow-stop: ## Stop local MLflow server
+	@pkill -f "mlflow server.*$(MLFLOW_PORT)" 2>/dev/null || true
+	@echo "✓ MLflow stopped"
+
+seed-data: ## Seed local MLflow with test data (requires mlflow-start)
+	MLFLOW_TRACKING_URI=$(MLFLOW_TRACKING_URI) \
+		$(VENV)/bin/python tests/seed_mlflow_data.py
+
+dev-setup: ## Set up local dev environment (venv + deps)
+	python3.13 -m venv $(VENV) || python3.12 -m venv $(VENV) || python3.11 -m venv $(VENV)
+	$(VENV)/bin/pip install --quiet -e ".[dev]"
+	@echo "✓ Dev environment ready. Activate: source $(VENV)/bin/activate"
 
 status: ## Show MCP + OpenShell Sandbox + legacy status
 	@echo "=== Official MLflow MCP ==="

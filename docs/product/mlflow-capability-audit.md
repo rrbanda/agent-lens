@@ -171,19 +171,19 @@ MLflow 3.10+ integrates Guardrails AI validators:
 | `SecretsPresent` | Regex pattern matching | API keys, tokens, passwords |
 | `GibberishText` | Perplexity-based coherence scoring | Incoherent/nonsensical text |
 
-**MCP availability: Python SDK only, NOT via MCP `evaluate_traces`.** Guardrails scorers require local model downloads (BERT, Presidio), the `guardrails-ai` package plus hub installs, and validator-specific kwargs. They are not resolvable by name in `evaluate_traces` unless manually registered. For Agent Lens, these would need a thin Python wrapper that runs locally and logs results via `log_feedback`.
+**MCP availability: Python SDK only, NOT via MCP `evaluate`.** Guardrails scorers require local model downloads (BERT, Presidio), the `guardrails-ai` package plus hub installs, and validator-specific kwargs. They are not resolvable by name in `evaluate` unless manually registered. For Agent Lens, these would need a thin Python wrapper that runs locally and logs results via `log_feedback`.
 
 ### Custom Scorers and MCP
 
-- **`@scorer` decorator:** Creates code-based scorers (Python functions). These ARE accessible via MCP `evaluate_traces` after registration via `scorer.register(name="my_scorer")`.
-- **Resolution order:** The `resolve_scorers()` function in `evaluate_traces` first checks built-in scorers via `get_all_scorers()` (class name match), then falls back to `get_scorer(name)` for registered custom scorers.
+- **`@scorer` decorator:** Creates code-based scorers (Python functions). These ARE accessible via MCP `evaluate` after registration via `scorer.register(name="my_scorer")`.
+- **Resolution order:** The `resolve_scorers()` function in `evaluate` first checks built-in scorers via `get_all_scorers()` (class name match), then falls back to `get_scorer(name)` for registered custom scorers.
 - **`list_scorers` MCP tool:** Returns all **registered** scorers for the experiment. Does NOT automatically include all built-in scorers (those are resolved by class name directly). Works on both OSS and Databricks.
-- **`evaluate_traces` MCP tool:** Accepts scorer names as strings. Built-in scorers are resolved by class name (e.g., `"Correctness"`). Custom scorers are resolved by registered name. Both paths work via MCP.
+- **`evaluate` MCP tool:** Accepts scorer names as strings. Built-in scorers are resolved by class name (e.g., `"Correctness"`). Custom scorers are resolved by registered name. Both paths work via MCP.
 - **OSS caveat:** Registration of custom scorers that execute arbitrary code requires `MLFLOW_ALLOW_CUSTOM_SCORER_CODE_EXECUTION=true` on the tracking server.
 
 ### Agent Lens Scorer Profiles: Config, Not Code
 
-Given the scorer surface, Agent Lens profiles should be **named groupings that map to specific scorer names passed to `evaluate_traces`**. No custom scorer infrastructure is needed.
+Given the scorer surface, Agent Lens profiles should be **named groupings that map to specific scorer names passed to `evaluate`**. No custom scorer infrastructure is needed.
 
 | Profile | Scorers | Notes |
 |---|---|---|
@@ -232,7 +232,7 @@ Returns run metadata including:
 - Metrics (all logged metrics, including evaluation scorer results)
 - Tags
 
-Evaluation metrics from `evaluate_traces` are logged as run metrics, so `describe_run` on an evaluation run returns pass rates and scorer results.
+Evaluation metrics from `evaluate` are logged as run metrics, so `describe_run` on an evaluation run returns pass rates and scorer results.
 
 ### Value Assessment
 
@@ -329,7 +329,7 @@ MLflow provides the raw data (traces, token usage, scorer results) but no aggreg
 |---|---|---|
 | Token usage per trace | `mlflow.chat.tokenUsage` span attribute | Per-agent cost aggregation |
 | Trace health data | `search_traces` with status/latency filters | Error rate, latency percentile computation |
-| Evaluation scores | `evaluate_traces` results as run metrics | Trend analysis over time |
+| Evaluation scores | `evaluate` results as run metrics | Trend analysis over time |
 | Alerting | Nothing | Threshold-based alerts (M3) |
 | Automatic evaluation | Databricks-only `ScorerScheduleConfig` | CronJob-based `evaluate-agent` (M3) |
 
@@ -443,8 +443,11 @@ Skills stay as ConfigMap-mounted SKILL.md files for M2. The Prompt Registry is a
 
 While webhooks cannot provide synchronous pass/fail, they CAN trigger asynchronous evaluation:
 
-```
-model_version.created webhook → POST to Gateway → Gateway runs evaluate_traces → stores result in audit trail
+```mermaid
+flowchart LR
+    Webhook["model_version.created\nwebhook"] --> POST["POST to\nGateway"]
+    POST --> Eval["Gateway runs\nevaluate"]
+    Eval --> Store["stores result in\naudit trail"]
 ```
 
 This is an M3+ enhancement: when a new model version is registered in MLflow, a webhook could trigger Agent Lens to automatically evaluate it. The result would be recorded in the audit trail, and the agent's qualification status would be updated.
@@ -538,7 +541,7 @@ The audit trail is confirmed as a net-new build. MLflow stores evidence (assessm
 | Feature | MLflow Provides | Agent Lens Adds | Decision | M2 Impact |
 |---|---|---|---|---|
 | **Agent inventory** | LoggedModel + tags + search (tag filtering confirmed working — doc bug fixed) | Fleet aggregation, qualification lifecycle, status computation | **Consume + Extend** | Use LoggedModel as storage; Gateway adds lifecycle logic |
-| **Evaluation scorers** | 23 built-in judges + `evaluate_traces` MCP | Profile groupings (YAML config), threshold config, OSS Safety fallback | **Consume + Config** | Profiles are config, not code; validate with `list_scorers` |
+| **Evaluation scorers** | 23 built-in judges + `evaluate` MCP | Profile groupings (YAML config), threshold config, OSS Safety fallback | **Consume + Config** | Profiles are config, not code; validate with `list_scorers` |
 | **Version comparison** | UI comparison + `describe_run` MCP + `list_runs` MCP | Chat-based diff skill | **Consume + Chat Interface** | Skill calls existing MCP tools; no new infrastructure |
 | **CI/CD quality gate** | Nothing (webhooks are async, not request-response) | Synchronous pass/fail REST API with threshold logic | **Build** | Gateway is essential and cannot be replaced |
 | **Audit trail** | Assessment storage on traces (evidence) | Checksummed decision log with actor, export, query | **Build** | Net-new; references MLflow evidence but stores decisions independently |
@@ -617,10 +620,10 @@ MLflow 3.7+ provides 7 multi-turn judges including `ConversationCompleteness`, `
 | `get_experiment` | experiments | evaluate-agent |
 | `search_traces` | traces | trace-explorer, review-trace, quality-dashboard |
 | `get_trace` | traces | review-trace, analyze-session |
-| `log_trace_feedback` | traces | review-trace |
-| `log_trace_expectation` | traces | review-trace, create-regression |
+| `log_feedback` | traces | review-trace |
+| `log_expectation` | traces | review-trace, create-regression |
 | `set_trace_tag` | traces | create-regression |
-| `evaluate_traces` | scorers | evaluate-agent |
+| `evaluate` | scorers | evaluate-agent |
 | `list_runs` | runs | quality-dashboard |
 | `describe_run` | runs | quality-dashboard |
 | `list_scorers` | scorers | evaluate-agent |

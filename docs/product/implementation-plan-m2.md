@@ -195,24 +195,29 @@ agent-lens-gate = "gateway.cli:main"
 
 ### 3.3 Network Topology (M2)
 
-```
-                                    ┌─────────────────────────────────────┐
-                                    │         openshell namespace         │
-                                    │                                     │
-CI/CD Pipeline ──POST──────────────►│  Gateway Deployment :8000           │
-(Tekton / GH Action)                │    ├── REST: /api/v1/gate/evaluate  │
-                                    │    ├── REST: /api/v1/audit          │
-                                    │    ├── REST: /api/v1/registry       │
-                                    │    ├── MCP:  /mcp (for Hermes)      │
-                                    │    ├── MCP Client → MLflow MCP      │
-                                    │    └── PVC: audit + registry data   │
-                                    │                                     │
-Platform Engineer ──HTTPS──────────►│  Sandbox Pod :9119                  │
-                                    │    ├── [OAuth Proxy sidecar]        │
-                                    │    └── Hermes Dashboard             │
-                                    │         ├── MCP → MLflow MCP :8080  │
-                                    │         └── MCP → Gateway :8000     │
-                                    └─────────────────────────────────────┘
+```mermaid
+flowchart LR
+    CICD["CI/CD Pipeline\n(Tekton / GH Action)"] -->|POST| GW
+
+    subgraph ns ["openshell namespace"]
+        subgraph GW ["Gateway Deployment :8000"]
+            REST1["REST: /api/v1/gate/evaluate"]
+            REST2["REST: /api/v1/audit"]
+            REST3["REST: /api/v1/registry"]
+            MCP_EP["MCP: /mcp (for Hermes)"]
+            MCP_Client["MCP Client → MLflow MCP"]
+            PVC["PVC: audit + registry data"]
+        end
+
+        subgraph Sandbox ["Sandbox Pod :9119"]
+            OAuth["OAuth Proxy sidecar"]
+            Hermes["Hermes Dashboard"]
+            Hermes -->|MCP| MLflow["MLflow MCP :8080"]
+            Hermes -->|MCP| GW
+        end
+    end
+
+    PE["Agent Platform Engineer"] -->|HTTPS| Sandbox
 ```
 
 ---
@@ -229,7 +234,7 @@ Everything else depends on this. The Gateway is the new component that hosts the
 |---|---|---|---|---|
 | S1.T1 | Create `gateway/` directory structure and `pyproject.toml` | -- | Package skeleton, installable with `pip install -e .` | 0.5d |
 | S1.T2 | Implement `gateway/config.py` | S1.T1 | Configuration from env vars + optional YAML; MCP URL, audit path, API key | 0.5d |
-| S1.T3 | Implement `gateway/mcp_client/mlflow.py` | S1.T1 | Async MCP client that connects to MLflow MCP via SSE/streamable HTTP. Methods: `evaluate_traces()`, `search_traces()`, `list_scorers()`, `search_experiments()`, `list_runs()` | 2d |
+| S1.T3 | Implement `gateway/mcp_client/mlflow.py` | S1.T1 | Async MCP client that connects to MLflow MCP via SSE/streamable HTTP. Methods: `evaluate()`, `search_traces()`, `list_scorers()`, `search_experiments()`, `list_runs()` | 2d |
 | S1.T4 | Implement `gateway/stores/audit.py` | S1.T1 | Append-only JSONL audit store with SHA-256 checksums. Methods: `append()`, `query()`, `export_jsonl()`, `export_csv()`. File locking for concurrent writes. | 1.5d |
 | S1.T5 | Implement `gateway/stores/registry.py` | S1.T1 | JSON-file-backed registry store. Methods: `list_agents()`, `get_agent()`, `register()`, `refresh_from_mlflow()`, `compute_status()`. Qualification TTL logic. | 1.5d |
 | S1.T6 | Implement `gateway/models/*.py` | S1.T1 | Pydantic models for gate request/response, audit record, registry entry. Match PRD schemas exactly. | 1d |
@@ -248,7 +253,7 @@ The CI/CD quality gate -- the primary M2 deliverable.
 
 | Task | Description | Depends On | Deliverable | Estimate |
 |---|---|---|---|---|
-| S2.T1 | Implement `POST /api/v1/gate/evaluate` | S1.T3, S1.T6, S1.T7 | Accepts experiment name, profile, thresholds. Calls MLflow MCP `evaluate_traces`. Returns structured verdict JSON. | 2d |
+| S2.T1 | Implement `POST /api/v1/gate/evaluate` | S1.T3, S1.T6, S1.T7 | Accepts experiment name, profile, thresholds. Calls MLflow MCP `evaluate`. Returns structured verdict JSON. | 2d |
 | S2.T2 | Implement scorer profile resolution | S2.T1 | Resolve profile name (rag/tool-calling/chat/safety/comprehensive/custom) to scorer list. Call `list_scorers` to validate availability. | 1d |
 | S2.T3 | Implement threshold evaluation logic | S2.T1 | Aggregate yes/no scorer results into pass rates. Compare against thresholds. Compute overall PASS/FAIL verdict. | 1d |
 | S2.T4 | Wire gate decisions to audit store | S2.T1, S1.T4 | Every gate evaluation writes a `gate_evaluation` audit record with checksummed evidence. | 0.5d |
@@ -355,32 +360,26 @@ Each skill is a SKILL.md file following established patterns. All skills also ne
 
 ## 5. Dependency Graph
 
-```
-Week 1-2                Week 2-4              Week 3-5              Week 5-7           Week 7-9           Week 9-10
-────────                ────────              ────────              ────────           ────────           ─────────
+```mermaid
+gantt
+    title M2 Work-Stream Dependency Graph
+    dateFormat YYYY-MM-DD
+    axisFormat Week %W
 
-S1: Gateway Foundation ──► S2: Gate API ──────────────────────────────────────────────────────────────────►
-  (S1.T1-T12)              (S2.T1-T10)                                                                   │
-     │                        │                                                                           │
-     │                        ▼                                                                           ▼
-     │                  S4: Audit Trail ──────────────────────────────────────────────────────────► Integration
-     │                    (S4.T1-T12)                                                               Testing
-     │                        │                                                                       Docs
-     │                        ▼                                                                       │
-     │                  S5: Agent Registry ──────────────────────────────────────────────────────►     │
-     │                    (S5.T1-T10)                                                                 │
-     │                        │                                                                       │
-     │                        ▼                                                                       │
-     │                  S6: New Skills ──────────────────────────────────────────────────────────►     │
-     │                    (S6.T1-T9)                                                                  │
-     │                                                                                                │
-S3: SSO/OIDC ─────────────────────────────────────────────────────────────────────────────────────►   │
-  (S3.T1-T8)                                                                                          │
-     │                                                                                                │
-S7: Infra/CI/Docs ─────────────────────────────────────────────────────────────────────────────────►   │
-  (S7.T1-T10)                                                                                         │
-                                                                                                      ▼
-                                                                                              M2 Release
+    section Critical Path
+    S1 Gateway Foundation (T1-T12)  :s1, 2026-10-01, 14d
+    S2 Gate API (T1-T10)            :s2, after s1, 14d
+    S4 Audit Trail (T1-T12)         :s4, after s2, 14d
+    S5 Agent Registry (T1-T10)      :s5, after s4, 14d
+    S6 New Skills (T1-T9)           :s6, after s5, 14d
+    Integration Testing + Docs      :crit, int, after s6, 7d
+
+    section Parallel
+    S3 SSO/OIDC (T1-T8)            :s3, 2026-10-01, 56d
+    S7 Infra/CI/Docs (T1-T10)      :s7, 2026-10-01, 63d
+
+    section Release
+    M2 Release                      :milestone, m2, after int, 0d
 ```
 
 **Critical path:** S1 → S2 → S4 → S5 → S6 → Integration Testing
@@ -452,20 +451,20 @@ S7: Infra/CI/Docs ────────────────────�
 
 ### 7.1 Test Pyramid
 
-```
-                    ┌─────────────┐
-                    │  Manual E2E │   2-3 scenarios on pilot cluster
-                    │  (per pilot)│
-                   ┌┴─────────────┴┐
-                   │  Integration   │  Mock MCP server, real Gateway
-                   │  (~10 tests)   │
-                  ┌┴───────────────┴┐
-                  │   Unit Tests     │  Stores, models, threshold logic
-                  │   (~40 tests)    │
-                 ┌┴─────────────────┴┐
-                 │  Contract Tests    │  Existing skill alignment + new dual-MCP
-                 │  (~10 tests)       │
-                 └────────────────────┘
+```mermaid
+%%{init: {"theme": "base"}}%%
+graph TB
+    E2E["Manual E2E\n2-3 scenarios on pilot cluster"]
+    INT["Integration Tests (~10)\nMock MCP server, real Gateway"]
+    UNIT["Unit Tests (~40)\nStores, models, threshold logic"]
+    CONTRACT["Contract Tests (~10)\nSkill alignment + dual-MCP"]
+
+    E2E ~~~ INT ~~~ UNIT ~~~ CONTRACT
+
+    style E2E fill:#f9d,stroke:#333
+    style INT fill:#fdb,stroke:#333
+    style UNIT fill:#bdf,stroke:#333
+    style CONTRACT fill:#bfb,stroke:#333
 ```
 
 ### 7.2 New Test Files

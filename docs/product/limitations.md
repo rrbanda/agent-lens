@@ -8,7 +8,7 @@ existed (or were marketed) via a custom FastMCP server are **not** product APIs 
 | Marketing phrase | Reality today | Roadmap |
 |------------------|---------------|---------|
 | Quality **gate** / block deploy | Skill compares **pass rates** (≥80% yes/no scorers) and returns a chat verdict | Enforceable CI webhook: [#18](https://github.com/rrbanda/agent-lens/issues/18) |
-| Regression **dataset** | `log_trace_expectation` + tags (`regression=true`, `dataset=…`) | Durable GenAI datasets via MLflow UI/SDK or upstream MCP tools |
+| Regression **dataset** | `log_expectation` + tags (`regression=true`, `dataset=…`) | Durable GenAI datasets via MLflow UI/SDK or upstream MCP tools |
 | **Review queue** | `search_traces` heuristics (errors / recent) | Upstream queue tool or smarter skill sampling |
 | Fleet **health summary** | Cap ≤20 experiments; N MCP calls (`search_experiments` + `search_traces` / `list_runs`) | Upstream aggregate tool or caching |
 | Custom MCP server | **Removed** from this repo | Do not reintroduce as default path |

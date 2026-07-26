@@ -28,9 +28,12 @@ Determine what the user wants to audit:
 
 Agent Lens audit records are derived from MLflow data:
 
-1. **Qualification history** — `mcp_mlflow_search_logged_models` to find the agent's LoggedModel, then read `agentlens.qualification.*` tags for verdict history
-2. **Annotation events** — `mcp_mlflow_search_traces` filtered by tags (`reviewed=true`, `regression=true`) to find annotated traces
-3. **Evaluation runs** — `mcp_mlflow_list_runs` + `mcp_mlflow_describe_run` for evaluation run metadata (who ran it, when, which scorers)
+1. **Annotation events** — `mcp_mlflow_search_traces` filtered by tags (`reviewed=true`, `regression=true`) to find annotated traces
+2. **Evaluation runs** — `mcp_mlflow_list_runs` + `mcp_mlflow_describe_run` for evaluation run metadata (who ran it, when, which scorers)
+3. **Experiment context** — `mcp_mlflow_search_experiments` to resolve experiment names
+
+> **Note:** Qualification history via LoggedModel tags (`search_logged_models`) requires the Gateway MCP (M2).
+> Until then, reconstruct qualification events from evaluation run metadata and tags.
 
 ### Step 3: Reconstruct timeline
 

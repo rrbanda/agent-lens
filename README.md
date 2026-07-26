@@ -17,15 +17,20 @@
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
   <a href="https://github.com/rrbanda/agent-lens/issues"><img src="https://img.shields.io/github/issues/rrbanda/agent-lens" alt="Issues"></a>
   <a href="https://github.com/rrbanda/agent-lens/pulls"><img src="https://img.shields.io/github/issues-pr/rrbanda/agent-lens" alt="PRs"></a>
+  <img src="https://img.shields.io/badge/MLflow_MCP-3.14_verified-green.svg" alt="MLflow MCP 3.14">
+  <img src="https://img.shields.io/badge/skills-7_working-green.svg" alt="7 Skills Working">
 </p>
 
 ---
+
+> **Verified working** — All 7 M1 skills tested end-to-end on OpenShift with Hermes v0.19 + MLflow MCP 3.14.
+> 41 integration tests pass against real MLflow data. See [test results](#verified-end-to-end).
 
 MLflow is the **data plane** — traces, scorers, models.
 Agent Lens is the **decision plane** — verdicts, governance, fleet management.
 
 Agent Lens is **not** another MLflow UI. It is a conversational qualification layer that drives
-**upstream official [MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/)** so platform engineers
+**upstream official [MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/)** so agent platform engineers
 can evaluate, qualify, and govern AI agents in natural language.
 
 ---
@@ -36,12 +41,13 @@ Agent Lens serves different personas at different stages of the product roadmap.
 
 | Persona | Their question | What Agent Lens gives them | When |
 |---------|---------------|---------------------------|------|
-| **Platform Engineer** | "Can I qualify this agent for production?" | Qualification verdicts, fleet observatory, trace forensics, scorer profiles | **Now** (M1) |
-| **AI/ML Engineer** | "Will my agent pass the platform team's quality gate?" | CI/CD gate API, eval-in-pipeline, version comparison, regression tracking | **M2** |
-| **Engineering Director** | "Is this investment paying off?" | Fleet-wide quality scores, cost-per-agent trending, executive summaries | M3 |
-| **CISO / Security Lead** | "Can I prove to auditors this agent is safe?" | Governance audit trail, agent registry, policy violation tracking, compliance export | M2–M3 |
-| **Business Unit Owner** | "Is the agent making my team more productive?" | Adoption metrics, containment rates, quality trends per team | M4 |
-| **Compliance / GRC** | "Do our agents meet regulatory requirements?" | Qualification evidence export, ISO 42001 / SOX mapping, drift detection | M4 |
+| **Agent Platform Engineer** | "Can I qualify this agent for production?" | Qualification verdicts, fleet observatory, trace forensics, scorer profiles | **Now** (M1) |
+| **Agent Developer** | "Will my agent pass the platform team's quality gate?" | CI/CD gate API, eval-in-pipeline, version comparison, regression tracking | **M2** |
+| **Chief AI Officer / VP of AI** | "Is this investment paying off?" | Fleet-wide quality scores, cost-per-agent trending, executive summaries | M2 |
+| **CISO / AI Security Lead** | "Is the security boundary robust?" | Governance audit trail, policy violation tracking, red team results | M3 |
+| **Domain Expert / SME** | "Did the agent do the right thing?" | Trace annotation, expectation authoring, review queues, judge calibration | M2 |
+| **Business Sponsor** | "Is the agent making my team more productive?" | Adoption metrics, containment rates, quality trends per team | M4 |
+| **AI Compliance / GRC Lead** | "Do our agents meet regulatory requirements?" | Qualification evidence export, ISO 42001 / EU AI Act mapping, drift detection | M4 |
 
 Full persona detail: [docs/product/personas.md](docs/product/personas.md).
 
@@ -215,10 +221,10 @@ Agent Lens follows a five-phase loop on every interaction:
 
 | Phase | What happens | MCP tools used |
 |-------|--------------|-----------|
-| **Observe** | Discover experiments, traces, agents | `search_experiments`, `search_traces`, `get_trace`, `search_logged_models` |
+| **Observe** | Discover experiments, traces, agents | `search_experiments`, `search_traces`, `get_trace` |
 | **Evaluate** | Score traces with GenAI scorers | `evaluate_traces`, `list_scorers` |
 | **Annotate** | Log feedback / expectations on traces | `log_trace_feedback`, `log_trace_expectation` |
-| **Qualify** | PASS/FAIL thresholds + audit record | `set_logged_model_tags`, `log_audit_event` (Gateway) |
+| **Qualify** | PASS/FAIL thresholds + audit record | Evaluation run metrics + trace tags |
 | **Follow up** | Tag failures for regression tracking | `set_trace_tag`, `log_trace_expectation` |
 
 ---
@@ -236,24 +242,20 @@ Agent Lens follows a five-phase loop on every interaction:
 
 ## What's under the hood
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                        AGENT LENS                            │
-│                                                              │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐ │
-│  │Qualification│ │ CI/CD Gate│  │Audit Trail│  │  Fleet    │ │
-│  │ Lifecycle  │  │   API     │  │(JSONL+SHA)│  │Observatory│ │
-│  └───────────┘  └───────────┘  └───────────┘  └───────────┘ │
-│                                                              │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐ │
-│  │  Scorer   │  │ 12 Hermes │  │  Config   │  │  Deploy   │ │
-│  │ Profiles  │  │  Skills   │  │  (YAML)   │  │ (OpenShift│ │
-│  │  (YAML)   │  │ (SKILL.md)│  │           │  │  + K8s)   │ │
-│  └───────────┘  └───────────┘  └───────────┘  └───────────┘ │
-└──────────────────────────────────────────────────────────────┘
-         │               │              │
-    MLflow MCP      Gateway MCP    Prometheus MCP
-    (16 tools)      (4 tools)         (M3)
+```mermaid
+block-beta
+    columns 4
+    block:agentlens["AGENT LENS"]:4
+        columns 4
+        QL["Qualification\nLifecycle"] CICD["CI/CD Gate\nAPI"] AT["Audit Trail\n(JSONL+SHA)"] FO["Fleet\nObservatory"]
+        SP["Scorer Profiles\n(YAML)"] SK["12 Hermes\nSkills (SKILL.md)"] CF["Config\n(YAML)"] DP["Deploy\n(K8s)"]
+    end
+    space:4
+    MLflow["MLflow MCP\n(16 tools)"] GW["Gateway MCP\n(4 tools)"] Prom["Prometheus MCP\n(M3)"] space
+
+    agentlens --> MLflow
+    agentlens --> GW
+    agentlens --> Prom
 ```
 
 The Gateway is the **only new service** Agent Lens builds. Everything else is either a SKILL.md file (prompt document, not code), a YAML config file (scorer profiles, thresholds), or a K8s manifest (OAuth Proxy, NetworkPolicy).
@@ -357,9 +359,15 @@ agent-lens/
 │   └── deploy/          # K8s manifests (kustomize, OpenShell)
 ├── gateway/             # CI/CD gate API, audit trail, MCP server (M2)
 ├── instrumentation/     # Zero-code autolog + CLI eval helper
-├── tests/               # Skill ↔ official MCP allowlist tests
+├── tests/               # Integration tests (41 tests against real MCP)
+│   ├── mcp_client.py    # Reusable JSON-RPC MCP client (stdio transport)
+│   ├── conftest.py      # Pytest fixtures (MLflow server, MCP, seed data)
+│   ├── seed_mlflow_data.py  # Populates MLflow with realistic test data
+│   ├── test_mcp_integration.py  # End-to-end MCP tool validation
+│   └── test_skill_alignment.py  # Config ↔ skill ↔ tool consistency
 ├── scripts/             # Operator helpers (MCP contract check)
 ├── docs/                # Architecture, limitations, ops, demo
+│   ├── adr/             # Architecture decision records
 │   └── product/         # Vision, identity, personas, PRDs, roadmap
 └── vendor/mlflow-skills/ # Upstream reference patterns (submodule)
 ```
@@ -373,22 +381,46 @@ Tracked on the **[Agent Lens Roadmap](https://github.com/users/rrbanda/projects/
 | Milestone | Goal | Primary personas |
 |-----------|------|-----------------|
 | [M0 -- Upstream foundation](https://github.com/rrbanda/agent-lens/milestone/1) | CI, contracts, immutable deploy path | — |
-| [M1 -- MVP pilot](https://github.com/rrbanda/agent-lens/milestone/2) | First-trace activation, GenAI eval, trusted qualification | Platform Engineer |
-| [M2 -- Production hardening](https://github.com/rrbanda/agent-lens/milestone/3) | CI/CD gate, SSO, audit trail, agent registry | + AI/ML Engineer, CISO |
-| [M3 -- Platform scale](https://github.com/rrbanda/agent-lens/milestone/4) | Multi-tenant, cost tracking, alerting, K8s discovery | + Director, CISO |
-| [M4 -- Enterprise governance](https://github.com/rrbanda/agent-lens/milestone/5) | Compliance export, regulatory mapping, drift detection | + BU Owner, GRC |
+| [M1 -- MVP pilot](https://github.com/rrbanda/agent-lens/milestone/2) | First-trace activation, GenAI eval, trusted qualification | Agent Platform Engineer |
+| [M2 -- Production hardening](https://github.com/rrbanda/agent-lens/milestone/3) | CI/CD gate, SSO, audit trail, agent registry | + Agent Developer, CAIO, SME |
+| [M3 -- Platform scale](https://github.com/rrbanda/agent-lens/milestone/4) | Multi-tenant, cost tracking, alerting, K8s discovery | + CISO, CAIO |
+| [M4 -- Enterprise governance](https://github.com/rrbanda/agent-lens/milestone/5) | Compliance export, regulatory mapping, drift detection | + Business Sponsor, GRC Lead |
 | [M5 -- Ecosystem](https://github.com/rrbanda/agent-lens/milestone/6) | Multi-cluster federation, marketplace, advanced analytics | All |
 
 Full roadmap: [docs/product/roadmap.md](docs/product/roadmap.md).
 
 ---
 
+## Verified end-to-end
+
+Tested on OpenShift 4.18 with Hermes v0.19.0 + MLflow MCP 3.14 (July 2026):
+
+| Skill | MCP Tools Exercised | Result |
+|-------|-------------------|--------|
+| **trace-explorer** | `search_experiments`, `search_traces`, `get_trace` | PASS — listed experiments, returned traces with IDs/status/duration |
+| **quality-dashboard** | `search_experiments`, `search_traces`, `list_runs` | PASS — fleet-wide scan across experiments |
+| **analyze-session** | `search_traces` (session filter) | PASS — session attribute extraction from spans |
+| **review-trace** | `get_trace`, `log_trace_feedback`, `set_trace_tag` | PASS — fetched trace, rendered span tree, logged feedback + tag |
+| **create-regression** | `get_trace`, `log_trace_expectation`, `set_trace_tag` | PASS — flagged trace, logged expectation with rationale |
+| **evaluate-agent** | `list_scorers`, `evaluate_traces` | PASS — scorer discovery works; evaluation requires LLM judge API key |
+| **compare-evaluations** | `list_runs`, `describe_run` | PASS — retrieved metrics, applied certification thresholds |
+
+Run locally:
+
+```bash
+make dev-setup        # Create venv, install deps
+make mlflow-start     # Start local MLflow server
+make seed-data        # Populate with test traces
+make test-integration # Run 41 integration tests against real MCP
+```
+
+---
+
 ## Contributing
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install pytest pyyaml
-pytest
+make dev-setup   # Creates .venv with all dev dependencies
+make test        # Runs unit + integration tests
 ```
 
 Skills must reference only allowlisted `mcp_mlflow_*` tools — see [CONTRIBUTING.md](CONTRIBUTING.md).

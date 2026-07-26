@@ -36,6 +36,7 @@ From `mcp_mlflow_get_trace`:
    - `regression=true`
    - `dataset=<agent-name>-regression` (naming convention)
 3. Optionally `mcp_mlflow_log_trace_feedback` if a quality score was given
+4. Optionally `mcp_mlflow_link_traces_to_run` — link the regression trace to an evaluation run for traceability
 
 ### Step 4: Confirm and advise
 

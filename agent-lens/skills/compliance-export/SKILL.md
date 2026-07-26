@@ -27,9 +27,12 @@ Identify:
 
 ### Step 2: Gather data from MLflow
 
-1. `mcp_mlflow_search_logged_models` — agent registry with qualification tags
-2. `mcp_mlflow_search_traces` — traces with annotation tags (reviewed, regression)
-3. `mcp_mlflow_list_runs` + `mcp_mlflow_describe_run` — evaluation run details
+1. `mcp_mlflow_search_traces` — traces with annotation tags (reviewed, regression)
+2. `mcp_mlflow_list_runs` + `mcp_mlflow_describe_run` — evaluation run details
+3. `mcp_mlflow_search_experiments` — list experiments for fleet-wide export
+
+> **Note:** `search_logged_models` and `experiments_csv` are not available in the official MLflow MCP.
+> Agent registry data requires the Gateway MCP (M2). For CSV export, use code execution to format the MCP JSON output.
 
 ### Step 3: Structure export records
 

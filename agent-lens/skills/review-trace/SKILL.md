@@ -35,7 +35,7 @@ Adapted from [mlflow/skills analyze-mlflow-trace](https://github.com/mlflow/skil
    - Inputs/outputs often in `attributes["mlflow.spanInputs"]` / `mlflow.spanOutputs"` (JSON strings)
    - Error spans: `status.code == STATUS_CODE_ERROR` (or equivalent)
 4. Read existing assessments (M2):
-   - `mcp_mlflow_get_assessment` — retrieve individual assessments by ID for full detail
+   - `mcp_mlflow_get_trace_assessment` — retrieve individual assessments by ID for full detail
    - Prefer **rationale** over raw value — values are ambiguous without it
    - `feedback.error` means the **scorer failed**, not that the agent failed — exclude from quality claims
 5. Present findings, then ask for annotation intent
@@ -49,7 +49,51 @@ Adapted from [mlflow/skills analyze-mlflow-trace](https://github.com/mlflow/skil
 - `mcp_mlflow_log_trace_expectation`
 
 **Correct existing feedback (M2):**
-- `mcp_mlflow_update_assessment` — update a previous assessment's value or rationale
+- `mcp_mlflow_update_trace_assessment` — update a previous assessment's value or rationale
+- `mcp_mlflow_delete_trace_assessment` — remove an incorrect or duplicate assessment entirely
+
+### Assessment Tool Parameters
+
+**`mcp_mlflow_log_trace_feedback`**
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| trace_id | string | yes | |
+| name | string | yes | e.g. "correctness", "helpfulness" |
+| value | string | no | numeric string "0.0"–"1.0" or categorical |
+| source_type | enum | no | HUMAN, LLM_JUDGE, CODE |
+| source_id | string | no | reviewer identifier |
+| rationale | string | no | always include for auditability |
+| span_id | string | no | attach feedback to a specific span |
+
+**`mcp_mlflow_log_trace_expectation`**
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| trace_id | string | yes | |
+| name | string | yes | e.g. "expected_output" |
+| value | string | yes | the gold/expected answer |
+| source_type | enum | no | HUMAN, LLM_JUDGE, CODE |
+| source_id | string | no | reviewer identifier |
+| span_id | string | no | attach expectation to a specific span |
+
+**`mcp_mlflow_get_trace_assessment`**
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| trace_id | string | yes | |
+| assessment_id | string | yes | |
+
+**`mcp_mlflow_update_trace_assessment`**
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| trace_id | string | yes | |
+| assessment_id | string | yes | |
+| value | string | no | updated value |
+| rationale | string | no | updated rationale |
+
+**`mcp_mlflow_delete_trace_assessment`**
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| trace_id | string | yes | |
+| assessment_id | string | yes | |
 
 **Workflow tags:**
 - `mcp_mlflow_set_trace_tag` — e.g. `needs_fix=true`, `reviewed=true`, `regression=true`

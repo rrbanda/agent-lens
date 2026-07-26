@@ -1,0 +1,39 @@
+---
+description: Always use Mermaid for diagrams in markdown files, never ASCII art
+globs: "**/*.md"
+alwaysApply: false
+---
+
+# Diagrams: Always Use Mermaid
+
+When adding or editing diagrams in markdown files, **always** use Mermaid syntax inside fenced code blocks (` ```mermaid `). Never use ASCII art, Unicode box-drawing characters, or plain-text diagrams.
+
+## Choosing the Right Diagram Type
+
+| Concept | Mermaid Type |
+|---------|-------------|
+| Architecture / data flow | `flowchart TB` or `flowchart LR` |
+| Sequence of interactions | `sequenceDiagram` |
+| Timeline / schedule | `gantt` |
+| Component hierarchy | `flowchart TB` with `subgraph` |
+| State machine | `stateDiagram-v2` |
+| Class / entity relationships | `classDiagram` or `erDiagram` |
+
+## Example
+
+```markdown
+` ``mermaid
+flowchart LR
+    A[Service A] -->|REST| B[Service B]
+    B --> C[(Database)]
+` ``
+```
+
+## What NOT to Do
+
+- No `+--` / `|` box borders
+- No Unicode `┌─┐ │ └─┘` box-drawing
+- No arrow characters like `-->`, `->`, `=>` in plain text
+- No indented text trees pretending to be architecture diagrams
+
+File tree listings (` ├── `, ` └── `) for showing directory structure are acceptable as plain code blocks since Mermaid has no equivalent.

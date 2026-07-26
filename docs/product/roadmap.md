@@ -10,10 +10,10 @@
 | Milestone | Theme | Target | Primary Personas | Ship Criteria |
 |---|---|---|---|---|
 | **M0** | Upstream Foundation | Done | -- | CI, contracts, immutable deploy path |
-| **M1** | MVP Pilot | Done | Platform Engineer | First-trace, GenAI eval, qualification verdict, fleet observatory |
-| **M2** | Production Hardening | Q4 2026 | Platform Eng + AI/ML Eng | CI/CD gate, SSO, audit trail, agent registry |
-| **M3** | Platform Scale | H1 2027 | + Executive + CISO | Multi-tenant, Grafana, cost tracking, alerting, K8s discovery |
-| **M4** | Enterprise Governance | H2 2027 | + Business Owner + Compliance | Compliance export, regulatory mapping, drift detection, adoption metrics |
+| **M1** | MVP Pilot | Done | Agent Platform Engineer | First-trace, GenAI eval, qualification verdict, fleet observatory |
+| **M2** | Production Hardening | Q4 2026 | APE + Agent Developer | CI/CD gate, SSO, audit trail, agent registry |
+| **M3** | Platform Scale | H1 2027 | + CAIO + CISO | Multi-tenant, Grafana, cost tracking, alerting, K8s discovery |
+| **M4** | Enterprise Governance | H2 2027 | + Business Sponsor + Compliance | Compliance export, regulatory mapping, drift detection, adoption metrics |
 | **M5** | Ecosystem | 2028 | All | Multi-cluster federation, marketplace integrations, advanced analytics |
 
 ---
@@ -41,7 +41,7 @@
 | Trace exploration | `trace-explorer` | Done | Latency, errors, token patterns |
 | Quality evaluation | `evaluate-agent` | Done | GenAI scorers, pass rates, 3 profiles |
 | Qualification verdict | `evaluate-agent` | Done | QUALIFIED / NOT QUALIFIED / NEEDS REVIEW (chat-only) |
-| Trace review and annotation | `review-trace` | Done | Feedback, expectations via MCP |
+| Trace review and annotation | `review-trace` | Done | Feedback, expectations via MCP (Domain Expert / SME) |
 | Multi-turn session analysis | `analyze-session` | Done | Timeline via `mlflow.trace.session` |
 | Regression follow-up | `create-regression` | Done | Expectations + tags (not full Evaluation Dataset) |
 | Fleet observatory | `quality-dashboard` | Done | HEALTHY / WARNING / CRITICAL / INACTIVE (cap 20) |
@@ -54,7 +54,7 @@
 
 ## M2 -- Production Hardening (Q4 2026)
 
-*From advisory to enforceable. Adding the AI/ML engineer persona.*
+*From advisory to enforceable. Adding the Agent Developer persona.*
 
 Full PRD: [prd-m2-enterprise.md](prd-m2-enterprise.md)
 
@@ -62,37 +62,39 @@ Full PRD: [prd-m2-enterprise.md](prd-m2-enterprise.md)
 
 | ID | Feature | New Components | Personas |
 |---|---|---|---|
-| F1 | **CI/CD Quality Gate API** | Agent Lens Gateway (FastAPI Deployment) | AI/ML Eng, Platform Eng |
+| F1 | **CI/CD Quality Gate API** | Agent Lens Gateway (FastAPI Deployment) | AD, APE |
 | F2 | **SSO / OIDC Authentication** | OpenShift OAuth Proxy sidecar | All |
-| F3 | **Audit Trail** | Append-only log with checksums | Platform Eng, CISO |
-| F4 | **Agent Registry** | Fleet inventory (MLflow + manual) | Platform Eng, CISO |
+| F3 | **Audit Trail** | Append-only log with checksums | APE, CISO |
+| F4 | **Agent Registry** | Fleet inventory (MLflow + manual) | APE, CISO |
 
 ### P1 Features (Should-Have)
 
 | ID | Feature | New Components | Personas |
 |---|---|---|---|
-| F5 | Trace Aggregation | New `aggregate-traces` skill (client-side aggregation) | Platform Eng, AI/ML Eng |
-| F6 | Expanded Scorer Profiles | Safety + Comprehensive + Custom profiles | Platform Eng, AI/ML Eng |
-| F7 | Evaluation Comparison | New `compare-evaluations` skill | AI/ML Eng |
+| F5 | Trace Aggregation | New `aggregate-traces` skill (client-side aggregation) | APE, AD |
+| F6 | Expanded Scorer Profiles | Safety + Comprehensive + Custom profiles | APE, AD |
+| F7 | Evaluation Comparison | New `compare-evaluations` skill | AD |
 
 ### P2 Features (Nice-to-Have)
 
 | ID | Feature | New Components | Personas |
 |---|---|---|---|
-| F8 | Executive Summary Skill | New skill (same data, different format) | CTO |
+| F8 | Executive Summary Skill | New skill (same data, different format) | CAIO |
 | F9 | Compliance Export Skill (Phase 1) | Basic JSONL/CSV export of qualification history | Compliance |
 
 ### New Infrastructure Components
 
-```
-M2 adds two new components to the deployment:
-
-openshell namespace:
-  ├── Agent Lens Sandbox (existing)
-  │     └── OAuth Proxy sidecar (new)
-  ├── Agent Lens Gateway (new Deployment)
-  │     └── FastAPI service + MCP client
-  └── Audit Log PVC (new or shared with existing PVC)
+```mermaid
+flowchart TB
+    subgraph ns [openshell namespace]
+        subgraph sandbox [Agent Lens Sandbox — existing]
+            OAuth[OAuth Proxy sidecar — new]
+        end
+        subgraph gateway [Agent Lens Gateway — new Deployment]
+            FastAPI[FastAPI service + MCP client]
+        end
+        PVC[Audit Log PVC\nnew or shared with existing PVC]
+    end
 ```
 
 ### MCP Dependencies (M2)
@@ -108,36 +110,37 @@ Per [MLflow Capability Audit](mlflow-capability-audit.md): Agent registry uses L
 
 ## M3 -- Platform Scale (H1 2027)
 
-*Multi-tenant, cost-aware, integrated with infrastructure monitoring. Adding executive and CISO personas.*
+*Multi-tenant, cost-aware, integrated with infrastructure monitoring. Adding CAIO and CISO personas.*
 
 ### Features
 
 | ID | Feature | Description | New MCP | Personas |
 |---|---|---|---|---|
 | F10 | **Multi-Tenant Isolation** | Namespace-scoped access; shared Hermes or per-team instances | -- | All |
-| F11 | **Prometheus/Grafana Integration** | Infrastructure metrics, token cost, latency SLOs in Agent Lens | Prometheus MCP | Platform Eng, CTO |
-| F12 | **Cost-Per-Agent Tracking** | Token usage + compute cost attribution per experiment | Prometheus MCP | Platform Eng, CTO |
-| F13 | **Kubernetes Agent Discovery** | Auto-discover agents from K8s deployments + labels | K8s/OpenShift MCP | Platform Eng, CISO |
-| F14 | **Alerting and Notification** | Configurable alerts on quality regression, SLO breach | Prometheus MCP | Platform Eng, CISO |
-| F15 | **Trend Analysis Skill** | Quality, cost, and latency trends over time | -- | Platform Eng, CTO |
-| F16 | **Fleet Pagination** | Remove 20-experiment cap; paginated fleet scan | -- | Platform Eng |
-| F17 | **Executive Dashboard** | Periodic summary reports for leadership | -- | CTO |
+| F11 | **Prometheus/Grafana Integration** | Infrastructure metrics, token cost, latency SLOs in Agent Lens | Prometheus MCP | APE, CAIO |
+| F12 | **Cost-Per-Agent Tracking** | Token usage + compute cost attribution per experiment | Prometheus MCP | APE, CAIO |
+| F13 | **Kubernetes Agent Discovery** | Auto-discover agents from K8s deployments + labels | K8s/OpenShift MCP | APE, CISO |
+| F14 | **Alerting and Notification** | Configurable alerts on quality regression, SLO breach | Prometheus MCP | APE, CISO |
+| F15 | **Trend Analysis Skill** | Quality, cost, and latency trends over time | -- | APE, CAIO |
+| F16 | **Fleet Pagination** | Remove 20-experiment cap; paginated fleet scan | -- | APE |
+| F17 | **Executive Dashboard** | Periodic summary reports for leadership | -- | CAIO |
 | F18 | **External Audit Store** | Migrate audit trail from PVC to PostgreSQL or S3 | -- | CISO, Compliance |
-| F19 | **HA Gateway** | Multi-replica Gateway with shared state | -- | Platform Eng |
+| F19 | **HA Gateway** | Multi-replica Gateway with shared state | -- | APE |
 
 ### New Infrastructure Components
 
-```
-M3 adds upstream MCP connections:
+```mermaid
+flowchart LR
+    subgraph ns [openshell namespace]
+        Sandbox[Agent Lens Sandbox\nmulti-replica or per-tenant]
+        Gateway[Agent Lens Gateway\nmulti-replica]
+        Audit[Audit Store\nPostgreSQL or S3]
+    end
 
-openshell namespace:
-  ├── Agent Lens Sandbox (multi-replica or per-tenant)
-  ├── Agent Lens Gateway (multi-replica)
-  └── Audit Store (PostgreSQL or S3)
-
-New MCP connections:
-  ├── Prometheus/Thanos MCP --> Prometheus (metrics, cost)
-  └── Kubernetes MCP --> OpenShift API (deployment discovery)
+    Gateway -->|metrics, cost| Prom[Prometheus/Thanos MCP]
+    Prom --> PromSrv[Prometheus]
+    Gateway -->|deployment discovery| K8s[Kubernetes MCP]
+    K8s --> API[OpenShift / K8s API]
 ```
 
 ### MCP Dependencies (M3)
@@ -172,13 +175,13 @@ Decision deferred to M3 design phase. Option C is the likely path for M3 with Op
 |---|---|---|---|
 | F20 | **Compliance Export (Phase 2)** | Structured qualification reports (PDF, JSON) mapped to regulatory controls; extends M2 basic export | Compliance, CISO |
 | F21 | **Regulatory Control Mapping** | Map qualification evidence to ISO 42001, SOX, HIPAA controls | Compliance |
-| F22 | **Configuration Drift Detection** | Compare approved agent config (registry) vs. running config (K8s) | CISO, Platform Eng |
-| F23 | **Adoption Metrics** | User interaction rates, acceptance rates, usage depth per agent | Business Owner |
+| F22 | **Configuration Drift Detection** | Compare approved agent config (registry) vs. running config (K8s) | CISO, APE |
+| F23 | **Adoption Metrics** | User interaction rates, acceptance rates, usage depth per agent | Business Sponsor |
 | F24 | **Red Team Evaluation Profile** | Adversarial testing scorer profile with attack success rate tracking | CISO |
 | F25 | **PII/PHI Scanner** | Detect sensitive data patterns in trace outputs | CISO, Compliance |
-| F26 | **Qualification Expiry and Re-eval** | Auto-flag agents past qualification TTL; trigger re-evaluation | Platform Eng, CISO |
-| F27 | **Team-Scoped Views** | Business unit owners see only their team's agents | Business Owner |
-| F28 | **GPA-Aligned Evaluation** | Goal-Plan-Action scoring (per Snowflake research) when MLflow supports it | AI/ML Eng |
+| F26 | **Qualification Expiry and Re-eval** | Auto-flag agents past qualification TTL; trigger re-evaluation | APE, CISO |
+| F27 | **Team-Scoped Views** | Business sponsors see only their team's agents | Business Sponsor |
+| F28 | **GPA-Aligned Evaluation** | Goal-Plan-Action scoring (per Snowflake research) when MLflow supports it | AD |
 
 ### MCP Dependencies (M4)
 
@@ -194,13 +197,13 @@ No new MCP servers beyond M3. Features build on MLflow MCP + Prometheus MCP + K8
 
 | ID | Feature | Description | Personas |
 |---|---|---|---|
-| F29 | **Multi-Cluster Federation** | Aggregate fleet health across multiple OpenShift clusters | CTO, Platform Eng |
-| F30 | **Evaluation Marketplace** | Share and discover custom scorer profiles across teams | AI/ML Eng |
-| F31 | **Advanced Analytics** | ML-powered anomaly detection on quality trends | Platform Eng |
+| F29 | **Multi-Cluster Federation** | Aggregate fleet health across multiple OpenShift clusters | CAIO, APE |
+| F30 | **Evaluation Marketplace** | Share and discover custom scorer profiles across teams | AD |
+| F31 | **Advanced Analytics** | ML-powered anomaly detection on quality trends | APE |
 | F32 | **Data Residency Verification** | Verify agent trace data stays within declared jurisdictions | Compliance |
 | F33 | **Retention Policy Enforcement** | Auto-archive or delete traces per retention schedule | Compliance |
-| F34 | **External Notification Integrations** | PagerDuty, Slack, email for quality alerts | Platform Eng |
-| F35 | **CSAT Integration** | Correlate agent quality scores with external satisfaction data | Business Owner |
+| F34 | **External Notification Integrations** | PagerDuty, Slack, email for quality alerts | APE |
+| F35 | **CSAT Integration** | Correlate agent quality scores with external satisfaction data | Business Sponsor |
 
 ---
 
@@ -208,25 +211,39 @@ No new MCP servers beyond M3. Features build on MLflow MCP + Prometheus MCP + K8
 
 | Persona | M1 | M2 | M3 | M4 | M5 |
 |---|---|---|---|---|---|
-| Platform Engineer | Primary | Primary | Primary | Primary | Primary |
-| AI/ML Engineer | Incidental | Added | Deepened | Deepened | Full |
-| CTO / Director | Minimal | Minimal | Added | Deepened | Full |
-| CISO | None | Foundation | Added | Deepened | Full |
-| Business Owner | None | None | Minimal | Added | Deepened |
-| Compliance / GRC | None | Foundation | Minimal | Added | Deepened |
+| Agent Platform Engineer | Primary | Primary | Primary | Primary | Primary |
+| Agent Developer | Incidental | Added | Deepened | Deepened | Full |
+| Chief AI Officer / VP of AI | Minimal | Minimal | Added | Deepened | Full |
+| CISO / AI Security Lead | None | Foundation | Added | Deepened | Full |
+| Business Sponsor | None | None | Minimal | Added | Deepened |
+| AI Compliance / GRC Lead | None | Foundation | Minimal | Added | Deepened |
+| Domain Expert / SME | Incidental | Incidental | Minimal | Added | Deepened |
 
 ---
 
 ## MCP Dependency Timeline
 
-```
-M1 (Done)     MLflow MCP ─────────────────────────────────────────>
-M2 (Q4 2026)  MLflow MCP ─────────────────────────────────────────>
-M3 (H1 2027)  MLflow MCP ─────────────────────────────────────────>
-              Prometheus MCP ──────────────────────────────────────>
-              Kubernetes MCP ──────────────────────────────────────>
-M4 (H2 2027)  (No new MCPs -- builds on M3 foundation)
-M5 (2028)     (Federation MCP or cross-cluster MLflow)
+```mermaid
+gantt
+    title MCP Dependency Timeline
+    dateFormat YYYY-MM
+    axisFormat %Y
+
+    section MLflow MCP
+    M1 Done               :done,    m1mlf, 2026-01, 2026-06
+    M2 Q4 2026             :active,  m2mlf, 2026-07, 2026-12
+    M3+ Ongoing            :         m3mlf, 2027-01, 2028-06
+
+    section Prometheus MCP
+    M3 H1 2027             :         m3prom, 2027-01, 2027-06
+    M4+ Ongoing            :         m4prom, 2027-07, 2028-06
+
+    section Kubernetes MCP
+    M3 H1 2027             :         m3k8s, 2027-01, 2027-06
+    M4+ Ongoing            :         m4k8s, 2027-07, 2028-06
+
+    section Federation MCP
+    M5 2028                :         m5fed, 2028-01, 2028-06
 ```
 
 ---
@@ -240,9 +257,9 @@ Agent Lens skills are the primary interface. This table maps planned features to
 | Skill | M2 Changes | M3 Changes | M4 Changes |
 |---|---|---|---|
 | `evaluate-agent` | Add Safety + Comprehensive profiles; custom thresholds | Trend comparison | GPA-aligned scoring |
-| `review-trace` | Write to audit trail | Pattern grouping | PII detection |
+| `review-trace` | Write to audit trail; Domain Expert / SME annotation | Pattern grouping; SME review queue | PII detection |
 | `analyze-session` | No changes | Enhanced multi-agent tracing | No changes |
-| `create-regression` | Write to audit trail | Regression trend analysis | No changes |
+| `create-regression` | Write to audit trail; Domain Expert / SME expectations | Regression trend analysis | No changes |
 | `trace-explorer` | Enhanced aggregation (F5) | Cost + latency overlay | Adoption metrics |
 | `quality-dashboard` | Registry integration (F4) | Pagination (F16); cost column | Team-scoped views |
 
@@ -279,7 +296,7 @@ Agent Lens skills are the primary interface. This table maps planned features to
 - [ ] Multi-tenant isolation deployed at 1+ enterprise
 - [ ] Cost-per-agent visible for all agents with Prometheus integration
 - [ ] Fleet scan handles 100+ agents without timeout
-- [ ] Executive dashboard reviewed by 2+ engineering directors
+- [ ] Executive dashboard reviewed by 2+ Chief AI Officers / VPs of AI
 - [ ] Alerting triggers on quality regression within 15 minutes
 - [ ] Audit trail migrated to external store at 1+ enterprise
 
@@ -289,7 +306,7 @@ Agent Lens skills are the primary interface. This table maps planned features to
 - [ ] Regulatory mapping covers ISO 42001 and SOX controls
 - [ ] Drift detection catches a real configuration change in pilot
 - [ ] Red team profile identifies at least 1 real vulnerability in pilot
-- [ ] Business unit owners using team-scoped views in 2+ enterprises
+- [ ] Business Sponsors using team-scoped views in 2+ enterprises
 
 ---
 
@@ -301,7 +318,7 @@ Some features require upstream contributions to MLflow MCP or other open-source 
 |---|---|---|---|
 | Fleet pagination (F16) | Aggregate experiment statistics tool | MLflow MCP | Before M3 |
 | GPA-aligned evaluation (F28) | Goal/Plan/Action scorers in MLflow GenAI | MLflow | Before M4 |
-| Review queue | Dedicated trace queue/triage tool | MLflow MCP | Before M3 |
+| Review queue | Dedicated trace queue/triage tool (Domain Expert / SME workflow) | MLflow MCP | Before M3 |
 | Evaluation Dataset creation | `create_evaluation_dataset` MCP tool | MLflow MCP | Before M3 |
 | Multi-agent session tracing | Cross-experiment session linking | MLflow | Before M4 |
 

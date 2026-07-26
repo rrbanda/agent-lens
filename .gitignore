@@ -29,3 +29,6 @@ Thumbs.db
 # Build artifacts
 *.tar
 *.tar.gz
+
+# Local test MLflow data
+.mlflow-test/

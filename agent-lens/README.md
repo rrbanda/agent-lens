@@ -17,23 +17,21 @@ Agent Lens is a three-layer stack:
 | Secure runtime | [NVIDIA OpenShell](https://github.com/nvidia/openshell) v0.0.85 | Supervisor wraps Hermes with Landlock + seccomp sandbox |
 | Orchestration | [Agent Sandbox Controller](https://github.com/kubernetes-sigs/agent-sandbox) v0.5.x | Reconciles `Sandbox` CRs into supervised pods |
 
-```
-Platform Engineer
-    |  HTTPS
-    v
-OpenShift Route (TLS edge)
-    |
-Service :9119
-    |
-+-- agent-lens Sandbox Pod ----------------------------+
-|  OpenShell Supervisor (--mode=process)               |
-|    -> Hermes Dashboard (port 9119)                   |
-|         |-> MLflow MCP (port 8080, mcp_mlflow_*)     |
-|         |-> LlamaStack (port 8321, OpenAI API)       |
-+------------------------------------------------------+
-    ^
-    |  reconciles Sandbox CR
-Agent Sandbox Controller (agent-sandbox-system ns)
+```mermaid
+flowchart TB
+    PE[Agent Platform Engineer] -->|HTTPS| Route[OpenShift Route\nTLS edge]
+    Route --> Svc[Service :9119]
+
+    subgraph pod [agent-lens Sandbox Pod]
+        Supervisor[OpenShell Supervisor\n--mode=process]
+        Hermes[Hermes Dashboard\nport 9119]
+        Supervisor --> Hermes
+        Hermes -->|mcp_mlflow_*| MLflow[MLflow MCP\nport 8080]
+        Hermes -->|OpenAI API| LlamaStack[LlamaStack\nport 8321]
+    end
+
+    Svc --> Supervisor
+    ASC[Agent Sandbox Controller\nagent-sandbox-system ns] -->|reconciles Sandbox CR| pod
 ```
 
 ## Prerequisites
@@ -257,10 +255,10 @@ mcp_servers:
         - get_experiment
         - search_traces
         - get_trace
-        - log_trace_feedback
-        - log_trace_expectation
+        - log_feedback
+        - log_expectation
         - set_trace_tag
-        - evaluate_traces
+        - evaluate
         - list_runs
         - describe_run
         - list_scorers
@@ -283,7 +281,7 @@ mcp_servers:
 
 - Agent Lens is an enterprise evaluation platform for platform teams
 - Allowed MCP tools: observability (`search_traces`, `get_trace`, ...), evaluation
-  (`evaluate_traces`, `list_scorers`), annotation (`log_trace_feedback`, ...)
+  (`evaluate`, `list_scorers`), annotation (`log_feedback`, ...)
 - Scoring truth: GenAI scorers are yes/no categorical; report **pass rates**, never
   invent Likert scores
 - Scorer profiles: RAG, Tool-Calling, Chat
@@ -296,10 +294,10 @@ Six skills in [skills/](skills/), each a `SKILL.md` mounted as a ConfigMap:
 
 | Skill | Trigger | MCP tools used |
 |-------|---------|---------------|
-| `evaluate-agent` | Evaluate, Score, Qualify | `evaluate_traces`, `list_scorers` |
-| `review-trace` | Review, Annotate | `get_trace`, `search_traces`, `log_trace_feedback`, `log_trace_expectation` |
+| `evaluate-agent` | Evaluate, Score, Qualify | `evaluate`, `list_scorers` |
+| `review-trace` | Review, Annotate | `get_trace`, `search_traces`, `log_feedback`, `log_expectation` |
 | `analyze-session` | Chat session / multi-turn | `search_traces`, `get_trace` |
-| `create-regression` | Regression follow-up | `log_trace_expectation`, `set_trace_tag` |
+| `create-regression` | Regression follow-up | `log_expectation`, `set_trace_tag` |
 | `trace-explorer` | Show traces, Errors | `search_traces`, `get_trace` |
 | `quality-dashboard` | Overview, Fleet health | `search_experiments`, `search_traces`, `list_runs` (max 20) |
 

@@ -13,6 +13,7 @@ mcp_servers:
       resources: false
       prompts: false
       include:
+        # --- Official MLflow MCP tools (verified against mlflow[mcp] 3.14) ---
         # Observability
         - search_experiments
         - get_experiment
@@ -28,18 +29,18 @@ mcp_servers:
         - log_trace_expectation
         - set_trace_tag
         - delete_trace_tag
-        # Assessment (M2)
-        - get_assessment
-        - update_assessment
-        # LoggedModel — agent registry (M2)
-        - search_logged_models
-        - get_logged_model
-        - set_logged_model_tags
-        - create_logged_model
-        - create_external_model
-        - finalize_logged_model
-        - delete_logged_model_tag
-        - log_logged_model_params
+        # Assessment
+        - get_trace_assessment
+        - update_trace_assessment
+        - delete_trace_assessment
+        # Scorer management
+        - register_llm_judge_scorer
+        # Run-trace association
+        - link_traces_to_run
+        # Lifecycle management
+        - delete_traces
+        - create_run
+        - create_experiment
 gateway:
   enabled: true
 tools:

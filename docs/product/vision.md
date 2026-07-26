@@ -43,15 +43,14 @@ No tool today gives a platform engineer a single surface to evaluate agents acro
 
 Agent Lens occupies a unique position at the intersection of three properties:
 
-```
-                    Conversational
-                         |
-                    Agent Lens
-                    /          \
-            MLflow-native    Kubernetes-native
+```mermaid
+flowchart TB
+    Conv[Conversational] --- AL((Agent Lens))
+    AL --- MLflow[MLflow-native]
+    AL --- K8s[Kubernetes-native]
 ```
 
-**Conversational:** Natural-language interaction for evaluation, not dashboards-then-SQL. A platform engineer asks "Can this agent be deployed?" and gets a qualification verdict with evidence, not a data table they must interpret.
+**Conversational:** Natural-language interaction for evaluation, not dashboards-then-SQL. An Agent Platform Engineer asks "Can this agent be deployed?" and gets a qualification verdict with evidence, not a data table they must interpret.
 
 **MLflow-native:** All evaluation data flows through upstream official MLflow MCP. No proprietary scoring engine, no vendor lock-in on the eval side. MLflow is the industry standard (30M+ PyPI downloads/month); Agent Lens is the qualification layer on top.
 
@@ -92,7 +91,7 @@ Agent Lens occupies a unique position at the intersection of three properties:
 
 ### 4.1 Primary ICP (M1-M2)
 
-**Platform engineers** at enterprises with 50+ deployed agents across multiple teams.
+**Agent Platform Engineers** at enterprises with 50+ deployed agents across multiple teams.
 
 They did not build these agents. They must approve them. They need evidence, not opinions.
 
@@ -107,12 +106,12 @@ Characteristics:
 
 | Persona | Enters At | What They Need From Agent Lens |
 |---|---|---|
-| Platform Engineer | M1 (current) | Qualification, fleet observatory, trace review |
-| AI/ML Engineer | M2 | CI/CD gate integration, eval-in-pipeline, regression tracking |
-| Engineering Director / CTO | M3 | Executive dashboard, ROI metrics, fleet health summary |
-| CISO / Security Lead | M3 | Governance audit trail, policy violation tracking, agent registry |
-| Business Unit Owner | M4 | Adoption metrics, quality trends for their team's agents |
-| Compliance / GRC | M4 | Regulatory mapping, qualification export, drift detection |
+| Agent Platform Engineer | M1 (current) | Qualification, fleet observatory, trace review |
+| Agent Developer | M2 | CI/CD gate integration, eval-in-pipeline, regression tracking |
+| Chief AI Officer / VP of AI | M3 | Executive dashboard, ROI metrics, fleet health summary |
+| CISO / AI Security Lead | M3 | Governance audit trail, policy violation tracking, agent registry |
+| Business Sponsor | M4 | Adoption metrics, quality trends for their team's agents |
+| AI Compliance / GRC Lead | M4 | Regulatory mapping, qualification export, drift detection |
 
 ---
 
@@ -120,7 +119,7 @@ Characteristics:
 
 ### Phase 1: Deepen the Wedge (M2)
 
-Harden the platform engineer experience and add the AI/ML engineer as a second persona. The CI/CD gate is the bridge -- platform engineers set the quality bar, AI/ML engineers integrate it into their pipelines.
+Harden the Agent Platform Engineer experience and add the Agent Developer as a second persona. The CI/CD gate is the bridge -- Agent Platform Engineers set the quality bar, Agent Developers integrate it into their pipelines.
 
 ### Phase 2: Widen to Leadership (M3)
 
@@ -128,7 +127,7 @@ Add executive dashboards and CISO governance views. These personas consume Agent
 
 ### Phase 3: Extend to Business (M4)
 
-Business unit owners and compliance officers. These require the least technical depth but the highest auditability. Qualification exports, regulatory mapping, adoption trends.
+Business Sponsors and compliance officers. These require the least technical depth but the highest auditability. Qualification exports, regulatory mapping, adoption trends.
 
 The critical constraint: **each persona expansion must produce value from data already flowing through MLflow MCP.** No persona should require a new data collection pipeline.
 

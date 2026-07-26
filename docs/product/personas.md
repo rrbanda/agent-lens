@@ -8,13 +8,15 @@
 
 ## Overview
 
-Agent Lens serves six enterprise personas across its roadmap. Each persona asks a fundamentally different question about agent quality, needs different metrics, and enters the product at a different milestone.
+Agent Lens serves seven enterprise personas across its roadmap. Each persona asks a fundamentally different question about agent quality, needs different metrics, and enters the product at a different milestone.
+
+Persona names align with 2026 AI industry conventions (see research basis: IBM 2026 CEO Study, Augment Code / Netflix / GitLab job specs, Databricks agent docs, Salesforce Agentforce Builder, Presenc AI procurement criteria).
 
 This document defines each persona, maps their specific needs to Agent Lens features, and tracks current vs. planned coverage.
 
 ---
 
-## Persona 1: Platform Engineer / Agent Platform Operator
+## Persona 1: Agent Platform Engineer
 
 **Enters:** M1 (current, primary persona)
 
@@ -22,9 +24,9 @@ This document defines each persona, maps their specific needs to Agent Lens feat
 
 | Attribute | Detail |
 |---|---|
-| Title | Platform Engineer, SRE, ML Platform Admin |
-| Reports to | Engineering Director or VP of Platform |
-| Daily tools | OpenShift console, Prometheus/Grafana, MLflow, terminal |
+| Title | Agent Platform Engineer, AI Platform Engineer, AgentOps Engineer, SRE |
+| Reports to | VP of AI / VP of Platform |
+| Daily tools | Kubernetes console, Prometheus/Grafana, MLflow, terminal |
 | Agent relationship | Did not build the agents; must approve and monitor them |
 | Decision rights | Can block deployment, set quality bars, escalate to security |
 
@@ -52,7 +54,7 @@ This document defines each persona, maps their specific needs to Agent Lens feat
 M1 Coverage: ██████████░░░░░ ~65%
 ```
 
-The platform engineer can evaluate, review, annotate, and view fleet health today. What is missing is enforcement (CI/CD gate), cost visibility, and temporal trend analysis.
+The agent platform engineer can evaluate, review, annotate, and view fleet health today. What is missing is enforcement (CI/CD gate), cost visibility, and temporal trend analysis.
 
 ### User Stories (Current)
 
@@ -69,7 +71,7 @@ The platform engineer can evaluate, review, annotate, and view fleet health toda
 
 ---
 
-## Persona 2: AI / ML Engineer (Agent Builder)
+## Persona 2: Agent Developer
 
 **Enters:** M2
 
@@ -77,9 +79,9 @@ The platform engineer can evaluate, review, annotate, and view fleet health toda
 
 | Attribute | Detail |
 |---|---|
-| Title | ML Engineer, AI Engineer, Agent Developer |
-| Reports to | Engineering Manager or ML Lead |
-| Daily tools | IDE (Cursor, VS Code), MLflow, CI/CD pipeline, Python |
+| Title | Agent Developer, AI Engineer, Agent Builder |
+| Reports to | Engineering Manager or AI Lead |
+| Daily tools | IDE (Cursor, VS Code), MLflow, CI/CD pipeline, Python, agent SDKs (OpenAI Agents SDK, LangGraph, ADK) |
 | Agent relationship | Built the agent; needs to validate before requesting platform approval |
 | Decision rights | Can iterate on agent design, fix evaluation failures, request qualification |
 
@@ -106,7 +108,7 @@ The platform engineer can evaluate, review, annotate, and view fleet health toda
 M1 Coverage: ████░░░░░░░░░░░ ~30%
 ```
 
-The AI/ML engineer can use Agent Lens conversationally to evaluate their agent, but the critical workflow -- evaluation integrated into their CI/CD pipeline -- does not exist yet. M2 is the inflection point for this persona.
+The agent developer can use Agent Lens conversationally to evaluate their agent, but the critical workflow -- evaluation integrated into their CI/CD pipeline -- does not exist yet. M2 is the inflection point for this persona.
 
 ### User Stories (Needed)
 
@@ -117,19 +119,19 @@ The AI/ML engineer can use Agent Lens conversationally to evaluate their agent, 
 
 ---
 
-## Persona 3: Engineering Director / CTO
+## Persona 3: Chief AI Officer / VP of AI
 
-**Enters:** M3
+**Enters:** M2
 
 ### Profile
 
 | Attribute | Detail |
 |---|---|
-| Title | Director of Engineering, VP of AI, CTO |
-| Reports to | C-suite or Board |
-| Daily tools | Dashboards, Slack, email, quarterly reviews |
-| Agent relationship | Sponsors the agent program; accountable for ROI and risk |
-| Decision rights | Budget allocation, program continuation, staffing |
+| Title | Chief AI Officer (CAIO), VP of AI, Head of AI, CDAO |
+| Reports to | CEO or Board |
+| Daily tools | Dashboards, Slack, email, quarterly reviews, AI governance platforms |
+| Agent relationship | Owns the AI program; accountable for ROI, risk, and governance |
+| Decision rights | Budget allocation, program continuation, go/no-go deployment authority for AI, staffing |
 
 ### Primary Question
 
@@ -142,8 +144,10 @@ The AI/ML engineer can use Agent Lens conversationally to evaluate their agent, 
 | P0 | Fleet-wide quality score (aggregate pass rate) | Executive summary skill | M2 -- Planned |
 | P0 | Total cost of agent fleet (compute + human escalation) | Cost dashboard (Prometheus MCP) | M3 -- Planned |
 | P0 | Agents qualified vs. total deployed | Registry + qualification history | M2 -- Planned |
+| P0 | Agent inventory oversight (fleet-wide view) | Agent Registry | M2 -- Planned |
 | P1 | Time-to-value acceleration | Before/after workflow metrics | M4 -- Planned |
 | P1 | Containment rate (% handled without humans) | Derived from escalation tracking | M3 -- Planned |
+| P1 | AI governance program compliance | Governance dashboard (builds on audit trail) | M3 -- Planned |
 | P2 | ROI per agent / per team | Cost attribution + business outcome correlation | M4 -- Planned |
 
 ### Current Coverage
@@ -152,7 +156,7 @@ The AI/ML engineer can use Agent Lens conversationally to evaluate their agent, 
 M1 Coverage: █░░░░░░░░░░░░░░ ~10%
 ```
 
-The quality-dashboard skill provides a basic fleet view, but it is designed for platform engineers, not executives. This persona needs a periodic summary report, not an interactive chat session.
+The quality-dashboard skill provides a basic fleet view, but it is designed for agent platform engineers, not executives. This persona needs a periodic summary report, not an interactive chat session.
 
 ### User Stories (Needed)
 
@@ -163,7 +167,7 @@ The quality-dashboard skill provides a basic fleet view, but it is designed for 
 
 ---
 
-## Persona 4: CISO / Security and Risk Leader
+## Persona 4: CISO / AI Security Lead
 
 **Enters:** M3
 
@@ -171,26 +175,25 @@ The quality-dashboard skill provides a basic fleet view, but it is designed for 
 
 | Attribute | Detail |
 |---|---|
-| Title | CISO, Security Architect, Risk Manager |
-| Reports to | CIO or CEO |
-| Daily tools | SIEM, vulnerability scanners, audit platforms, policy engines |
-| Agent relationship | Must ensure agents do not create security or compliance risk |
-| Decision rights | Can block deployment on security grounds, mandate governance controls |
+| Title | CISO, AI Security Lead, Security Architect |
+| Reports to | CIO, CEO, or CAIO |
+| Daily tools | SIEM, vulnerability scanners, threat modeling tools, policy engines |
+| Agent relationship | Must ensure agents do not create security risk; owns AI-specific threat modeling |
+| Decision rights | Can block deployment on security grounds, mandate security controls |
 
 ### Primary Question
 
-"Can I trust this agent not to harm the organization -- and can I prove it to auditors?"
+"Can I trust this agent not to harm the organization -- and is the security boundary robust?"
 
 ### Metrics That Matter
 
 | Priority | Metric | Agent Lens Feature | Status |
 |---|---|---|---|
-| P0 | Agent inventory (complete fleet registry) | Agent Registry (MLflow LoggedModel + manual) | M2 -- Planned |
 | P0 | Audit trail of all qualification decisions | Audit log (every qualify/reject with evidence) | M2 -- Planned |
-| P0 | Policy violation rate | Safety scorer tracking + trend | M3 -- Planned |
-| P1 | Per-agent identity and permission boundaries | Registry metadata + RBAC integration | M3 -- Planned |
+| P0 | Policy violation rate (safety scorers) | Safety scorer tracking + trend | M3 -- Planned |
 | P1 | Sensitive data exposure detection | PII/PHI scanner in trace review | M4 -- Planned |
 | P1 | Adversarial robustness (red team results) | Red team evaluation profile | M4 -- Planned |
+| P1 | Sandbox security posture | NetworkPolicy + Landlock verification | M3 -- Planned |
 | P2 | Configuration drift (approved vs. running) | Drift detection skill (K8s MCP comparison) | M4 -- Planned |
 | P2 | Mean time to detect unsafe behavior | Alert-to-containment SLO tracking | M4 -- Planned |
 
@@ -200,18 +203,18 @@ The quality-dashboard skill provides a basic fleet view, but it is designed for 
 M1 Coverage: ░░░░░░░░░░░░░░░ ~5%
 ```
 
-Agent Lens has no governance or audit features today. The only security-relevant capability is that qualification decisions are logged in Hermes session history (PVC), but this is not a proper audit trail. M2 introduces the audit trail; M3 introduces the agent registry and policy violation tracking.
+Agent Lens has no security-specific features today. The only security-relevant capability is that qualification decisions are logged in Hermes session history (PVC), but this is not a proper audit trail. M2 introduces the audit trail; M3 introduces policy violation tracking.
 
 ### User Stories (Needed)
 
-- "Show me a complete inventory of all agents on this cluster with their qualification status"
 - "Export the audit trail of all qualification decisions for the last quarter"
 - "Which agents have not been re-evaluated in the last 30 days?"
 - "Flag any agent that has a safety scorer pass rate below 95%"
+- "Show me the red team evaluation results for the customer-facing agent"
 
 ---
 
-## Persona 5: Business Unit Owner / Line-of-Business Leader
+## Persona 5: Business Sponsor
 
 **Enters:** M4
 
@@ -255,7 +258,7 @@ Agent Lens has no business-user features today. This persona requires the least 
 
 ---
 
-## Persona 6: Compliance / Legal / GRC Leader
+## Persona 6: AI Compliance / GRC Lead
 
 **Enters:** M4
 
@@ -263,9 +266,9 @@ Agent Lens has no business-user features today. This persona requires the least 
 
 | Attribute | Detail |
 |---|---|
-| Title | Chief Compliance Officer, GRC Analyst, Legal Counsel |
+| Title | Chief Compliance Officer, AI Compliance Lead, GRC Analyst |
 | Reports to | General Counsel or CRO |
-| Daily tools | GRC platforms, audit management, regulatory databases |
+| Daily tools | GRC platforms, audit management, regulatory databases (EU AI Act, ISO 42001) |
 | Agent relationship | Must ensure agents comply with regulations and internal policy |
 | Decision rights | Can mandate controls, block non-compliant deployments |
 
@@ -279,7 +282,7 @@ Agent Lens has no business-user features today. This persona requires the least 
 |---|---|---|---|
 | P0 | Qualification evidence export (PDF / structured) | Compliance export skill | M4 -- Planned |
 | P0 | Audit log completeness (who, what, when, which policy) | Audit trail (builds on M2 foundation) | M4 -- Planned |
-| P1 | Regulatory control mapping (ISO 42001, SOX, etc.) | Compliance mapping metadata on qualifications | M4 -- Planned |
+| P1 | Regulatory control mapping (ISO 42001, SOX, EU AI Act) | Compliance mapping metadata on qualifications | M4 -- Planned |
 | P1 | Agent configuration drift | Drift detection (approved vs. running comparison) | M4 -- Planned |
 | P2 | Data residency adherence | Trace metadata + deployment topology verification | M5 -- Planned |
 | P2 | Retention schedule compliance | Trace lifecycle management | M5 -- Planned |
@@ -301,24 +304,81 @@ No compliance features exist today. The M2 audit trail is the foundation; M4 add
 
 ---
 
+## Persona 7: Domain Expert / SME
+
+**Enters:** M2
+
+### Profile
+
+| Attribute | Detail |
+|---|---|
+| Title | Subject Matter Expert, Domain Expert, Process Owner |
+| Reports to | Business Unit Leader or Operations Manager |
+| Daily tools | Business applications (CRM, EHR, ticketing systems), Agent Lens review interface |
+| Agent relationship | Knows what "correct" looks like for the business task; provides ground truth labels |
+| Decision rights | Can approve/reject agent outputs, provide expectation annotations, flag incorrect behavior |
+
+### Primary Question
+
+"Did the agent do the right thing for this specific case?"
+
+### Metrics That Matter
+
+| Priority | Metric | Agent Lens Feature | Status |
+|---|---|---|---|
+| P0 | Trace annotation (approve/reject with evidence) | `review-trace` + `log_feedback` tools | M1 -- Partial |
+| P0 | Expectation authoring (what should the agent have done?) | `create-regression` + `log_expectation` tools | M1 -- Partial |
+| P1 | Review queue (pending traces needing human judgment) | Enhanced `trace-explorer` with review status filter | M2 -- Planned |
+| P1 | Agreement rate (SME consensus across reviewers) | Inter-annotator agreement tracking | M3 -- Planned |
+| P2 | Calibration feedback (do eval scorers match SME judgment?) | Judge calibration dashboard | M4 -- Planned |
+
+### Current Coverage
+
+```
+M1 Coverage: ██░░░░░░░░░░░░░ ~15%
+```
+
+The `review-trace` and `create-regression` skills provide basic annotation capabilities today. What is missing is a non-technical review interface, queue management, and agreement tracking. This persona is critical for evaluation quality because automated scorers must be calibrated against human ground truth.
+
+### Competing Product Precedent
+
+- **Databricks**: Review App for SMEs (built into Mosaic AI Agent Framework)
+- **Humanloop**: Entire product built around structured human-in-the-loop feedback
+- **LangSmith**: Human-review queues and annotation datasets
+- **Braintrust**: Collaborative eval dataset curation
+
+### User Stories (Current)
+
+- "Review this trace and tell me if the agent answered correctly" -- works today (via `review-trace`)
+- "Mark this trace as a regression test case" -- works today (via `create-regression`)
+
+### User Stories (Needed)
+
+- "Show me all traces pending my review for the billing agent"
+- "I disagree with the agent's response -- here's what it should have said"
+- "How often do the automated scorers agree with my annotations?"
+
+---
+
 ## Persona Coverage Summary
 
 | Persona | M1 (Current) | M2 | M3 | M4 | M5 |
 |---|---|---|---|---|---|
-| Platform Engineer | 65% | 85% | 95% | 95% | 100% |
-| AI/ML Engineer | 30% | 70% | 85% | 90% | 95% |
-| Engineering Director / CTO | 10% | 30% | 70% | 85% | 95% |
-| CISO / Security Lead | 5% | 40% | 65% | 85% | 95% |
-| Business Unit Owner | 0% | 5% | 20% | 60% | 80% |
-| Compliance / GRC | 0% | 10% | 20% | 65% | 85% |
+| Agent Platform Engineer | 65% | 85% | 95% | 95% | 100% |
+| Agent Developer | 30% | 70% | 85% | 90% | 95% |
+| Chief AI Officer / VP of AI | 10% | 30% | 70% | 85% | 95% |
+| CISO / AI Security Lead | 5% | 40% | 65% | 85% | 95% |
+| Business Sponsor | 0% | 5% | 20% | 60% | 80% |
+| AI Compliance / GRC Lead | 0% | 10% | 20% | 65% | 85% |
+| Domain Expert / SME | 15% | 40% | 55% | 70% | 85% |
 
 ### Coverage Visualization
 
 ```
-M1  PE  ██████░░░░  AI  ███░░░░░░░  CTO █░░░░░░░░░  CISO ░░░░░░░░░░
-M2  PE  ████████░░  AI  ███████░░░  CTO █░░░░░░░░░  CISO ██░░░░░░░░
-M3  PE  █████████░  AI  ████████░░  CTO ███████░░░  CISO ██████░░░░
-M4  PE  █████████░  AI  █████████░  CTO ████████░░  CISO ████████░░
+M1  APE ██████░░░░  AD  ███░░░░░░░  CAIO █░░░░░░░░░  CISO ░░░░░░░░░░  SME █░░░░░░░░░
+M2  APE ████████░░  AD  ███████░░░  CAIO ███░░░░░░░  CISO ████░░░░░░  SME ████░░░░░░
+M3  APE █████████░  AD  ████████░░  CAIO ███████░░░  CISO ██████░░░░  SME █████░░░░░
+M4  APE █████████░  AD  █████████░  CAIO ████████░░  CISO ████████░░  SME ███████░░░
 ```
 
 ---
@@ -329,16 +389,18 @@ Some features serve multiple personas simultaneously. The table below maps featu
 
 | Feature | Primary Persona | Secondary Personas | Milestone |
 |---|---|---|---|
-| Qualification verdict | Platform Engineer | AI/ML Engineer | M1 (done) |
-| Trace review / annotation | Platform Engineer | AI/ML Engineer | M1 (done) |
-| Fleet observatory | Platform Engineer | CTO, CISO | M1 (done) |
-| CI/CD quality gate | AI/ML Engineer | Platform Engineer | M2 |
-| Audit trail | CISO | Compliance, Platform Engineer | M2 |
-| SSO/OIDC | Platform Engineer | All personas | M2 |
-| Agent registry | CISO | Platform Engineer, CTO | M2 |
-| Executive summary | CTO | Business Owner | M2 |
-| Cost tracking | Platform Engineer | CTO | M3 |
-| Alerting / drift detection | Platform Engineer | CISO | M3 |
-| Compliance export | Compliance | CISO, CTO | M4 |
-| Adoption metrics | Business Owner | CTO | M4 |
-| Regulatory mapping | Compliance | CISO | M4 |
+| Qualification verdict | Agent Platform Engineer | Agent Developer, Domain Expert / SME | M1 (done) |
+| Trace review / annotation | Agent Platform Engineer | Agent Developer, Domain Expert / SME | M1 (done) |
+| Fleet observatory | Agent Platform Engineer | CAIO, CISO | M1 (done) |
+| CI/CD quality gate | Agent Developer | Agent Platform Engineer | M2 |
+| Audit trail | CISO / AI Security Lead | AI Compliance / GRC Lead, Agent Platform Engineer | M2 |
+| SSO/OIDC | Agent Platform Engineer | All personas | M2 |
+| Agent registry | CAIO | Agent Platform Engineer, CISO / AI Security Lead | M2 |
+| Executive summary | CAIO | Business Sponsor | M2 |
+| Review queue | Domain Expert / SME | Agent Developer | M2 |
+| Cost tracking | Agent Platform Engineer | CAIO | M3 |
+| Alerting / drift detection | Agent Platform Engineer | CISO / AI Security Lead | M3 |
+| Compliance export | AI Compliance / GRC Lead | CISO / AI Security Lead, CAIO | M4 |
+| Adoption metrics | Business Sponsor | CAIO | M4 |
+| Regulatory mapping | AI Compliance / GRC Lead | CISO / AI Security Lead | M4 |
+| Judge calibration | Domain Expert / SME | Agent Developer | M4 |

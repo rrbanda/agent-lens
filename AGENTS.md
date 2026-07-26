@@ -119,17 +119,23 @@ The Gateway is a Python/FastAPI service under `gateway/`.
 ## Test Commands
 
 ```bash
+# Set up local dev environment
+make dev-setup
+
+# Unit tests (fast, no MLflow needed)
+make test-unit
+
+# Integration tests (requires local MLflow)
+make mlflow-start
+make seed-data
+make test-integration
+make mlflow-stop
+
 # All tests
-pytest
-
-# Skill ↔ MCP allowlist alignment (fast, no cluster needed)
-pytest tests/test_skill_alignment.py -v
-
-# Gateway tests (M2, requires gateway running)
-pytest tests/test_gateway_api.py -v
+make test
 
 # MCP contract check (requires cluster access)
-scripts/check_mcp_contract.sh
+make check-mcp
 ```
 
 ---

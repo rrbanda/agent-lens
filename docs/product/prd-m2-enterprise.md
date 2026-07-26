@@ -37,8 +37,9 @@ M2 is done when an enterprise can:
 
 | Persona | Role in M2 |
 |---|---|
-| **Platform Engineer** (primary) | Sets quality bars, reviews audit trails, manages agent registry |
-| **AI/ML Engineer** (new in M2) | Integrates quality gate into CI/CD, iterates on failing evaluations |
+| **Agent Platform Engineer** (primary) | Sets quality bars, reviews audit trails, manages agent registry |
+| **Agent Developer** (new in M2) | Integrates quality gate into CI/CD, iterates on failing evaluations |
+| **Domain Expert / SME** (secondary) | Provides domain-specific feedback during trace review and annotation |
 
 See [personas.md](personas.md) for full persona definitions.
 
@@ -60,10 +61,10 @@ See [personas.md](personas.md) for full persona definitions.
 
 | ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| F1-US1 | AI/ML Engineer | trigger an evaluation from my CI/CD pipeline via HTTP POST | my PR is blocked if agent quality drops below the threshold |
-| F1-US2 | Platform Engineer | define quality thresholds per experiment (scorer, pass rate, max error rate) | different agents can have different quality bars |
-| F1-US3 | AI/ML Engineer | receive a structured JSON response with pass/fail, scorer results, and trace IDs | I can diagnose failures without switching to the Agent Lens chat |
-| F1-US4 | Platform Engineer | see all gate decisions in the audit trail | I know which pipelines ran evaluations and what the results were |
+| F1-US1 | Agent Developer | trigger an evaluation from my CI/CD pipeline via HTTP POST | my PR is blocked if agent quality drops below the threshold |
+| F1-US2 | Agent Platform Engineer | define quality thresholds per experiment (scorer, pass rate, max error rate) | different agents can have different quality bars |
+| F1-US3 | Agent Developer | receive a structured JSON response with pass/fail, scorer results, and trace IDs | I can diagnose failures without switching to the Agent Lens chat |
+| F1-US4 | Agent Platform Engineer | see all gate decisions in the audit trail | I know which pipelines ran evaluations and what the results were |
 
 **API Contract (draft):**
 
@@ -115,7 +116,7 @@ Response 200:
 
 - [ ] `POST /api/v1/gate/evaluate` accepts experiment name, profile, and thresholds
 - [ ] Returns structured JSON with per-scorer results and overall verdict
-- [ ] Calls MLflow MCP `evaluate_traces` internally (no direct MLflow SDK)
+- [ ] Calls MLflow MCP `evaluate` internally (no direct MLflow SDK)
 - [ ] Response time <30 seconds for 50 traces with 3 scorers
 - [ ] Every gate decision is written to the audit log (see F3)
 - [ ] CLI wrapper available: `agent-lens-gate --experiment outreach-agent --profile tool-calling`
@@ -124,24 +125,16 @@ Response 200:
 
 **Architecture:**
 
-```
-CI/CD Pipeline
-    |
-    | POST /api/v1/gate/evaluate
-    v
-Agent Lens Gateway (Deployment in openshell namespace)
-    |
-    | MCP tools: evaluate_traces, list_scorers, search_traces
-    v
-MLflow MCP --> MLflow Tracking
-    |
-    | write gate decision
-    v
-Audit Log (PersistentVolume or external store)
+```mermaid
+flowchart TB
+    CICD[CI/CD Pipeline] -->|POST /api/v1/gate/evaluate| GW[Agent Lens Gateway\nDeployment in openshell namespace]
+    GW -->|"MCP tools: evaluate, list_scorers, search_traces"| MCP[MLflow MCP]
+    MCP --> MLflow[MLflow Tracking]
+    GW -->|write gate decision| Audit[Audit Log\nPersistentVolume or external store]
 ```
 
 **Dependencies:**
-- MLflow MCP with `evaluate_traces` tool (already available)
+- MLflow MCP with `evaluate` tool (already available)
 - Judge LLM configured on MLflow side (existing requirement)
 - New container image for Gateway (Python, FastAPI)
 - Network access from Gateway to MLflow MCP service
@@ -160,9 +153,9 @@ Audit Log (PersistentVolume or external store)
 
 | ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| F2-US1 | Platform Engineer | log in with my enterprise SSO credentials | I do not need a separate password for Agent Lens |
-| F2-US2 | CISO | know which user performed each qualification decision | the audit trail has verifiable identity, not "admin" |
-| F2-US3 | Platform Engineer | restrict access to Agent Lens by LDAP group | only authorized platform team members can qualify agents |
+| F2-US1 | Agent Platform Engineer | log in with my enterprise SSO credentials | I do not need a separate password for Agent Lens |
+| F2-US2 | CISO / AI Security Lead | know which user performed each qualification decision | the audit trail has verifiable identity, not "admin" |
+| F2-US3 | Agent Platform Engineer | restrict access to Agent Lens by LDAP group | only authorized platform team members can qualify agents |
 
 **Implementation Options:**
 
@@ -199,10 +192,11 @@ Audit Log (PersistentVolume or external store)
 
 | ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| F3-US1 | CISO | query all qualification decisions for the last quarter | I can prepare for an internal audit |
-| F3-US2 | Platform Engineer | see the history of qualifications for a specific agent | I know when it was last evaluated and what the results were |
-| F3-US3 | Compliance Officer | export the audit trail as structured JSON or CSV | I can import it into our GRC platform |
-| F3-US4 | CISO | verify that no qualification decision has been tampered with | the audit trail is a trustworthy regulatory artifact |
+| F3-US1 | CISO / AI Security Lead | query all qualification decisions for the last quarter | I can prepare for an internal audit |
+| F3-US2 | Agent Platform Engineer | see the history of qualifications for a specific agent | I know when it was last evaluated and what the results were |
+| F3-US3 | AI Compliance / GRC Lead | export the audit trail as structured JSON or CSV | I can import it into our GRC platform |
+| F3-US4 | CISO / AI Security Lead | verify that no qualification decision has been tampered with | the audit trail is a trustworthy regulatory artifact |
+| F3-US5 | Domain Expert / SME | annotate traces with domain-specific feedback during review | my expertise is captured as structured evidence in the audit trail |
 
 **Audit Record Schema (draft):**
 
@@ -244,7 +238,7 @@ Audit Log (PersistentVolume or external store)
 |---|---|---|
 | `qualification` | `evaluate-agent` skill issues verdict | Verdict, evidence, thresholds, actor |
 | `gate_evaluation` | Gateway API processes a CI/CD request | Verdict, pipeline identity, evidence |
-| `annotation` | `review-trace` or `log_trace_feedback` | Trace ID, feedback, actor |
+| `annotation` | `review-trace` or `log_feedback` | Trace ID, feedback, actor |
 | `regression_tagged` | `create-regression` skill tags a trace | Trace ID, expectation, actor |
 | `threshold_change` | Quality threshold modified | Old/new thresholds, actor |
 
@@ -276,10 +270,10 @@ Audit Log (PersistentVolume or external store)
 
 | ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| F4-US1 | Platform Engineer | see every agent on the cluster with its qualification status | I know which agents are qualified and which are pending |
-| F4-US2 | CISO | know how many agents are deployed vs. how many are qualified | I can quantify governance coverage |
-| F4-US3 | Platform Engineer | register an agent manually if auto-discovery misses it | the registry is complete even for non-standard deployments |
-| F4-US4 | Platform Engineer | see agent metadata (owner team, deploy namespace, framework) | I can route evaluation requests to the right people |
+| F4-US1 | Agent Platform Engineer | see every agent on the cluster with its qualification status | I know which agents are qualified and which are pending |
+| F4-US2 | CISO / AI Security Lead | know how many agents are deployed vs. how many are qualified | I can quantify governance coverage |
+| F4-US3 | Agent Platform Engineer | register an agent manually if auto-discovery misses it | the registry is complete even for non-standard deployments |
+| F4-US4 | Agent Platform Engineer | see agent metadata (owner team, deploy namespace, framework) | I can route evaluation requests to the right people |
 
 **Registry Data Model (extends MLflow experiment metadata):**
 
@@ -323,9 +317,9 @@ Audit Log (PersistentVolume or external store)
 
 | ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| F5-US1 | Platform Engineer | see the error rate trend for an agent over the last 7 days | I can spot quality regressions early |
-| F5-US2 | AI/ML Engineer | see which tool calls fail most frequently | I can fix the most impactful issues first |
-| F5-US3 | Platform Engineer | see latency p50/p95 by agent | I can identify slow agents before users complain |
+| F5-US1 | Agent Platform Engineer | see the error rate trend for an agent over the last 7 days | I can spot quality regressions early |
+| F5-US2 | Agent Developer | see which tool calls fail most frequently | I can fix the most impactful issues first |
+| F5-US3 | Agent Platform Engineer | see latency p50/p95 by agent | I can identify slow agents before users complain |
 
 **Acceptance Criteria:**
 
@@ -345,9 +339,9 @@ Audit Log (PersistentVolume or external store)
 
 | ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| F6-US1 | Platform Engineer | evaluate an agent with a Safety profile | I can check for harmful or policy-violating outputs |
-| F6-US2 | AI/ML Engineer | define a custom profile with specific scorers and thresholds | I can set quality bars tailored to my agent's domain |
-| F6-US3 | Platform Engineer | save and reuse custom profiles | I do not have to redefine thresholds every evaluation |
+| F6-US1 | Agent Platform Engineer | evaluate an agent with a Safety profile | I can check for harmful or policy-violating outputs |
+| F6-US2 | Agent Developer | define a custom profile with specific scorers and thresholds | I can set quality bars tailored to my agent's domain |
+| F6-US3 | Agent Platform Engineer | save and reuse custom profiles | I do not have to redefine thresholds every evaluation |
 
 **New Profiles:**
 
@@ -374,8 +368,8 @@ Audit Log (PersistentVolume or external store)
 
 | ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| F7-US1 | AI/ML Engineer | compare evaluation results between two MLflow runs | I can see if my changes improved or regressed quality |
-| F7-US2 | Platform Engineer | see a before/after when re-evaluating an agent | I can confirm the fix actually worked |
+| F7-US1 | Agent Developer | compare evaluation results between two MLflow runs | I can see if my changes improved or regressed quality |
+| F7-US2 | Agent Platform Engineer | see a before/after when re-evaluating an agent | I can confirm the fix actually worked |
 
 **Acceptance Criteria:**
 
@@ -465,7 +459,7 @@ Audit Log (PersistentVolume or external store)
 
 | Dependency | Owner | Risk | Mitigation |
 |---|---|---|---|
-| MLflow MCP `evaluate_traces` tool | MLflow upstream | Tool behavior or contract changes | CI contract check; pin to tested MCP versions |
+| MLflow MCP `evaluate` tool | MLflow upstream | Tool behavior or contract changes | CI contract check; pin to tested MCP versions |
 | Judge LLM behind MLflow GenAI evaluation | Platform team (customer) | No judge = no scoring = gate always fails | Pre-flight check in Gateway; clear error messages |
 | OpenShift OAuth Proxy | Red Hat catalog | Version compatibility with OpenShift | Test against target OpenShift versions |
 | Hermes session identity propagation | Hermes upstream | May not support passing OIDC user to skills | Contribute upstream or use proxy header injection |

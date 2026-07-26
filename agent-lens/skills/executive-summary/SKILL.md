@@ -5,7 +5,7 @@ description: "Generate a non-technical, one-paragraph fleet health summary for l
 
 # Executive Summary
 
-Non-technical fleet health summary for CTO, Director, and VP-level stakeholders.
+Non-technical fleet health summary for Chief AI Officer (CAIO), VP of AI, and executive stakeholders.
 
 ## When to Use
 
@@ -19,9 +19,12 @@ Non-technical fleet health summary for CTO, Director, and VP-level stakeholders.
 
 ### Step 1: Gather fleet-wide data
 
-1. `mcp_mlflow_search_logged_models` — get all agents with `agentlens.managed=true`
-2. Read `agentlens.qualification.*` tags for status distribution
-3. `mcp_mlflow_search_experiments` — get experiment metadata for active agents
+1. `mcp_mlflow_search_experiments` — list all agent experiments in the fleet
+2. Per experiment: `mcp_mlflow_search_traces` — recent trace metrics (success rate, errors)
+3. Per experiment: `mcp_mlflow_list_runs` — evaluation run history for qualification status
+
+> **Note:** Agent registry data (`search_logged_models`) requires the Gateway MCP (M2).
+> Until then, derive fleet composition and qualification status from experiments, traces, and evaluation runs.
 
 ### Step 2: Compute fleet health indicators
 
