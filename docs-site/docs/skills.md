@@ -5,32 +5,30 @@ title: Skills Reference
 
 # Skills Reference
 
-Agent Lens ships with 16 skills — 7 core evaluation skills, 4 advanced evaluation skills, and 5 operational skills for fleet management. Each skill is a `SKILL.md` file (a portable markdown prompt document) that guides the LLM on which MCP tools to call and how to format results.
+Agent Lens ships with skills across three categories — core evaluation, advanced evaluation, and operational fleet management. Each skill is a `SKILL.md` file (a portable markdown prompt document) that guides the LLM on which MCP tools to call and how to format results.
 
-Skills are **framework-agnostic** — they evaluate any agent that sends traces to MLflow, regardless of whether the agent was built with LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, or custom code. Skills are also **harness-independent** — they work with any MCP-capable agent runtime, not just the reference Hermes deployment.
+Skills are **framework-agnostic** — they evaluate any agent that sends traces to MLflow, regardless of whether the agent was built with LangGraph, Google ADK, LangChain, CrewAI, OpenAI Agents SDK, or custom code. Skills are also **harness-independent** — they work with any MCP-capable agent runtime.
 
-## Verified End-to-End (July 2026)
+## Skills Overview
 
-Tested on OpenShift 4.18 with Hermes v0.19 + Gemini 2.5 Flash + MLflow MCP 3.14.
-
-| Skill | MCP Tools Used | Status |
-|-------|---------------|--------|
-| [trace-explorer](#trace-explorer) | `search_experiments`, `search_traces`, `get_trace` | PASS |
-| [quality-dashboard](#quality-dashboard) | `search_experiments`, `search_traces`, `list_runs` | PASS |
-| [analyze-session](#analyze-session) | `search_traces`, `get_trace` | PASS |
-| [review-trace](#review-trace) | `get_trace`, `get_trace_assessment` | PASS |
-| [create-regression](#create-regression) | `update_trace_assessment`, `set_trace_tag` | PASS |
-| [evaluate-agent](#evaluate-agent) | `list_scorers`, `evaluate_traces` | PARTIAL — LLM judges need OpenAI key on MCP server |
-| [compare-evaluations](#compare-evaluations) | `list_runs`, `describe_run` | PASS |
+| Skill | MCP Tools Used |
+|-------|---------------|
+| [trace-explorer](#trace-explorer) | `search_experiments`, `search_traces`, `get_trace` |
+| [quality-dashboard](#quality-dashboard) | `search_experiments`, `search_traces`, `list_runs` |
+| [analyze-session](#analyze-session) | `search_traces`, `get_trace` |
+| [review-trace](#review-trace) | `get_trace`, `get_trace_assessment` |
+| [create-regression](#create-regression) | `update_trace_assessment`, `set_trace_tag` |
+| [evaluate-agent](#evaluate-agent) | `list_scorers`, `evaluate_traces` |
+| [compare-evaluations](#compare-evaluations) | `list_runs`, `describe_run` |
 
 ## Advanced Evaluation Skills
 
-| Skill | MCP Tools Used | Status |
-|-------|---------------|--------|
-| [create-judge](#create-judge) | `list_scorers` | PASS — `register_llm_judge_scorer` needs OpenAI key |
-| [red-team](#red-team) | `search_traces`, `evaluate_traces` | PARTIAL — LLM judges need OpenAI key |
-| [eval-loop](#eval-loop) | `create_run`, `search_traces` | PASS |
-| [cost-quality](#cost-quality) | `list_runs`, `describe_run`, `search_traces` | PASS |
+| Skill | MCP Tools Used |
+|-------|---------------|
+| [create-judge](#create-judge) | `list_scorers`, `register_llm_judge_scorer` |
+| [red-team](#red-team) | `search_traces`, `evaluate_traces` |
+| [eval-loop](#eval-loop) | `create_run`, `search_traces` |
+| [cost-quality](#cost-quality) | `list_runs`, `describe_run`, `search_traces` |
 
 ---
 
@@ -259,13 +257,13 @@ Tested on OpenShift 4.18 with Hermes v0.19 + Gemini 2.5 Flash + MLflow MCP 3.14.
 
 These skills compose the same MCP tools for fleet management, governance, and reporting.
 
-| Skill | MCP Tools Used | Status |
-|-------|---------------|--------|
-| [audit-trail](#audit-trail) | `search_traces`, `list_runs`, `describe_run` | PASS |
-| [agent-registry](#agent-registry) | `search_experiments`, `list_runs`, `describe_run` | PASS |
-| [executive-summary](#executive-summary) | `search_experiments`, `search_traces`, `list_runs` | PASS |
-| [compliance-export](#compliance-export) | `search_traces`, `list_runs`, `describe_run` | TIMEOUT in CLI — works in dashboard |
-| [aggregate-traces](#aggregate-traces) | `search_traces` | PARTIAL — large payloads may truncate |
+| Skill | MCP Tools Used |
+|-------|---------------|
+| [audit-trail](#audit-trail) | `search_traces`, `list_runs`, `describe_run` |
+| [agent-registry](#agent-registry) | `search_experiments`, `list_runs`, `describe_run` |
+| [executive-summary](#executive-summary) | `search_experiments`, `search_traces`, `list_runs` |
+| [compliance-export](#compliance-export) | `search_traces`, `list_runs`, `describe_run` |
+| [aggregate-traces](#aggregate-traces) | `search_traces` |
 
 ---
 

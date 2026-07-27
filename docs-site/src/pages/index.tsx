@@ -7,7 +7,7 @@ function Hero() {
   return (
     <section className="hero-section">
       <div className="container">
-        <div className="hero-badge">16 skills · 19 MCP tools · 14 verified end-to-end on OpenShift 4.18</div>
+        <div className="hero-badge">Open source · MLflow native · Framework agnostic</div>
         <h1 className="hero-title">
           Trust your agents.<br />Verify with evidence.
         </h1>
@@ -87,7 +87,7 @@ const features = [
   {
     icon: '⚡',
     title: 'MLflow MCP Native',
-    description: 'Built entirely on the official MLflow MCP server. 19 tools from mlflow[mcp] 3.14, zero custom forks. Your data stays in MLflow.',
+    description: 'Built entirely on the official MLflow MCP server. Zero custom forks. Your data stays in MLflow.',
   },
   {
     icon: '🔒',
@@ -153,36 +153,35 @@ function Features() {
 
 function Skills() {
   const skills = [
-    { name: 'trace-explorer', tools: 'search_experiments, search_traces, get_trace', desc: 'Search and drill into any trace', status: 'PASS' },
-    { name: 'quality-dashboard', tools: 'search_experiments, search_traces, list_runs', desc: 'Fleet-wide health + cost + latency', status: 'PASS' },
-    { name: 'analyze-session', tools: 'search_traces, get_trace', desc: 'Trace analysis with status and latency', status: 'PASS' },
-    { name: 'review-trace', tools: 'get_trace, get_trace_assessment', desc: 'Deep-dive + assessments', status: 'PASS' },
-    { name: 'create-regression', tools: 'update_trace_assessment, set_trace_tag', desc: 'Flag failures for follow-up', status: 'PASS' },
-    { name: 'evaluate-agent', tools: 'list_scorers, evaluate_traces', desc: 'Run LLM judges on traces', status: 'PARTIAL' },
-    { name: 'compare-evaluations', tools: 'list_runs, describe_run', desc: 'Track quality over time', status: 'PASS' },
-    { name: 'create-judge', tools: 'list_scorers, register_llm_judge_scorer', desc: 'Build custom scorers from English', status: 'PASS' },
-    { name: 'red-team', tools: 'search_traces, evaluate_traces', desc: 'Adversarial safety evaluation', status: 'PARTIAL' },
-    { name: 'eval-loop', tools: 'create_run, search_traces', desc: 'Full EDD improvement cycle', status: 'PASS' },
-    { name: 'cost-quality', tools: 'list_runs, describe_run, search_traces', desc: 'Cost vs quality tradeoff analysis', status: 'PASS' },
-    { name: 'audit-trail', tools: 'search_traces, list_runs, describe_run', desc: 'Qualification decision history', status: 'PASS' },
-    { name: 'agent-registry', tools: 'search_experiments, list_runs, describe_run', desc: 'Fleet inventory and status', status: 'PASS' },
-    { name: 'executive-summary', tools: 'search_experiments, search_traces, list_runs', desc: 'Board-ready health summary', status: 'PASS' },
-    { name: 'compliance-export', tools: 'search_traces, list_runs, describe_run', desc: 'JSONL/CSV export for GRC tools', status: 'PASS*' },
-    { name: 'aggregate-traces', tools: 'search_traces', desc: 'Error rates, latency, token trends', status: 'PARTIAL' },
+    { name: 'trace-explorer', tools: 'search_experiments, search_traces, get_trace', desc: 'Search and drill into any trace' },
+    { name: 'quality-dashboard', tools: 'search_experiments, search_traces, list_runs', desc: 'Fleet-wide health + cost + latency' },
+    { name: 'analyze-session', tools: 'search_traces, get_trace', desc: 'Trace analysis with status and latency' },
+    { name: 'review-trace', tools: 'get_trace, get_trace_assessment', desc: 'Deep-dive + assessments' },
+    { name: 'create-regression', tools: 'update_trace_assessment, set_trace_tag', desc: 'Flag failures for follow-up' },
+    { name: 'evaluate-agent', tools: 'list_scorers, evaluate_traces', desc: 'Run LLM judges on traces' },
+    { name: 'compare-evaluations', tools: 'list_runs, describe_run', desc: 'Track quality over time' },
+    { name: 'create-judge', tools: 'list_scorers, register_llm_judge_scorer', desc: 'Build custom scorers from English' },
+    { name: 'red-team', tools: 'search_traces, evaluate_traces', desc: 'Adversarial safety evaluation' },
+    { name: 'eval-loop', tools: 'create_run, search_traces', desc: 'Full EDD improvement cycle' },
+    { name: 'cost-quality', tools: 'list_runs, describe_run, search_traces', desc: 'Cost vs quality tradeoff analysis' },
+    { name: 'audit-trail', tools: 'search_traces, list_runs, describe_run', desc: 'Qualification decision history' },
+    { name: 'agent-registry', tools: 'search_experiments, list_runs, describe_run', desc: 'Fleet inventory and status' },
+    { name: 'executive-summary', tools: 'search_experiments, search_traces, list_runs', desc: 'Board-ready health summary' },
+    { name: 'compliance-export', tools: 'search_traces, list_runs, describe_run', desc: 'JSONL/CSV export for GRC tools' },
+    { name: 'aggregate-traces', tools: 'search_traces', desc: 'Error rates, latency, token trends' },
   ];
 
   return (
     <section className="skills-section">
       <div className="container">
         <p className="section-label">Skills</p>
-        <h2 className="section-title">16 skills. 12 fully verified.</h2>
+        <h2 className="section-title">Built-in skills for every stage of qualification.</h2>
         <div className="skills-table">
           <table>
             <thead>
               <tr>
                 <th>Skill</th>
                 <th>MCP Tools</th>
-                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -190,7 +189,6 @@ function Skills() {
                 <tr key={i}>
                   <td><strong>{s.name}</strong><br /><span style={{color: '#64748b', fontSize: '0.85rem'}}>{s.desc}</span></td>
                   <td><code style={{fontSize: '0.8rem'}}>{s.tools}</code></td>
-                  <td className={s.status === 'PASS' ? 'status-pass' : s.status === 'PARTIAL' ? 'status-partial' : 'status-pass'}>{s.status}</td>
                 </tr>
               ))}
             </tbody>
