@@ -1,0 +1,72 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: openshell
+
+resources:
+  - sandbox-adk.yaml
+  - services.yaml
+  - network-policies.yaml
+
+configMapGenerator:
+  # ADK-specific startup
+  - name: agent-lens-adk-startup
+    files:
+      - startup-adk.sh=startup-adk.sh
+  # ADK-specific OpenShell policy (different from Hermes: /app instead of /sandbox)
+  - name: agent-lens-adk-openshell-policy
+    files:
+      - policy.yaml=policy-adk.yaml
+      - sandbox-policy.rego=../openshell/sandbox-policy.rego
+  # Shared skills (same ConfigMaps as Hermes deployment)
+  - name: skill-evaluate-agent
+    files:
+      - SKILL.md=../../skills/evaluate-agent/SKILL.md
+  - name: skill-review-trace
+    files:
+      - SKILL.md=../../skills/review-trace/SKILL.md
+  - name: skill-create-regression
+    files:
+      - SKILL.md=../../skills/create-regression/SKILL.md
+  - name: skill-trace-explorer
+    files:
+      - SKILL.md=../../skills/trace-explorer/SKILL.md
+  - name: skill-quality-dashboard
+    files:
+      - SKILL.md=../../skills/quality-dashboard/SKILL.md
+  - name: skill-analyze-session
+    files:
+      - SKILL.md=../../skills/analyze-session/SKILL.md
+  - name: skill-audit-trail
+    files:
+      - SKILL.md=../../skills/audit-trail/SKILL.md
+  - name: skill-agent-registry
+    files:
+      - SKILL.md=../../skills/agent-registry/SKILL.md
+  - name: skill-aggregate-traces
+    files:
+      - SKILL.md=../../skills/aggregate-traces/SKILL.md
+  - name: skill-compare-evaluations
+    files:
+      - SKILL.md=../../skills/compare-evaluations/SKILL.md
+  - name: skill-executive-summary
+    files:
+      - SKILL.md=../../skills/executive-summary/SKILL.md
+  - name: skill-compliance-export
+    files:
+      - SKILL.md=../../skills/compliance-export/SKILL.md
+  - name: skill-create-judge
+    files:
+      - SKILL.md=../../skills/create-judge/SKILL.md
+  - name: skill-red-team
+    files:
+      - SKILL.md=../../skills/red-team/SKILL.md
+  - name: skill-eval-loop
+    files:
+      - SKILL.md=../../skills/eval-loop/SKILL.md
+  - name: skill-cost-quality
+    files:
+      - SKILL.md=../../skills/cost-quality/SKILL.md
+
+generatorOptions:
+  disableNameSuffixHash: true

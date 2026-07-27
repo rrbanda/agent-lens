@@ -97,7 +97,7 @@ const features = [
   {
     icon: '🔌',
     title: 'Pick Your Harness',
-    description: 'Skills are portable markdown — not code. Ships with Hermes, works with Claude Code, OpenClaw, Goose, or any MCP-capable agent runtime. Choose a commodity runtime.',
+    description: 'Skills are portable markdown — not code. Ships with two validated harnesses (Hermes + Google ADK), works with Claude Code, OpenClaw, Goose, or any MCP-capable runtime.',
   },
   {
     icon: '🛡️',

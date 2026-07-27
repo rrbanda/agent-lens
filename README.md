@@ -179,7 +179,7 @@ The sandbox is **subtractive** — it constrains what the agent can do. The skil
 
 ## Pick your agent harness
 
-Agent Lens ships with [Hermes](https://github.com/hermes-ai/hermes-agent) as the reference runtime. But the skills, soul, and config are **portable artifacts** — plain markdown and YAML that work with any MCP-capable agent harness.
+Agent Lens ships with two validated harnesses — **Hermes** and **Google ADK** — and the skills, soul, and config are **portable artifacts** that work with any MCP-capable agent runtime.
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -193,13 +193,30 @@ Agent Lens ships with [Hermes](https://github.com/hermes-ai/hermes-agent) as the
 └─────────────────────────────────────────────┘
 ```
 
+| Harness | Container | Startup | Port | Status |
+|---------|-----------|---------|------|--------|
+| [Hermes](https://github.com/hermes-ai/hermes-agent) | `Containerfile` | `startup.sh` | 9119 | Reference |
+| [Google ADK](https://adk.dev/) | `Containerfile.adk` | `startup-adk.sh` | 8000 | Validated — LiteLlm + OpenAI-compatible API |
+
+```bash
+# Run with Hermes (reference)
+make deploy-all
+
+# Run with Google ADK
+oc apply -k agent-lens/deploy/adk/
+
+# Run ADK locally for development
+cd agent-lens && pip install "adk/.[tracing]"
+PYTHONPATH=. uvicorn adk.main:app --port 8000
+```
+
 | | Harness-independent | Harness-specific |
 |---|---|---|
-| **Keep** | `skills/*.md`, `soul.md`, `config.yaml` | |
-| **Swap** | | `Containerfile`, `startup.sh` |
+| **Keep** | `skills/*.md`, `soul.md` | |
+| **Swap** | | `Containerfile`, `startup.sh`, `agent.py` |
 | **Your harness needs** | | MCP tool calling, skill/prompt loading, chat interface |
 
-Any MCP-capable agent runtime works: [Hermes](https://github.com/hermes-ai/hermes-agent), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenClaw](https://github.com/openclaw), [Goose](https://github.com/block/goose), or your own. The skills use standard MCP tool patterns that any MCP client can execute. Choose a commodity runtime — the qualification logic lives in the skills, not the harness.
+Any MCP-capable agent runtime works: [Hermes](https://github.com/hermes-ai/hermes-agent), [Google ADK](https://adk.dev/), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenClaw](https://github.com/openclaw), [Goose](https://github.com/block/goose), or your own. Choose a commodity runtime — the qualification logic lives in the skills, not the harness.
 
 See [Architecture](https://rrbanda.github.io/agentlens/docs/architecture) for the full design.
 
@@ -239,7 +256,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) · For AI coding agents: [AGENTS.md](AGEN
 - [MLflow](https://mlflow.org/) — GenAI evaluation, 20+ built-in scorers
 - [MLflow MCP](https://mlflow.org/docs/latest/genai/mcp/) — 19 tools via Model Context Protocol
 - [OpenShell](https://github.com/NVIDIA/OpenShell) — defense-in-depth agent sandboxing
-- Any MCP-capable agent harness (ships with [Hermes](https://github.com/hermes-ai/hermes-agent))
+- [Google ADK](https://adk.dev/) — validated agent harness with `SkillToolset` + `McpToolset`
+- [Hermes](https://github.com/hermes-ai/hermes-agent) — reference agent harness
 - Any OpenAI-compatible LLM (Gemini, OpenAI, Azure, Ollama, vLLM)
 - [Kubernetes](https://kubernetes.io/) — tested on OpenShift, EKS, GKE
 

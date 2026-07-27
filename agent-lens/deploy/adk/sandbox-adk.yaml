@@ -1,0 +1,254 @@
+apiVersion: agents.x-k8s.io/v1beta1
+kind: Sandbox
+metadata:
+  name: agent-lens-adk
+  labels:
+    app: agent-lens-adk
+    app.kubernetes.io/name: agent-lens-adk
+    app.kubernetes.io/part-of: agent-lens
+    agent-lens/harness: adk
+spec:
+  replicas: 1
+  shutdownPolicy: Retain
+  podTemplate:
+    metadata:
+      labels:
+        app: agent-lens-adk
+        agent-lens/harness: adk
+    spec:
+      serviceAccountName: openshell-sandbox
+      securityContext:
+        fsGroup: 1001310000
+      initContainers:
+        - name: openshell-supervisor-install
+          image: ghcr.io/nvidia/openshell/supervisor:0.0.85
+          imagePullPolicy: IfNotPresent
+          command: ["/openshell-sandbox", "copy-self", "/opt/openshell/bin/openshell-sandbox"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: openshell-supervisor-bin
+              mountPath: /opt/openshell/bin
+        - name: workspace-init
+          image: image-registry.openshift-image-registry.svc:5000/agent-lens/agent-lens-adk:latest
+          imagePullPolicy: Always
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /workspace-pvc/.workspace-initialized ]; then
+                [ -d /sandbox ] && tar -C /sandbox -cf - . | tar -C /workspace-pvc -xpf -
+                touch /workspace-pvc/.workspace-initialized
+              fi
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace-pvc
+      containers:
+        - name: agent
+          image: image-registry.openshift-image-registry.svc:5000/agent-lens/agent-lens-adk:latest
+          imagePullPolicy: Always
+          command:
+            - /opt/openshell/bin/openshell-sandbox
+          args:
+            - --mode=process
+            - --log-level=debug
+            - --policy-rules
+            - /etc/openshell/sandbox-policy.rego
+            - --policy-data
+            - /etc/openshell/policy.yaml
+            - --
+            - bash
+            - /mnt/startup/startup-adk.sh
+          env:
+            - name: OPENSHELL_SANDBOX
+              value: agent-lens-adk
+            - name: OPENSHELL_ENDPOINT
+              value: "https://openshell.openshell.svc.cluster.local:8080"
+            - name: OPENSHELL_TLS_CA
+              value: /etc/openshell-tls/ca.crt
+            - name: OPENSHELL_TLS_CERT
+              value: /etc/openshell-tls/tls.crt
+            - name: OPENSHELL_TLS_KEY
+              value: /etc/openshell-tls/tls.key
+            - name: OPENSHELL_POLICY_RULES
+              value: /etc/openshell/sandbox-policy.rego
+            - name: OPENSHELL_POLICY_DATA
+              value: /etc/openshell/policy.yaml
+            - name: OPENSHELL_TELEMETRY_ENABLED
+              value: "true"
+            - name: OPENSHELL_SSH_SOCKET_PATH
+              value: /run/openshell/ssh.sock
+            - name: OPENSHELL_SANDBOX_UID
+              value: "1001310000"
+            - name: OPENSHELL_SANDBOX_GID
+              value: "1001310000"
+            - name: HOME
+              value: /sandbox
+            - name: PYTHONPATH
+              value: /sandbox
+            # --- ADK (LiteLlm) inference endpoint ---
+            - name: MODEL_ID
+              value: ""
+            - name: BASE_URL
+              value: ""
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-lens-auth
+                  key: llm-api-key
+                  optional: true
+            - name: PORT
+              value: "8000"
+            - name: MLFLOW_MCP_URL
+              value: "http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp"
+            - name: MLFLOW_TRACKING_URI
+              value: ""
+            - name: MLFLOW_TRACKING_INSECURE_TLS
+              value: "true"
+            - name: PATH
+              value: "/opt/app-root/bin:/usr/local/bin:/usr/bin:/bin"
+          securityContext:
+            runAsUser: 0
+            appArmorProfile:
+              type: Unconfined
+            capabilities:
+              add: [SYS_ADMIN, NET_ADMIN, SYS_PTRACE, SYSLOG]
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "2"
+          volumeMounts:
+            - name: openshell-supervisor-bin
+              mountPath: /opt/openshell/bin
+              readOnly: true
+            - name: openshell-policy
+              mountPath: /etc/openshell
+              readOnly: true
+            - name: openshell-client-tls
+              mountPath: /etc/openshell-tls
+              readOnly: true
+            - name: workspace
+              mountPath: /sandbox
+            - name: startup
+              mountPath: /mnt/startup
+            - name: skill-evaluate-agent
+              mountPath: /mnt/skill-evaluate-agent
+            - name: skill-review-trace
+              mountPath: /mnt/skill-review-trace
+            - name: skill-create-regression
+              mountPath: /mnt/skill-create-regression
+            - name: skill-trace-explorer
+              mountPath: /mnt/skill-trace-explorer
+            - name: skill-quality-dashboard
+              mountPath: /mnt/skill-quality-dashboard
+            - name: skill-analyze-session
+              mountPath: /mnt/skill-analyze-session
+            - name: skill-audit-trail
+              mountPath: /mnt/skill-audit-trail
+            - name: skill-agent-registry
+              mountPath: /mnt/skill-agent-registry
+            - name: skill-aggregate-traces
+              mountPath: /mnt/skill-aggregate-traces
+            - name: skill-compare-evaluations
+              mountPath: /mnt/skill-compare-evaluations
+            - name: skill-executive-summary
+              mountPath: /mnt/skill-executive-summary
+            - name: skill-compliance-export
+              mountPath: /mnt/skill-compliance-export
+            - name: skill-create-judge
+              mountPath: /mnt/skill-create-judge
+            - name: skill-red-team
+              mountPath: /mnt/skill-red-team
+            - name: skill-eval-loop
+              mountPath: /mnt/skill-eval-loop
+            - name: skill-cost-quality
+              mountPath: /mnt/skill-cost-quality
+          ports:
+            - containerPort: 8000
+              name: api
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: openshell-supervisor-bin
+          emptyDir: {}
+        - name: openshell-client-tls
+          secret:
+            secretName: openshell-client-tls
+        - name: openshell-policy
+          configMap:
+            name: agent-lens-adk-openshell-policy
+        - name: startup
+          configMap:
+            name: agent-lens-adk-startup
+            defaultMode: 0755
+        - name: skill-evaluate-agent
+          configMap:
+            name: skill-evaluate-agent
+        - name: skill-review-trace
+          configMap:
+            name: skill-review-trace
+        - name: skill-create-regression
+          configMap:
+            name: skill-create-regression
+        - name: skill-trace-explorer
+          configMap:
+            name: skill-trace-explorer
+        - name: skill-quality-dashboard
+          configMap:
+            name: skill-quality-dashboard
+        - name: skill-analyze-session
+          configMap:
+            name: skill-analyze-session
+        - name: skill-audit-trail
+          configMap:
+            name: skill-audit-trail
+        - name: skill-agent-registry
+          configMap:
+            name: skill-agent-registry
+        - name: skill-aggregate-traces
+          configMap:
+            name: skill-aggregate-traces
+        - name: skill-compare-evaluations
+          configMap:
+            name: skill-compare-evaluations
+        - name: skill-executive-summary
+          configMap:
+            name: skill-executive-summary
+        - name: skill-compliance-export
+          configMap:
+            name: skill-compliance-export
+        - name: skill-create-judge
+          configMap:
+            name: skill-create-judge
+        - name: skill-red-team
+          configMap:
+            name: skill-red-team
+        - name: skill-eval-loop
+          configMap:
+            name: skill-eval-loop
+        - name: skill-cost-quality
+          configMap:
+            name: skill-cost-quality
+  volumeClaimTemplates:
+    - metadata:
+        name: workspace
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 5Gi

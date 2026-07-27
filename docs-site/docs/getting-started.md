@@ -21,19 +21,36 @@ title: Getting Started
 
 ## Local Development
 
+### Option A: Hermes (reference harness)
+
 ```bash
-# Clone and setup
-git clone https://github.com/rrbanda/agent-lens.git
-cd agent-lens
-make dev-setup
-
-# Start MLflow and seed test data
-make mlflow-start
-make seed-data
-
-# Run integration tests to verify everything works
+git clone https://github.com/rrbanda/agent-lens.git && cd agent-lens
+make dev-setup && make mlflow-start && make seed-data
 make test-integration
 ```
+
+### Option B: Google ADK
+
+```bash
+git clone https://github.com/rrbanda/agent-lens.git && cd agent-lens
+cd agent-lens && cp adk/.env.example adk/.env   # edit with your config
+
+# Install dependencies (uv or pip)
+uv pip install "adk/.[tracing]"   # or: pip install -r adk/pyproject.toml
+
+# Start MLflow MCP server (separate terminal)
+make mlflow-start
+python -m mlflow.mcp.run --tracking-uri http://localhost:5555
+
+# Start the ADK agent (OpenAI-compatible API)
+PYTHONPATH=. uvicorn adk.main:app --host 0.0.0.0 --port 8000
+```
+
+The ADK agent exposes:
+- **`POST /chat/completions`** — OpenAI-compatible endpoint (streaming + non-streaming)
+- **`GET /health`** — readiness probe
+
+Uses LiteLlm to route inference through any OpenAI-compatible endpoint (vLLM, OGX, Ollama, Gemini, Azure). Skills load via `SkillToolset` with progressive disclosure.
 
 ## Deploy to Kubernetes
 
@@ -71,26 +88,41 @@ MLflow's built-in scorers (used by `evaluate_traces`) default to OpenAI model na
 
 ### Step 3: Build and deploy Agent Lens
 
-```bash
-# Build the container image and deploy
-make deploy-all
+Choose your harness:
 
-# Check status
-make status
+**Hermes (reference):**
+
+```bash
+make deploy-all && make status
 ```
 
-### Step 4: Access the dashboard
+**Google ADK:**
 
 ```bash
-# Get the route URL
+# Build the ADK image
+podman build -f agent-lens/Containerfile.adk -t agent-lens-adk agent-lens/
+
+# Push to your registry, then deploy
+oc apply -k agent-lens/deploy/adk/
+```
+
+### Step 4: Access the agent
+
+**Hermes:** Access the dashboard at the route URL, login with `admin` and your dashboard password.
+
+```bash
 oc get route agent-lens -n openshell -o jsonpath='https://{.spec.host}'
 ```
 
-Login with username `admin` and the dashboard password you set in the secret.
+**ADK:** Access the ADK API server (FastAPI). For production, add an OAuth proxy sidecar for auth.
+
+```bash
+oc get route agent-lens-adk -n openshell -o jsonpath='https://{.spec.host}'
+```
 
 ### Step 5: Verify MCP connectivity
 
-In the dashboard, try: **"Show me all experiments"**
+Try: **"Show me all experiments"**
 
 If it responds with a list of MLflow experiments, everything is working. If it hangs or times out, check the [Troubleshooting](#troubleshooting) section below.
 

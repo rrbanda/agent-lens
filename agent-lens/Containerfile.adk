@@ -1,0 +1,51 @@
+# Agent Lens ADK — OpenShell BYOC (Bring Your Own Container) pattern.
+#
+# Follows the agentic-starter-kits convention:
+# https://github.com/red-hat-data-services/agentic-starter-kits
+#
+# Build:
+#   podman build --platform linux/amd64 -t agent-lens-adk:latest -f Containerfile.adk .
+#
+# Run (OpenShell replaces CMD — pass start command after --):
+#   openshell sandbox create --from agent-lens-adk:latest --forward 8000 \
+#     -e API_KEY=... -e BASE_URL=... -e MODEL_ID=... -e MLFLOW_MCP_URL=... \
+#     -- uvicorn adk.main:app --host 0.0.0.0 --port 8000
+
+FROM registry.access.redhat.com/ubi9/python-312:latest
+
+USER 0
+
+# iproute: required by OpenShell for network namespace management
+# nftables: optional, enables bypass detection
+RUN dnf install -y --nodocs iproute nftables && dnf clean all && rm -rf /var/cache/dnf
+
+# uv for fast dependency installation
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Application directory (OpenShell convention: /sandbox)
+RUN install -d -o 1001 -g 0 -m 775 /sandbox
+WORKDIR /sandbox
+
+# Install Python dependencies
+COPY adk/pyproject.toml /sandbox/pyproject.toml
+COPY adk/ /sandbox/adk/
+RUN uv pip install --python /opt/app-root/bin/python3 --no-cache ".[tracing]"
+
+# Copy skills (shared with Hermes — same SKILL.md files)
+COPY skills/ /sandbox/skills/
+
+# Ensure app directory is owned by default user
+RUN chown -R 1001:0 /sandbox && chmod -R g=u /sandbox
+
+USER 1001
+
+ENV PORT=8000 \
+    PYTHONPATH=/sandbox \
+    PATH="/opt/app-root/bin:${PATH}" \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+# OpenShell supervisor replaces CMD at runtime.
+# Pass the start command explicitly after --.
+CMD ["uvicorn", "adk.main:app", "--host", "0.0.0.0", "--port", "8000"]

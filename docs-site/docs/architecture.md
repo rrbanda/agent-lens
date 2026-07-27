@@ -99,14 +99,21 @@ Agent Lens requires an MCP-capable agent harness — any runtime that can:
 - Maintain session context across multi-step workflows
 - Provide a chat interface (web dashboard or CLI)
 
-The reference implementation ships with **Hermes**, but the skills, soul, and config are **portable artifacts** — plain markdown and YAML, not code.
+Agent Lens ships with **two validated harnesses** — the skills, soul, and config are **portable artifacts** that work with either runtime (and any other MCP-capable agent).
+
+| Harness | Container | Startup | Port | MCP wiring | Skill loading |
+|---------|-----------|---------|------|------------|---------------|
+| [Hermes](https://github.com/hermes-ai/hermes-agent) | `Containerfile` | `startup.sh` | 9119 | `config.yaml` mcp_servers | Built-in skill curator |
+| [Google ADK](https://adk.dev/) | `Containerfile.adk` | `startup-adk.sh` | 8000 | `McpToolset` in `agent.py` | `SkillToolset` (agentskills.io) + LiteLlm model connector |
 
 | | Harness-independent (keep) | Harness-specific (swap) |
 |---|---|---|
-| **Files** | `skills/*.md`, `soul.md`, `config.yaml` | `Containerfile`, `startup.sh` |
+| **Files** | `skills/*.md`, `soul.md` | `Containerfile`, `startup.sh`, `agent.py` |
 | **Why** | Standard MCP tool patterns any client can execute | Runtime-specific packaging and lifecycle |
 
-Compatible runtimes include [Hermes](https://github.com/hermes-ai/hermes-agent), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenClaw](https://github.com/openclaw), [Goose](https://github.com/block/goose), or any custom MCP-capable agent. Choose a commodity runtime — the qualification logic lives in the skills, not the harness.
+The ADK harness uses a custom FastAPI server (`main.py`) with an OpenAI-compatible `/chat/completions` endpoint — following the [agentic-starter-kits](https://github.com/red-hat-data-services/agentic-starter-kits) BYOC pattern. It uses `LiteLlm` to route inference through any OpenAI-compatible endpoint (vLLM, OGX, Ollama, Gemini, Azure), `McpToolset` for MLflow MCP tools, and `SkillToolset` for the 16 SKILL.md files. MLflow tracing is auto-enabled via `mlflow.litellm.autolog()` when `MLFLOW_TRACKING_URI` is set.
+
+Compatible runtimes also include [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenClaw](https://github.com/openclaw), [Goose](https://github.com/block/goose), or any custom MCP-capable agent. Choose a commodity runtime — the qualification logic lives in the skills, not the harness.
 
 ### Agents being evaluated (target agents)
 
@@ -115,7 +122,7 @@ Agent Lens evaluates **any agent that sends traces to MLflow**, regardless of fr
 | Framework | MLflow integration |
 |-----------|-------------------|
 | LangGraph | `mlflow.langchain.autolog()` |
-| Google ADK | `mlflow.tracing.enable()` or ADK's built-in tracing |
+| Google ADK | `mlflow.litellm.autolog()` — automatic CHAT_MODEL + TOOL spans |
 | LangChain | `mlflow.langchain.autolog()` |
 | CrewAI | `mlflow.crewai.autolog()` |
 | OpenAI Agents SDK | `mlflow.openai.autolog()` |
@@ -176,8 +183,8 @@ No custom gateway service needed — Agent Lens consumes these features directly
 graph LR
     subgraph Kubernetes
         subgraph agent-ns["agent-lens namespace"]
-            Sandbox[Agent Lens Sandbox Pod]
-            Dashboard[Dashboard Route :9119]
+            HermesPod["Hermes Pod :9119"]
+            ADKPod["ADK Pod :8000"]
         end
         subgraph mlflow-ns["mlflow namespace"]
             MCP[MLflow MCP Deploy]
@@ -185,10 +192,12 @@ graph LR
         end
     end
     
-    Sandbox -->|HTTP /mcp| MCP
+    HermesPod -->|HTTP /mcp| MCP
+    ADKPod -->|HTTP /mcp| MCP
     MCP -->|HTTPS + SA token| MLflow
-    Dashboard -->|edge TLS| Sandbox
 ```
+
+Both harnesses share the same MLflow MCP server, skill ConfigMaps, and OpenShell sandbox security model. You can run them side by side or choose one — the skills are identical.
 
 ## ADRs
 

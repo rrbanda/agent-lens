@@ -1,0 +1,63 @@
+# Egress from Agent Lens ADK sandbox.
+# LiteLlm routes to any OpenAI-compatible endpoint — egress allows HTTPS + in-cluster model serving.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-lens-adk
+  labels:
+    app: agent-lens-adk
+    app.kubernetes.io/part-of: agent-lens
+    agent-lens/harness: adk
+spec:
+  podSelector:
+    matchLabels:
+      app: agent-lens-adk
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Official MLflow MCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redhat-ods-applications
+      ports:
+        - protocol: TCP
+          port: 8080
+    # OpenShell gateway
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshell
+      ports:
+        - protocol: TCP
+          port: 8080
+    # HTTPS (LLM inference — vLLM, OGX, Gemini, Azure, etc.)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+    # Cluster DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
