@@ -1,12 +1,15 @@
 .PHONY: help secret secret-openshell build-agent deploy-agent \
 	deploy-openshell deploy-all undeploy undeploy-openshell scale-down-legacy \
 	eval logs-agent logs-openshell status check-mcp \
-	test test-unit test-integration mlflow-start mlflow-stop seed-data
+	test test-unit test-integration test-adk mlflow-start mlflow-stop seed-data \
+	build-adk deploy-adk undeploy-adk logs-adk status-adk
 
 NAMESPACE ?= agent-lens
 OPENSHELL_NS ?= openshell
 MCP_URL ?= http://mlflow-mcp.redhat-ods-applications.svc.cluster.local:8080/mcp
 AGENT_IMAGE ?= quay.io/rrbanda/agent-lens:v3
+ADK_IMAGE ?= image-registry.openshift-image-registry.svc:5000/agent-lens/agent-lens-adk:latest
+ADK_REGISTRY ?= $(shell oc get route default-route -n openshift-image-registry -o jsonpath='{.spec.host}' 2>/dev/null || echo YOUR_REGISTRY)
 MLFLOW_PORT ?= 5555
 MLFLOW_TRACKING_URI ?= http://127.0.0.1:$(MLFLOW_PORT)
 VENV ?= .venv
@@ -105,14 +108,14 @@ deploy-agent: ## DEPRECATED — plain Deployment in agent-lens (rollback only)
 		oc apply -k agent-lens/deploy/ ; \
 	fi
 
-deploy-all: deploy-openshell ## Deploy OpenShell Sandbox (optional: make build-agent first)
+deploy-all: deploy-openshell deploy-adk ## Deploy both Hermes + ADK Sandboxes
 	@echo ""
 	@echo "═══════════════════════════════════════════════"
 	@echo "  Agent Lens on OpenShell (openshell ns)"
-	@echo "  Dashboard: https://$$(oc get route agent-lens -n $(OPENSHELL_NS) -o jsonpath='{.spec.host}')"
+	@echo "  Hermes:  https://$$(oc get route agent-lens -n $(OPENSHELL_NS) -o jsonpath='{.spec.host}' 2>/dev/null || echo pending)"
+	@echo "  ADK:     https://$$(oc get route agent-lens-adk -n $(OPENSHELL_NS) -o jsonpath='{.spec.host}' 2>/dev/null || echo pending)"
 	@echo "  MCP: upstream mlflow-mcp (prerequisite)"
-	@echo "  LLM: Any OpenAI-compatible API (set OPENAI_BASE_URL + OPENAI_API_KEY)"
-	@echo "  Image: quay OpenShell Hermes (or ImageStream after make build-agent)"
+	@echo "  LLM: Any OpenAI-compatible API"
 	@echo "═══════════════════════════════════════════════"
 
 scale-down-legacy: ## Scale down legacy Deployment in agent-lens after OpenShell smoke
@@ -189,6 +192,62 @@ dev-setup: ## Set up local dev environment (venv + deps)
 	$(VENV)/bin/pip install --quiet -e ".[dev]"
 	@echo "✓ Dev environment ready. Activate: source $(VENV)/bin/activate"
 
+# ── Google ADK Harness ─────────────────────────────────────────────────────────
+
+build-adk: ## Build ADK container image (local podman, push to cluster registry)
+	podman build --platform linux/amd64 --no-cache \
+		-t agent-lens-adk:latest -f agent-lens/Containerfile.adk agent-lens/
+	podman tag agent-lens-adk:latest $(ADK_REGISTRY)/agent-lens/agent-lens-adk:latest
+	podman push --tls-verify=false $(ADK_REGISTRY)/agent-lens/agent-lens-adk:latest
+	@echo "✓ ADK image pushed to cluster registry"
+
+deploy-adk: ## Deploy ADK Sandbox into openshell (OpenShell-secured)
+	@echo "Checking OpenShell platform prerequisites..."
+	@oc get sa openshell-sandbox -n $(OPENSHELL_NS) >/dev/null \
+		|| { echo "ERROR: SA openshell-sandbox missing in $(OPENSHELL_NS)"; exit 1; }
+	@oc get secret agent-lens-auth -n $(OPENSHELL_NS) >/dev/null \
+		|| { echo "ERROR: secret agent-lens-auth missing — run: make secret-openshell"; exit 1; }
+	@oc get secret openshell-client-tls -n $(OPENSHELL_NS) >/dev/null \
+		|| { echo "ERROR: openshell-client-tls missing — gateway not installed or TLS not generated"; exit 1; }
+	@echo "Deploying ADK OpenShell Sandbox to $(OPENSHELL_NS)..."
+	@if [ -x /tmp/kustomize ]; then K=/tmp/kustomize; \
+	elif command -v kustomize >/dev/null; then K=kustomize; \
+	else K=; fi; \
+	if [ -n "$$K" ]; then \
+		$$K build --load-restrictor LoadRestrictionsNone agent-lens/deploy/adk | oc apply -f - ; \
+	else \
+		echo "ERROR: kustomize required (cross-directory file refs). Install: curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash -s -- /tmp"; exit 1; \
+	fi
+	@echo "✓ ADK OpenShell Sandbox applied"
+	@echo "  Route: $$(oc get route agent-lens-adk -n $(OPENSHELL_NS) -o jsonpath='{.spec.host}' 2>/dev/null || echo pending)"
+
+undeploy-adk: ## Remove ADK Sandbox resources (keeps platform)
+	@if [ -x /tmp/kustomize ]; then K=/tmp/kustomize; \
+	elif command -v kustomize >/dev/null; then K=kustomize; \
+	else K=; fi; \
+	if [ -n "$$K" ]; then \
+		$$K build --load-restrictor LoadRestrictionsNone agent-lens/deploy/adk | oc delete -f - --ignore-not-found ; \
+	else \
+		echo "ERROR: kustomize required"; exit 1; \
+	fi
+	@echo "✓ ADK Sandbox resources removed"
+
+logs-adk: ## Tail ADK Sandbox agent logs
+	@POD=$$(oc get pods -n $(OPENSHELL_NS) -l app=agent-lens-adk -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
+	test -n "$$POD" || { echo "No ADK sandbox pod found"; exit 1; }; \
+	oc logs -f -n $(OPENSHELL_NS) "$$POD" -c agent
+
+status-adk: ## Show ADK Sandbox status
+	@echo "=== ADK Harness (OpenShell Sandbox) ==="
+	@oc get sandbox agent-lens-adk -n $(OPENSHELL_NS) 2>/dev/null || echo "  Sandbox not deployed"
+	@oc get pods -l app=agent-lens-adk -n $(OPENSHELL_NS) 2>/dev/null || true
+	@oc get route agent-lens-adk -n $(OPENSHELL_NS) -o jsonpath='  https://{.spec.host}\n' 2>/dev/null || echo "  No route"
+
+test-adk: ## Run ADK E2E tests against live cluster
+	@ADK_ROUTE=$$(oc get route agent-lens-adk -n $(OPENSHELL_NS) -o jsonpath='{.spec.host}' 2>/dev/null); \
+	test -n "$$ADK_ROUTE" || { echo "ERROR: No ADK route found — deploy first: make deploy-adk"; exit 1; }; \
+	ADK_URL="https://$$ADK_ROUTE" python3 -m pytest tests/test_adk_e2e.py -v
+
 status: ## Show MCP + OpenShell Sandbox + legacy status
 	@echo "=== Official MLflow MCP ==="
 	@oc get pods -l app=mlflow-mcp -n redhat-ods-applications 2>/dev/null || echo "  Not found"
@@ -200,6 +259,11 @@ status: ## Show MCP + OpenShell Sandbox + legacy status
 	@echo ""
 	@echo "=== Legacy Deployment (rollback) ==="
 	@oc get deploy,pods -l app=agent-lens -n $(NAMESPACE) 2>/dev/null || echo "  Not deployed"
+	@echo ""
+	@echo "=== Google ADK Harness (OpenShell Sandbox) ==="
+	@oc get sandbox agent-lens-adk -n $(OPENSHELL_NS) 2>/dev/null || echo "  Sandbox not deployed"
+	@oc get pods -l app=agent-lens-adk -n $(OPENSHELL_NS) 2>/dev/null || true
+	@oc get route agent-lens-adk -n $(OPENSHELL_NS) -o jsonpath='  https://{.spec.host}\n' 2>/dev/null || echo "  No route"
 	@echo ""
 	@echo "=== Secrets ==="
 	@oc get secret agent-lens-auth -n $(OPENSHELL_NS) 2>/dev/null || echo "  Missing openshell auth — make secret-openshell"

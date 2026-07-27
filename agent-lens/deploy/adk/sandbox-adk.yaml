@@ -90,9 +90,9 @@ spec:
               value: /sandbox
             # --- ADK (LiteLlm) inference endpoint ---
             - name: MODEL_ID
-              value: ""
+              value: "gemini-2.5-flash"
             - name: BASE_URL
-              value: ""
+              value: "https://generativelanguage.googleapis.com/v1beta/openai"
             - name: API_KEY
               valueFrom:
                 secretKeyRef:
